@@ -11,6 +11,7 @@
     <version>0.1-SNAPSHOT</version>
     <modules>
         <module>dummy-prior-engine</module>
+        <module>dummy-prior-engine-python</module>
     </modules>
 
     <dependencyManagement>

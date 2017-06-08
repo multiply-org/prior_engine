@@ -1,4 +1,4 @@
-class dummy_prior_engine:
+class DummyPriorEngine:
 
     def create_prior(self, aux_data):
         print 'Creating a prior'

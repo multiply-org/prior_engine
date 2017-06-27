@@ -27,7 +27,7 @@ class PriorEngine(object):
         elif p == 'vegetation':
             assert False, 'The veg prior should provide cross-correlated prior information of vegetation characteristics'
         elif p == 'roughness':
-            P = RoughnessPrior(ptype=self.priors[p]['type'])
+            P = RoughnessPrior(ptype=self.priors[p]['type'], lc_file=self.config.landcover, lut_file = self.config.luts['roughness'])
         else:
             assert False, 'Invalid prior'
 

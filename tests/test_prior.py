@@ -7,4 +7,11 @@ from multiply_prior_engine import SoilMoisturePrior
 
 class TestPrior(unittest.TestCase):
     def test_sm_prior(self):
-        S = SoilMoisturePrior()
+        S = SoilMoisturePrior(ptype='climatology')
+
+    def test_calc(self):
+        S = SoilMoisturePrior(ptype='climatology')
+        S.calc()
+        print S.file
+        self.assertTrue(os.path.exists(S.file))
+

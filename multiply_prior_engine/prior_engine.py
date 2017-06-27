@@ -3,6 +3,7 @@ Prior Engine
 """
 
 import tempfile
+import os
 
 
 class PriorEngine(object):
@@ -37,6 +38,7 @@ class PriorEngine(object):
 class Prior(object):
     def __init__(self, **kwargs):
         self.ptype = kwargs.get('ptype', None)
+        self._check()
 
     def _check(self):
         assert self.ptype is not None, 'Invalid prior type'
@@ -49,16 +51,17 @@ class SoilMoisturePrior(Prior):
     def __init__(self, **kwargs):
         super(SoilMoisturePrior, self).__init__(**kwargs)
 
-        self.file = 'nix'
-
     def calc(self):
         if self.ptype == 'climatology':
-            return self._get_climatology_file()
+            self.file = self._get_climatology_file()
         else:
             assert False
 
     def _get_climatology_file(self):
-        return tempfile.mktemp()
+
+        f = tempfile.mktemp()
+        os.system('touch ' + f)
+        return f
 
 
 

@@ -7,6 +7,7 @@ import os
 
 
 class PriorEngine(object):
+
     def __init__(self, **kwargs):
         self.config = kwargs.get('config', None)
         self.priors = kwargs.get('priors', None)
@@ -18,23 +19,25 @@ class PriorEngine(object):
     def get_priors(self):
         res = {}
         for p in self.priors.keys():
-            res.update({p : self._get_prior(p)})
+            res.update({p: self._get_prior(p)})
         return res
 
     def _get_prior(self, p):
         if p == 'sm':
-            P = SoilMoisturePrior(ptype=self.priors[p]['type'])
+            prior = SoilMoisturePrior(ptype=self.priors[p]['type'])
         elif p == 'vegetation':
-            assert False, 'The veg prior should provide cross-correlated prior information of vegetation characteristics'
+            assert False, \
+                'The veg prior should provide cross-correlated prior information of vegetation characteristics'
         elif p == 'roughness':
-            P = RoughnessPrior(ptype=self.priors[p]['type'], lc_file=self.config.landcover, lut_file = self.config.luts['roughness'])
+            prior = RoughnessPrior(ptype=self.priors[p]['type'], lc_file=self.config.landcover,
+                                   lut_file=self.config.luts['roughness'])
         else:
             assert False, 'Invalid prior'
 
         # calculate prior
-        P.calc()
+        prior.calc()
 
-        return P.file  # return filename where prior file is located
+        return prior.file  # return filename where prior file is located
 
 
 class Prior(object):
@@ -47,6 +50,7 @@ class Prior(object):
 
     def calc(self):
         assert False, 'Should be implemented in child class'
+
 
 class MapPrior(Prior):
     """
@@ -72,8 +76,6 @@ class MapPrior(Prior):
         # check that files exist
         assert os.path.exists(self.lc_file)
         assert os.path.exists(self.lut_file)
-
-
 
 
 class SoilMoisturePrior(Prior):
@@ -113,7 +115,7 @@ class RoughnessPrior(MapPrior):
             self._read_lut()
             self._read_lc()
             self._map_lut()
-            self.file =  self.save()
+            self.file = self.save()
         else:
             assert False
 
@@ -129,11 +131,8 @@ class RoughnessPrior(MapPrior):
         """
         self.roughness = self.lut + self.lc
 
-
     def save(self):
         """
         save mapped roughness data to file
         """
         return tempfile.mktemp(suffix='.nc')
-
-

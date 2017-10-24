@@ -2,3 +2,6 @@
 .idea/
 *.egg-info/
 *.pyc
+
+# emacs temp files
+.#*

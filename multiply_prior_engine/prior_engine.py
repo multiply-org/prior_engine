@@ -1,16 +1,30 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 """
-Prior Engine
+    Soil Moisture Prior Engine
+
+    Copyright (C) 2017  Thomas Ramsauer
 """
+
 
 import tempfile
 import os
+import xarray as xr
+import yaml
 
+
+from netCDF4 import Dataset
 
 class PriorEngine(object):
 
     def __init__(self, **kwargs):
-        self.config = kwargs.get('config', None)
-        self.priors = kwargs.get('priors', None)
+        self.configfile = kwargs.get('config', None)
+        self._get_config()
+        # self.priors = kwargs.get('priors', None)
+        self.priors = self.config['Prior']['priors']
+        # print(self.priors)
+        self._check()
 
     def _check(self):
         assert self.config is not None
@@ -19,17 +33,37 @@ class PriorEngine(object):
     def get_priors(self):
         res = {}
         for p in self.priors.keys():
+        # for p in self.priors:
             res.update({p: self._get_prior(p)})
         return res
 
+    def _get_config(self):
+        with open(self.configfile, 'r') as cfg:
+            self.config = yaml.load(cfg)
+        assert self.config['Prior'] is not None, \
+            ('There is no prior config information in {}'
+             .format(self.configfile))
+
     def _get_prior(self, p):
-        if p == 'sm':
-            prior = SoilMoisturePrior(ptype=self.priors[p]['type'])
+        if p[:2] == 'sm':
+            assert self.priors[p]['type'] is not None, \
+                'No prior type for soil moisture prior specified!'
+
+            # pass config and prior type to subclass
+            prior = SoilMoisturePrior(ptype=self.priors[p]['type'],
+                                      config=self.config['Prior'])
+            # for ptype in self.priors.sm.type:
+            #     try:
+            #         prior = SoilMoisturePrior(ptype=self.priors[p][ptype])
+            #     except:
+            #         assert False, 'SoilMoisturePrior generation failed.'
         elif p == 'vegetation':
             assert False, \
-                'The veg prior should provide cross-correlated prior information of vegetation characteristics'
+                ('The veg prior should provide cross-correlated prior'
+                 'information of vegetation characteristics')
         elif p == 'roughness':
-            prior = RoughnessPrior(ptype=self.priors[p]['type'], lc_file=self.config.landcover,
+            prior = RoughnessPrior(ptype=self.priors[p]['type'],
+                                   lc_file=self.config.landcover,
                                    lut_file=self.config.luts['roughness'])
         else:
             assert False, 'Invalid prior'
@@ -43,6 +77,7 @@ class PriorEngine(object):
 class Prior(object):
     def __init__(self, **kwargs):
         self.ptype = kwargs.get('ptype', None)
+        self.config = kwargs.get('config', None)
         self._check()
 
     def _check(self):
@@ -87,19 +122,68 @@ class SoilMoisturePrior(Prior):
 
     def calc(self):
         if self.ptype == 'climatology':
-            self.file = self._get_climatology_file()
+            self._get_climatology_file()
+            self._extract_climatology()
+            #make prior from here
+            self.file = prior
+
         elif self.ptype == 'recent':
             self.file = self._get_recent_sm_proxy()
         else:
-            assert False
+            assert False, '{} prior for sm not implemented'.format(self.ptype)
 
     def _get_climatology_file(self):
         """
-        return filename of preprocessed climatology
+        load pre-processed climatology into self.clim
         """
-        f = tempfile.mktemp()
-        os.system('touch ' + f)
-        return f
+        assert (self.config['priors']['sm_clim']
+                           ['climatology_file']) is not None,\
+            'There is no climatology file specified in the config!'
+        self.clim_data = Dataset(self.config['priors']['sm_clim']
+        # use xarray:
+        # self.clim = xr.open_dataset(self.config['priors']['sm_clim']
+                            ['climatology_file'])
+        # f = tempfile.mktemp()
+        # os.system('touch ' + f)
+
+    def _extract_climatology(self):
+        """
+        extract climatology values for ROI
+        """
+        clim = self.clim_data.variables['sm'][:]
+        std = self.clim_data.variables['sm_stdev'][:]
+        lats = self.clim_data.variables['lat']  # extract/copy the data
+        lons = clim.lon
+        print(lons)
+
+        # sm = np.ma.array(sm, mask=self.mask)
+        # sm_stdev = np.ma.array(sm_stdev, mask=self.mask)
+
+        # Use KDTree!
+        POI = (lat_in, lon_in)
+
+        if POI[0] < np.amin(lats) or POI[0] > np.amax(lats) or\
+           POI[1] < np.amin(lons) or POI[1] > np.amax(lons):
+            raise ValueError("POI's latitude and longitude out of bounds.")
+
+        combined_LAT_LON = np.dstack([lats.ravel(), lons.ravel()])[0]
+        mytree = scipy.spatial.cKDTree(combined_LAT_LON)
+        dist, indexes = mytree.query(POI)
+        x, y = tuple(combined_LAT_LON[indexes])
+        idx = indexes % self.climatology.data.shape[2]
+        idy = int(np.ceil(indexes / self.climatology.data.shape[2]))
+
+        sm_POI = self.climatology.data[:, idy, idx]
+        sm_stdev_POI = self.climatology_stdev.data[:, idy, idx]
+        a = 2
+        b = a + 1
+        sm_area_ = self.climatology.data[:, range(idy - a, idy + b), :]
+        sm_area = sm_area_[:, :, range(idx - a, idx + b)]
+        sm_area_std = np.std(sm_area, axis=(1, 2))
+        sm_area_mean = np.mean(sm_area, axis=(1, 2))
+        # self.clim
+        # self.clim_extr = #
+
 
     def _get_recent_sm_proxy(self):
         assert False
@@ -136,3 +220,13 @@ class RoughnessPrior(MapPrior):
         save mapped roughness data to file
         """
         return tempfile.mktemp(suffix='.nc')
+
+    
+P = PriorEngine(config="./sample_config_prior.yml")
+P.get_priors()
+
+
+if __name__ == '__main__':
+    P = PriorEngine(config="./sample_config_prior.yml")
+    P.get_priors()
+

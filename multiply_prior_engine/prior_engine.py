@@ -9,12 +9,18 @@
 
 
 import tempfile
+# import datetime
 import os
-import xarray as xr
+# import xarray as xr
 import yaml
-
+import numpy as np
+import scipy as sp
+# from scipy import spatial
+# import re
+import ast
 
 from netCDF4 import Dataset
+
 
 class PriorEngine(object):
 
@@ -27,13 +33,15 @@ class PriorEngine(object):
         self._check()
 
     def _check(self):
-        assert self.config is not None
-        assert self.priors is not None
+        assert self.config is not None, \
+            'Could not load configfile.'
+        assert self.priors is not None, \
+            'There is no prior specified in configfile.'
 
     def get_priors(self):
         res = {}
-        for p in self.priors.keys():
         # for p in self.priors:
+        for p in self.priors.keys():
             res.update({p: self._get_prior(p)})
         return res
 
@@ -51,7 +59,7 @@ class PriorEngine(object):
 
             # pass config and prior type to subclass
             prior = SoilMoisturePrior(ptype=self.priors[p]['type'],
-                                      config=self.config['Prior'])
+                                      config=self.config)
             # for ptype in self.priors.sm.type:
             #     try:
             #         prior = SoilMoisturePrior(ptype=self.priors[p][ptype])
@@ -122,13 +130,9 @@ class SoilMoisturePrior(Prior):
 
     def calc(self):
         if self.ptype == 'climatology':
-            self._get_climatology_file()
-            self._extract_climatology()
-            #make prior from here
-            self.file = prior
-
-        elif self.ptype == 'recent':
-            self.file = self._get_recent_sm_proxy()
+            self.file = self._calc_climatological_prior()
+        # elif self.ptype == 'recent':
+            # self.file = self._get_recent_sm_proxy()
         else:
             assert False, '{} prior for sm not implemented'.format(self.ptype)
 
@@ -136,15 +140,18 @@ class SoilMoisturePrior(Prior):
         """
         load pre-processed climatology into self.clim
         """
-        assert (self.config['priors']['sm_clim']
+        assert (self.config['Prior']['priors']['sm_clim']
                            ['climatology_file']) is not None,\
             'There is no climatology file specified in the config!'
-        self.clim_data = Dataset(self.config['priors']['sm_clim']
+
         # use xarray:
-        # self.clim = xr.open_dataset(self.config['priors']['sm_clim']
-                            ['climatology_file'])
-        # f = tempfile.mktemp()
-        # os.system('touch ' + f)
+        # self.clim_data = xr.open_dataset(self.config['priors']['sm_clim']
+        self.clim_data = Dataset(self.config['Prior']['priors']['sm_clim']
+                                 ['climatology_file'])
+
+        # fd, path = tempfile.mkstemp()
+        # os.write(fd, 'tempfile')
+        # os.close(fd)
 
     def _extract_climatology(self):
         """
@@ -152,41 +159,70 @@ class SoilMoisturePrior(Prior):
         """
         clim = self.clim_data.variables['sm'][:]
         std = self.clim_data.variables['sm_stdev'][:]
-        lats = self.clim_data.variables['lat']  # extract/copy the data
-        lons = clim.lon
-        print(lons)
+        lats = self.clim_data.variables['lat'][:]  # extract/copy the data
+        lons = self.clim_data.variables['lon'][:]
 
-        # sm = np.ma.array(sm, mask=self.mask)
-        # sm_stdev = np.ma.array(sm_stdev, mask=self.mask)
+        # TODO wonky ROI loading
+        ROI_ = (self.config['General'][0]['roi']
+                .split(' ', 1)[1]
+                .replace(' ', ''))
+        ROI = ast.literal_eval(ROI_)
 
-        # Use KDTree!
-        POI = (lat_in, lon_in)
-
-        if POI[0] < np.amin(lats) or POI[0] > np.amax(lats) or\
-           POI[1] < np.amin(lons) or POI[1] > np.amax(lons):
-            raise ValueError("POI's latitude and longitude out of bounds.")
-
+        # TODO insert check for ROI bounds:
+        # if POI[0] < np.amin(lats) or POI[0] > np.amax(lats) or\
+        #    POI[1] < np.amin(lons) or POI[1] > np.amax(lons):
+        #     raise ValueError("POI's latitude and longitude out of bounds.")
         combined_LAT_LON = np.dstack([lats.ravel(), lons.ravel()])[0]
-        mytree = scipy.spatial.cKDTree(combined_LAT_LON)
-        dist, indexes = mytree.query(POI)
-        x, y = tuple(combined_LAT_LON[indexes])
-        idx = indexes % self.climatology.data.shape[2]
-        idy = int(np.ceil(indexes / self.climatology.data.shape[2]))
+        mytree = sp.spatial.cKDTree(combined_LAT_LON)
+        idx, idy = [], []
+        for i in range(len(ROI)):
+            dist, indexes = mytree.query(ROI[i])
+            x, y = tuple(combined_LAT_LON[indexes])
+            idx.append(indexes % clim.shape[2])
+            idy.append(int(np.ceil(indexes / clim.shape[2])))
 
-        sm_POI = self.climatology.data[:, idy, idx]
-        sm_stdev_POI = self.climatology_stdev.data[:, idy, idx]
-        a = 2
-        b = a + 1
-        sm_area_ = self.climatology.data[:, range(idy - a, idy + b), :]
-        sm_area = sm_area_[:, :, range(idx - a, idx + b)]
-        sm_area_std = np.std(sm_area, axis=(1, 2))
-        sm_area_mean = np.mean(sm_area, axis=(1, 2))
-        # self.clim
-        # self.clim_extr = #
+        # TODO check assignment
+        # print(idx, idy)
 
+        # extract sm data
+        sm_area_ = clim[:, min(idy):max(idy)+1, :]
+        sm_area = sm_area_[:, :, min(idx):max(idx)+1]
+
+        # extract sm stddef data
+        sm_area_std_ = std[:, min(idy):max(idy)+1, :]
+        sm_area_std = sm_area_std_[:, :, min(idx):max(idx)+1]
+        # sm_area_std = np.std(sm_area, axis=(1, 2))
+        # sm_area_mean = np.mean(sm_area, axis=(1, 2))
+
+        # TODO limit to months
+
+        # date_format = ('%Y-%m-%d')
+        # s = self.config['General'][1]['start_time']
+        # e = self.config['General'][2]['end_time']
+        # t_span = (e-s).days + 1
+        # print(t_span)
+
+        # print(sm_area)
+        self.clim = sm_area
+        self.std = sm_area_std
+
+    def _calc_climatological_prior(self):
+        self._get_climatology_file()
+        self._extract_climatology()
+
+        # create prior
+        prior = np.array(range(0, 365))
+
+        fd, path = tempfile.mkstemp()
+        os.write(fd, prior)
+        os.close(fd)
+
+        # return prior.file
+        self.file = path
+        return path
 
     def _get_recent_sm_proxy(self):
-        assert False
+        assert False, "recent sm proxy not implemented"
 
 
 class RoughnessPrior(MapPrior):
@@ -221,12 +257,12 @@ class RoughnessPrior(MapPrior):
         """
         return tempfile.mktemp(suffix='.nc')
 
-    
-P = PriorEngine(config="./sample_config_prior.yml")
-P.get_priors()
 
+P = PriorEngine(config="./sample_config_prior.yml")
+priors = P.get_priors()
+print(priors)
 
 if __name__ == '__main__':
     P = PriorEngine(config="./sample_config_prior.yml")
-    P.get_priors()
-
+    priors = P.get_priors()
+    print(priors)

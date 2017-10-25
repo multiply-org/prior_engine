@@ -211,14 +211,14 @@ class SoilMoisturePrior(Prior):
         self._extract_climatology()
 
         # create prior
-        prior = np.array(range(0, 365))
+        prior = np.array('')
 
         fd, path = tempfile.mkstemp()
         os.write(fd, prior)
         os.close(fd)
 
         # return prior.file
-        self.file = path
+        # self.file = path
         return path
 
     def _get_recent_sm_proxy(self):

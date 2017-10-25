@@ -1,5 +1,5 @@
 General:
-    - roi : POLYGON ( (0, 0), (0,1 )) # blahblah
+    - roi: POLYGON ( (0, 0), (0,1 )) # blahblah
     - start_time: 2017-01-01
     - end_time: 2017-12-31
     - time_interval: 1 # 1 day
@@ -32,11 +32,11 @@ Prior:
     #         - API
     #         - other
 
-        # veg:
-        #     type: pft
-        #     database: /aux_data/some_DB
-        # veg:
-        #     type: species
-        #    database: /user_data/some_DB
+    # veg_pft:
+    #   type: pft
+    #   database: /aux_data/some_DB
+    # veg_spec:
+    #   type: species
+    #   database: /user_data/some_DB
   add_config:
     # - 

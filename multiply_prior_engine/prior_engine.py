@@ -14,8 +14,8 @@ import os
 # import xarray as xr
 import yaml
 import numpy as np
-import scipy as sp
-# from scipy import spatial
+# import scipy as sp
+from scipy import spatial
 # import re
 import ast
 
@@ -39,6 +39,12 @@ class PriorEngine(object):
             'There is no prior specified in configfile.'
 
     def get_priors(self):
+        """Get prior files.
+
+        :returns: dictionary with prior names/filepath as key/value
+        :rtype: dictionary
+
+        """
         res = {}
         # for p in self.priors:
         for p in self.priors.keys():
@@ -46,6 +52,11 @@ class PriorEngine(object):
         return res
 
     def _get_config(self):
+        """Load confing from self.configfile.
+           writes to self.config.
+
+        :returns: nothing
+        """
         with open(self.configfile, 'r') as cfg:
             self.config = yaml.load(cfg)
         assert self.config['Prior'] is not None, \
@@ -53,6 +64,15 @@ class PriorEngine(object):
              .format(self.configfile))
 
     def _get_prior(self, p):
+        """Called by get_priors for all prior keys in config.
+           For specific prior (e.g. sm_clim) get prior info and calculate
+           prior.
+
+        :param p: prior name (e.g. sm_clim)
+        :returns: prior file
+        :rtype:
+
+        """
         if p[:2] == 'sm':
             assert self.priors[p]['type'] is not None, \
                 'No prior type for soil moisture prior specified!'
@@ -90,6 +110,7 @@ class Prior(object):
 
     def _check(self):
         assert self.ptype is not None, 'Invalid prior type'
+        assert self.config is not None, 'No config available.'
 
     def calc(self):
         assert False, 'Should be implemented in child class'
@@ -129,6 +150,10 @@ class SoilMoisturePrior(Prior):
         super(SoilMoisturePrior, self).__init__(**kwargs)
 
     def calc(self):
+        """Initialize prior specific calculation
+
+        :returns: nothing
+        """
         if self.ptype == 'climatology':
             self.file = self._calc_climatological_prior()
         # elif self.ptype == 'recent':
@@ -138,7 +163,8 @@ class SoilMoisturePrior(Prior):
 
     def _get_climatology_file(self):
         """
-        load pre-processed climatology into self.clim
+        Load pre-processed climatology into self.clim_data
+
         """
         assert (self.config['Prior']['priors']['sm_clim']
                            ['climatology_file']) is not None,\
@@ -155,17 +181,19 @@ class SoilMoisturePrior(Prior):
 
     def _extract_climatology(self):
         """
-        extract climatology values for ROI
+        Extract climatology values for ROI
         """
         clim = self.clim_data.variables['sm'][:]
         std = self.clim_data.variables['sm_stdev'][:]
-        lats = self.clim_data.variables['lat'][:]  # extract/copy the data
+        lats = self.clim_data.variables['lat'][:]
         lons = self.clim_data.variables['lon'][:]
 
         # TODO wonky ROI loading
         ROI_ = (self.config['General'][0]['roi']
                 .split(' ', 1)[1]
                 .replace(' ', ''))
+
+        # make string a tuple
         ROI = ast.literal_eval(ROI_)
 
         # TODO insert check for ROI bounds:
@@ -173,7 +201,7 @@ class SoilMoisturePrior(Prior):
         #    POI[1] < np.amin(lons) or POI[1] > np.amax(lons):
         #     raise ValueError("POI's latitude and longitude out of bounds.")
         combined_LAT_LON = np.dstack([lats.ravel(), lons.ravel()])[0]
-        mytree = sp.spatial.cKDTree(combined_LAT_LON)
+        mytree = spatial.cKDTree(combined_LAT_LON)
         idx, idy = [], []
         for i in range(len(ROI)):
             dist, indexes = mytree.query(ROI[i])
@@ -207,6 +235,13 @@ class SoilMoisturePrior(Prior):
         self.std = sm_area_std
 
     def _calc_climatological_prior(self):
+        """
+        Calculate climatological prior
+
+        :returns: filepath to prior file
+        :rtype: str
+
+        """
         self._get_climatology_file()
         self._extract_climatology()
 
@@ -258,11 +293,7 @@ class RoughnessPrior(MapPrior):
         return tempfile.mktemp(suffix='.nc')
 
 
-P = PriorEngine(config="./sample_config_prior.yml")
-priors = P.get_priors()
-print(priors)
-
-if __name__ == '__main__':
-    P = PriorEngine(config="./sample_config_prior.yml")
-    priors = P.get_priors()
-    print(priors)
+# if __name__ == '__main__':
+#     P = PriorEngine(config="./sample_config_prior.yml")
+#     priors = P.get_priors()
+#     print(priors)

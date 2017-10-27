@@ -9,12 +9,12 @@
 
 
 import tempfile
-# import datetime
+import datetime
 import os
 # import xarray as xr
 import yaml
 import numpy as np
-# import scipy as sp
+import scipy as sp
 from scipy import spatial
 # import re
 import ast
@@ -49,6 +49,7 @@ class PriorEngine(object):
         # for p in self.priors:
         for p in self.priors.keys():
             res.update({p: self._get_prior(p)})
+
         return res
 
     def _get_config(self):
@@ -97,9 +98,11 @@ class PriorEngine(object):
             assert False, 'Invalid prior'
 
         # calculate prior
-        prior.calc()
+        # prior, C_prior_inv = prior.calc()
 
-        return prior.file  # return filename where prior file is located
+        prior.calc()
+        # return filename where prior file is located
+        return prior.file
 
 
 class Prior(object):
@@ -114,6 +117,17 @@ class Prior(object):
 
     def calc(self):
         assert False, 'Should be implemented in child class'
+
+    def concat_priors(self):
+        """concat individual priors and covaranc matrices
+
+        :returns:
+        :rtype:
+
+        """
+        # all_priors = np.concatenate((p, std), axis=0)
+        # all_cov = np.concatenate((p, std), axis=0)
+        pass
 
 
 class MapPrior(Prior):
@@ -222,14 +236,6 @@ class SoilMoisturePrior(Prior):
         # sm_area_std = np.std(sm_area, axis=(1, 2))
         # sm_area_mean = np.mean(sm_area, axis=(1, 2))
 
-        # TODO limit to months
-
-        # date_format = ('%Y-%m-%d')
-        # s = self.config['General'][1]['start_time']
-        # e = self.config['General'][2]['end_time']
-        # t_span = (e-s).days + 1
-        # print(t_span)
-
         # print(sm_area)
         self.clim = sm_area
         self.std = sm_area_std
@@ -238,16 +244,57 @@ class SoilMoisturePrior(Prior):
         """
         Calculate climatological prior
 
-        :returns: filepath to prior file
+        :returns: filepath to temp prior file
         :rtype: str
 
         """
         self._get_climatology_file()
         self._extract_climatology()
 
-        # create prior
-        prior = np.array('')
+        # TODO limit to months
 
+        # date_format = ('%Y-%m-%d')
+        s = self.config['General'][1]['start_time']
+        e = self.config['General'][2]['end_time']
+        t_span = (e-s).days + 1
+        # print(t_span)
+
+        idt = [(s+datetime.timedelta(x)).month
+               for x in range(t_span)]
+        # idt_unique = list(set(idt))
+
+        # create nd array with correct dimensions
+        p = np.ndarray(shape=(len(idt), self.clim.shape[1],
+                              self.clim.shape[2]),
+                       dtype=float)
+        std = p.copy()
+
+        for i in range(len(idt)):
+            p[i, :, :] = self.clim[idt[i]-1, :, :]
+            std[i, :, :] = self.std[idt[i]-1, :, :]
+
+        # calculate uncertainty with normalization via coefficient of variation
+        # TODO scale uncertainty
+        sm_unc = (std/np.mean(self.clim))
+        # inverse covariance matrix
+        diagon = (1./sm_unc)
+
+        def create_sparse_matrix(a):
+            return sp.sparse.lil_matrix(np.eye(t_span)*a)
+
+        C_prior_inv = np.apply_along_axis(create_sparse_matrix, 0, diagon)
+
+        # print(C_prior_inv.shape, C_prior_inv)
+
+        # DISCUSS TODO
+        # rather write to self.'prior_key' to easy concatenate afterwards
+        # via concat_priors.
+
+        # return p, C_prior_inv
+
+        # ------------------------
+        # Create temp prior for now
+        prior = np.array('')
         fd, path = tempfile.mkstemp()
         os.write(fd, prior)
         os.close(fd)
@@ -293,7 +340,8 @@ class RoughnessPrior(MapPrior):
         return tempfile.mktemp(suffix='.nc')
 
 
-# if __name__ == '__main__':
-#     P = PriorEngine(config="./sample_config_prior.yml")
-#     priors = P.get_priors()
-#     print(priors)
+if __name__ == '__main__':
+    # P = PriorEngine(config="./sample_config_prior.yml")
+    # priors = P.get_priors()
+    # print(priors)
+    pass

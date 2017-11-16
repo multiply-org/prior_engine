@@ -357,8 +357,16 @@ class RoughnessPrior(MapPrior):
         return tempfile.mktemp(suffix='.nc')
 
 
+def get_mean_state_vector(config_file):
+    """return state vector and inverse covariance matrix for priors.
+
+    :param config_file: path to config file
+    :returns: state vector and inverse covariance matrix
+    :rtype: dictionary
+
+    """
+    return PriorEngine(config="./sample_config_prior.yml").get_priors()
+
+
 if __name__ == '__main__':
-    # P = PriorEngine(config="./sample_config_prior.yml")
-    # priors = P.get_priors()
-    # print(priors)
-    pass
+    get_mean_state_vector(config_file="./sample_config_prior.yml")

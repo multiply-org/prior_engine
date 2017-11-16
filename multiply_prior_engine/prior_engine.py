@@ -2,24 +2,32 @@
 # -*- coding: utf-8 -*-
 
 """
-    Soil Moisture Prior Engine
+    Soil Moisture Prior Engine for MULTIPLY.
 
     Copyright (C) 2017  Thomas Ramsauer
 """
 
 
-import tempfile
 import datetime
 import os
-# import xarray as xr
-import yaml
-import numpy as np
-import scipy as sp
-from scipy import spatial
-# import re
-import ast
+import tempfile
 
+import numpy as np
+import shapely
+import shapely.wkt
+import yaml
 from netCDF4 import Dataset
+from scipy import spatial
+
+
+__author__ = ["Alexander Löw", "Thomas Ramsauer"]
+__copyright__ = "Copyright 2017, Thomas Ramsauer"
+__credits__ = ["Alexander Löw", "Thomas Ramsauer"]
+__license__ = "GPLv3"
+__version__ = "0.0.1"
+__maintainer__ = "Thomas Ramsauer"
+__email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
+__status__ = "Prototype"
 
 
 class PriorEngine(object):
@@ -39,9 +47,11 @@ class PriorEngine(object):
             'There is no prior specified in configfile.'
 
     def get_priors(self):
-        """Get prior files.
+        """Get prior data.
+           calls *_get_prior* for all priors in config.
 
-        :returns: dictionary with prior names/filepath as key/value
+        :returns: dictionary with prior names/(state vector,
+                  inverse covariance matrix) as key/value
         :rtype: dictionary
 
         """
@@ -65,9 +75,10 @@ class PriorEngine(object):
              .format(self.configfile))
 
     def _get_prior(self, p):
-        """Called by get_priors for all prior keys in config.
-           For specific prior (e.g. sm_clim) get prior info and calculate
-           prior.
+        """
+        Called by get_priors for all prior keys in config.
+        For specific prior (e.g. sm_clim) get prior info and calculate
+        prior.
 
         :param p: prior name (e.g. sm_clim)
         :returns: prior file
@@ -119,7 +130,7 @@ class Prior(object):
         assert False, 'Should be implemented in child class'
 
     def concat_priors(self):
-        """concat individual priors and covaranc matrices
+        """concat individual priors and covariance matrices
 
         :returns:
         :rtype:
@@ -177,7 +188,8 @@ class SoilMoisturePrior(Prior):
 
     def _get_climatology_file(self):
         """
-        Load pre-processed climatology into self.clim_data
+        Load pre-processed climatology into self.clim_data.
+        Part of prior._calc_climatological_prior().
 
         """
         assert (self.config['Prior']['priors']['sm_clim']
@@ -236,16 +248,23 @@ class SoilMoisturePrior(Prior):
         # sm_area_std = np.std(sm_area, axis=(1, 2))
         # sm_area_mean = np.mean(sm_area, axis=(1, 2))
 
+        # TODO Respect spatial resolution in config file.
+        #      Adjust result accordingly.
+
         # print(sm_area)
         self.clim = sm_area
         self.std = sm_area_std
 
     def _calc_climatological_prior(self):
         """
-        Calculate climatological prior
+        Calculate climatological prior.
+        Reads climatological file and extracts proper values for given
+        timespan and -interval.
+        Then converts the means and stds to state vector and covariance
+        matrices.
 
-        :returns: filepath to temp prior file
-        :rtype: str
+        :returns: state vector and covariance matrix
+        :rtype: tuple
 
         """
         self._get_climatology_file()

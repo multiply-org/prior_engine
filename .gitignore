@@ -2,4 +2,11 @@
 .idea/
 *.egg-info/
 *.pyc
+<<<<<<< HEAD
 .cache/
+=======
+
+# emacs temp files
+.#*
+.cache
+>>>>>>> upstream/master

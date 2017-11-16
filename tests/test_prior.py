@@ -1,35 +1,63 @@
-import unittest
-import sys
+# import sys
 import os
+import pytest
+from nose.tools import with_setup
+from multiply_prior_engine import PriorEngine, SoilMoisturePrior
 
-import tempfile
+def test_priorengine_init():
+    P = PriorEngine(config='../tests/test_config_prior.yml')
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + os.sep + '..' )
-from multiply_prior_engine import SoilMoisturePrior, RoughnessPrior
-
-class TestPrior(unittest.TestCase):
-
-    def gen_file(self, s):
-        os.system('touch ' + s)
-    
-    def test_sm_prior(self):
-        S = SoilMoisturePrior(ptype='climatology')
-
-    def test_calc(self):
-        S = SoilMoisturePrior(ptype='climatology')
-        S.calc()
-        print S.file
-        self.assertTrue(os.path.exists(S.file))
+    assert P.configfile is not None
+    assert type(P.configfile) is str
+    assert type(P.priors) is dict
 
 
-    def test_roughness(self):
-        lut_file = tempfile.mktemp(suffix='.lut')
-        lc_file = tempfile.mktemp(suffix='.nc')
-        self.gen_file(lut_file)
-        self.gen_file(lc_file)
-        P = RoughnessPrior(ptype='climatology', lut_file=lut_file, lc_file=lc_file)
-
-        P.calc()
+def test_priorengine_get_priors():
+    P = PriorEngine(config='../tests/test_config_prior.yml')
+    assert type(P.get_priors()) is dict
 
 
+def test_sm_prior_init():
+    with pytest.raises(AssertionError,
+                       message=("Expecting AssertionError \
+                                --> no config specified")):
+        SoilMoisturePrior()
 
+
+def test_sm_prior_no_ptype():
+    with pytest.raises(AssertionError,
+                       message=("Expecting AssertionError \
+                                --> no config specified")):
+        SoilMoisturePrior()
+
+
+def test_sm_prior_invalid_ptype():
+    with pytest.raises(AssertionError,
+                       message=("Expecting AssertionError \
+                                --> no config specified")):
+        SoilMoisturePrior(ptype='climatologi')
+
+
+def test_calc_config():
+    P = PriorEngine(config='../tests/test_config_prior.yml')
+    S = SoilMoisturePrior(config=P.config,
+                          ptype='climatology')
+    assert type(S.config) is dict
+
+
+def test_calc_output():
+    P = PriorEngine(config='../tests/test_config_prior.yml')
+    S = SoilMoisturePrior(config=P.config,
+                          ptype='climatology')
+    S.calc()
+    assert os.path.exists(S.file)
+
+
+# def test_roughness():
+#     lut_file = tempfile.mktemp(suffix='.lut')
+#     lc_file = tempfile.mktemp(suffix='.nc')
+#     gen_file(lut_file)
+#     gen_file(lc_file)
+#     P = RoughnessPrior(ptype='climatology',
+#                        lut_file=lut_file,
+#                        lc_file=lc_file)

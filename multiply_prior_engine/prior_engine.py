@@ -205,34 +205,37 @@ class SoilMoisturePrior(Prior):
         self.clim_data = Dataset(self.config['Prior']['priors']['sm_clim']
                                  ['climatology_file'])
 
-        # fd, path = tempfile.mkstemp()
-        # os.write(fd, 'tempfile')
-        # os.close(fd)
-
     def _extract_climatology(self):
         """
-        Extract climatology values for ROI
+        Extract climatology values for ROI.
+        Part of _clac_climatological_prior().
+
         """
         clim = self.clim_data.variables['sm'][:]
         std = self.clim_data.variables['sm_stdev'][:]
         lats = self.clim_data.variables['lat'][:]
         lons = self.clim_data.variables['lon'][:]
 
-        # TODO wonky ROI loading
-        ROI_ = (self.config['General'][0]['roi']
-                .split(' ', 1)[1]
-                .replace(' ', ''))
+        ROI_wkt = shapely.wkt.loads(self.config['General']['roi'])
 
-        # make string a tuple
-        ROI = ast.literal_eval(ROI_)
+        # minx, miny, maxx, maxy:
+        minx, miny, maxx, maxy = ROI_wkt.bounds
+        ROI = [(minx, miny), (maxx, maxy)]
 
         # TODO insert check for ROI bounds:
         # if POI[0] < np.amin(lats) or POI[0] > np.amax(lats) or\
         #    POI[1] < np.amin(lons) or POI[1] > np.amax(lons):
         #     raise ValueError("POI's latitude and longitude out of bounds.")
+
+        # stack all raveled lats and lons from climatology
+        # combined_LAT_LON results in e.g.
+        # [[ 34.625 -10.875]
+        #  [ 34.625 -10.625]
+        #  [ 34.625 -10.375]...]
         combined_LAT_LON = np.dstack([lats.ravel(), lons.ravel()])[0]
         mytree = spatial.cKDTree(combined_LAT_LON)
         idx, idy = [], []
+        # for all coordinate pairs in ROI search indexes in combined_LAT_LON:
         for i in range(len(ROI)):
             dist, indexes = mytree.query(ROI[i])
             x, y = tuple(combined_LAT_LON[indexes])
@@ -277,21 +280,23 @@ class SoilMoisturePrior(Prior):
         # TODO limit to months
 
         # date_format = ('%Y-%m-%d')
-        s = self.config['General'][1]['start_time']
-        e = self.config['General'][2]['end_time']
+        s = self.config['General']['start_time']
+        e = self.config['General']['end_time']
         t_span = (e-s).days + 1
         # print(t_span)
 
+        # create list of month ids for every queried point in time:
         idt = [(s+datetime.timedelta(x)).month
                for x in range(t_span)]
         # idt_unique = list(set(idt))
 
-        # create nd array with correct dimensions
+        # create nd array with correct dimensions (time, x, y):
         p = np.ndarray(shape=(len(idt), self.clim.shape[1],
                               self.clim.shape[2]),
                        dtype=float)
         std = p.copy()
 
+        # read correspending data into mean and std arrays:
         for i in range(len(idt)):
             p[i, :, :] = self.clim[idt[i]-1, :, :]
             std[i, :, :] = self.std[idt[i]-1, :, :]

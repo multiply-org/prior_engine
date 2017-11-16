@@ -60,11 +60,16 @@ class PriorEngine(object):
         for p in self.priors.keys():
             res.update({p: self._get_prior(p)})
 
-        return res
+        # temp fix:
+        return res['sm_clim']
+
+        # TODO return concatenated priors, something like
+        # return list(zip(res.values()))
 
     def _get_config(self):
-        """Load confing from self.configfile.
-           writes to self.config.
+        """
+        Load confing from self.configfile.
+        writes to self.config.
 
         :returns: nothing
         """
@@ -109,11 +114,9 @@ class PriorEngine(object):
             assert False, 'Invalid prior'
 
         # calculate prior
-        # prior, C_prior_inv = prior.calc()
+        # state_vector, c_prior_inv = prior.calc()
 
-        prior.calc()
-        # return filename where prior file is located
-        return prior.file
+        return prior.calc()
 
 
 class Prior(object):
@@ -180,7 +183,8 @@ class SoilMoisturePrior(Prior):
         :returns: nothing
         """
         if self.ptype == 'climatology':
-            self.file = self._calc_climatological_prior()
+            # self.prior = self._calc_climatological_prior()
+            return self._calc_climatological_prior()
         # elif self.ptype == 'recent':
             # self.file = self._get_recent_sm_proxy()
         else:
@@ -297,30 +301,19 @@ class SoilMoisturePrior(Prior):
         sm_unc = (std/np.mean(self.clim))
         # inverse covariance matrix
         diagon = (1./sm_unc)
+        # print(diagon.shape)
 
-        def create_sparse_matrix(a):
-            return sp.sparse.lil_matrix(np.eye(t_span)*a)
+        # def create_sparse_matrix(a):
+        #     return sp.sparse.lil_matrix(np.eye(t_span)*a)
 
-        C_prior_inv = np.apply_along_axis(create_sparse_matrix, 0, diagon)
-
-        # print(C_prior_inv.shape, C_prior_inv)
+        # C_prior_inv = np.apply_along_axis(create_sparse_matrix, 0, diagon)
+        C_prior_inv = diagon
 
         # DISCUSS TODO
         # rather write to self.'prior_key' to easy concatenate afterwards
         # via concat_priors.
 
-        # return p, C_prior_inv
-
-        # ------------------------
-        # Create temp prior for now
-        prior = np.array('')
-        fd, path = tempfile.mkstemp()
-        os.write(fd, prior)
-        os.close(fd)
-
-        # return prior.file
-        # self.file = path
-        return path
+        return p, C_prior_inv
 
     def _get_recent_sm_proxy(self):
         assert False, "recent sm proxy not implemented"

@@ -116,6 +116,26 @@ class PriorEngine(object):
 
         return prior.calc()
 
+    def _concat_priors(self, prior_dict):
+        """ Concatenate individual state vectors and covariance matrices
+        for sm, veg, ..
+
+        :returns: dictionary with keys beeing superordinate prior name (sm, ..)
+        :rtype: dictionary
+
+        """
+        # input: dictionary from getpriors
+        # all_priors = np.concatenate((p, std), axis=0)
+        # all_cov = np.concatenate((p, std), axis=0)
+        res_concat = {}
+        for key in self.config['Prior'].keys():
+            if key == 'priors':
+                continue
+            temp_dict = {k: v for (k, v) in prior_dict.items() if key in k}
+            res_concat.update({key: list(zip(temp_dict.values()))})
+
+        return res_concat
+
 
 class Prior(object):
     def __init__(self, **kwargs):

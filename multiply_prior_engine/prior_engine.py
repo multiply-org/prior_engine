@@ -47,8 +47,9 @@ class PriorEngine(object):
             'There is no prior specified in configfile.'
 
     def get_priors(self):
-        """Get prior data.
-           calls *_get_prior* for all priors in config.
+        """
+        Get prior data.
+        calls *_get_prior* for all priors in config.
 
         :returns: dictionary with prior names/(state vector,
                   inverse covariance matrix) as key/value
@@ -80,8 +81,7 @@ class PriorEngine(object):
              .format(self.configfile))
 
     def _get_prior(self, p):
-        """
-        Called by get_priors for all prior keys in config.
+        """ Called by get_priors for all prior keys in config.
         For specific prior (e.g. sm_clim) get prior info and calculate
         prior.
 
@@ -132,22 +132,10 @@ class Prior(object):
     def calc(self):
         assert False, 'Should be implemented in child class'
 
-    def concat_priors(self):
-        """concat individual priors and covariance matrices
-
-        :returns:
-        :rtype:
-
-        """
-        # all_priors = np.concatenate((p, std), axis=0)
-        # all_cov = np.concatenate((p, std), axis=0)
-        pass
-
 
 class MapPrior(Prior):
     """
-    prior which is based on a LC map
-    and a LUT
+    Prior which is based on a LC map and a LUT
     """
     def __init__(self, **kwargs):
         """
@@ -172,13 +160,15 @@ class MapPrior(Prior):
 
 class SoilMoisturePrior(Prior):
     """
-    Soil moisture prior generation
+    Soil moisture prior class.
+    Calculation of climatological prior.
     """
     def __init__(self, **kwargs):
         super(SoilMoisturePrior, self).__init__(**kwargs)
 
     def calc(self):
-        """Initialize prior specific calculation
+        """
+        Initialize prior specific (climatological, ...) calculation.
 
         :returns: nothing
         """
@@ -358,7 +348,8 @@ class RoughnessPrior(MapPrior):
 
 
 def get_mean_state_vector(config_file):
-    """return state vector and inverse covariance matrix for priors.
+    """
+    Return state vector and inverse covariance matrix for priors.
 
     :param config_file: path to config file
     :returns: state vector and inverse covariance matrix

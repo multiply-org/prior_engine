@@ -57,15 +57,11 @@ class PriorEngine(object):
 
         """
         res = {}
-        # for p in self.priors:
-        for p in self.priors.keys():
+        # for p in self.priors.keys():
+        for p in self.priors:
             res.update({p: self._get_prior(p)})
 
-        # temp fix:
-        return res['sm_clim']
-
-        # TODO return concatenated priors, something like
-        # return list(zip(res.values()))
+        return self._concat_priors(res)
 
     def _get_config(self):
         """
@@ -91,11 +87,13 @@ class PriorEngine(object):
 
         """
         if p[:2] == 'sm':
-            assert self.priors[p]['type'] is not None, \
+            # assert self.priors[p]['type'] is not None, \
+            ptype = self.config['Prior']['sm'][p]['type']
+            assert ptype is not None, \
                 'No prior type for soil moisture prior specified!'
 
             # pass config and prior type to subclass
-            prior = SoilMoisturePrior(ptype=self.priors[p]['type'],
+            prior = SoilMoisturePrior(ptype=ptype,
                                       config=self.config)
             # for ptype in self.priors.sm.type:
             #     try:
@@ -186,13 +184,13 @@ class SoilMoisturePrior(Prior):
         Part of prior._calc_climatological_prior().
 
         """
-        assert (self.config['Prior']['priors']['sm_clim']
+        assert (self.config['Prior']['sm']['sm_clim']
                            ['climatology_file']) is not None,\
             'There is no climatology file specified in the config!'
 
         # use xarray:
         # self.clim_data = xr.open_dataset(self.config['priors']['sm_clim']
-        self.clim_data = Dataset(self.config['Prior']['priors']['sm_clim']
+        self.clim_data = Dataset(self.config['Prior']['sm']['sm_clim']
                                  ['climatology_file'])
 
     def _extract_climatology(self):

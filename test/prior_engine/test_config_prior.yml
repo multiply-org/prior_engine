@@ -1,12 +1,12 @@
 General:
-    roi: POLYGON ((48.0 11.3, 48.2 11.300, 48.1 11.1, 48.0 11, 48.0 11.3))
-    start_time: 2017-01-01
-    end_time: 2017-12-31
-    time_interval: 1 # 1 day
-    spatial_resolution : 10 # metres
-    state_mask: /path/to/my/state_mask.tif # Or shape?
-    output_directory_root: /some/where/
-    # output_prefix: my_test_33	
+    - roi: POLYGON ( (0, 0), (0,1 )) # blahblah
+    - start_time: 2017-01-01
+    - end_time: 2017-12-31
+    - time_interval: 1 # 1 day
+    - spatial_resolution : 10 # metres
+    - state_mask: /path/to/my/state_mask.tif # Or shape?
+    - output_directory_root: /some/where/
+    # - output_prefix: my_test_33	
 
 Inference: # inference config
     - parameters:

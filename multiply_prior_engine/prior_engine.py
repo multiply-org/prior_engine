@@ -47,8 +47,9 @@ class PriorEngine(object):
             'There is no prior specified in configfile.'
 
     def get_priors(self):
-        """Get prior data.
-           calls *_get_prior* for all priors in config.
+        """
+        Get prior data.
+        calls *_get_prior* for all priors in config.
 
         :returns: dictionary with prior names/(state vector,
                   inverse covariance matrix) as key/value
@@ -56,15 +57,11 @@ class PriorEngine(object):
 
         """
         res = {}
-        # for p in self.priors:
-        for p in self.priors.keys():
+        # for p in self.priors.keys():
+        for p in self.priors:
             res.update({p: self._get_prior(p)})
 
-        # temp fix:
-        return res['sm_clim']
-
-        # TODO return concatenated priors, something like
-        # return list(zip(res.values()))
+        return self._concat_priors(res)
 
     def _get_config(self):
         """
@@ -80,8 +77,7 @@ class PriorEngine(object):
              .format(self.configfile))
 
     def _get_prior(self, p):
-        """
-        Called by get_priors for all prior keys in config.
+        """ Called by get_priors for all prior keys in config.
         For specific prior (e.g. sm_clim) get prior info and calculate
         prior.
 
@@ -91,11 +87,13 @@ class PriorEngine(object):
 
         """
         if p[:2] == 'sm':
-            assert self.priors[p]['type'] is not None, \
+            # assert self.priors[p]['type'] is not None, \
+            ptype = self.config['Prior']['sm'][p]['type']
+            assert ptype is not None, \
                 'No prior type for soil moisture prior specified!'
 
             # pass config and prior type to subclass
-            prior = SoilMoisturePrior(ptype=self.priors[p]['type'],
+            prior = SoilMoisturePrior(ptype=ptype,
                                       config=self.config)
             # for ptype in self.priors.sm.type:
             #     try:
@@ -116,7 +114,27 @@ class PriorEngine(object):
         # calculate prior
         # state_vector, c_prior_inv = prior.calc()
 
-        return prior.calc()
+        return prior.initialize()
+
+    def _concat_priors(self, prior_dict):
+        """ Concatenate individual state vectors and covariance matrices
+        for sm, veg, ..
+
+        :returns: dictionary with keys beeing superordinate prior name (sm, ..)
+        :rtype: dictionary
+
+        """
+        # input: dictionary from getpriors
+        # all_priors = np.concatenate((p, std), axis=0)
+        # all_cov = np.concatenate((p, std), axis=0)
+        res_concat = {}
+        for key in self.config['Prior'].keys():
+            if key == 'priors':
+                continue
+            temp_dict = {k: v for (k, v) in prior_dict.items() if key in k}
+            res_concat.update({key: list(zip(temp_dict.values()))})
+
+        return res_concat
 
 
 class Prior(object):
@@ -129,25 +147,20 @@ class Prior(object):
         assert self.ptype is not None, 'Invalid prior type'
         assert self.config is not None, 'No config available.'
 
-    def calc(self):
-        assert False, 'Should be implemented in child class'
+    def initialize(self):
+        """Initialiszation routine. Should be implemented in child class.
+        Prior calculation is initialized here.
 
-    def concat_priors(self):
-        """concat individual priors and covariance matrices
-
-        :returns:
-        :rtype:
+        :returns: 
+        :rtype: 
 
         """
-        # all_priors = np.concatenate((p, std), axis=0)
-        # all_cov = np.concatenate((p, std), axis=0)
-        pass
+        assert False, 'Should be implemented in child class'
 
 
 class MapPrior(Prior):
     """
-    prior which is based on a LC map
-    and a LUT
+    Prior which is based on a LC map and a LUT
     """
     def __init__(self, **kwargs):
         """
@@ -172,13 +185,15 @@ class MapPrior(Prior):
 
 class SoilMoisturePrior(Prior):
     """
-    Soil moisture prior generation
+    Soil moisture prior class.
+    Calculation of climatological prior.
     """
     def __init__(self, **kwargs):
         super(SoilMoisturePrior, self).__init__(**kwargs)
 
-    def calc(self):
-        """Initialize prior specific calculation
+    def initialize(self):
+        """
+        Initialize prior specific (climatological, ...) calculation.
 
         :returns: nothing
         """
@@ -196,13 +211,13 @@ class SoilMoisturePrior(Prior):
         Part of prior._calc_climatological_prior().
 
         """
-        assert (self.config['Prior']['priors']['sm_clim']
+        assert (self.config['Prior']['sm']['sm_clim']
                            ['climatology_file']) is not None,\
             'There is no climatology file specified in the config!'
 
         # use xarray:
         # self.clim_data = xr.open_dataset(self.config['priors']['sm_clim']
-        self.clim_data = Dataset(self.config['Prior']['priors']['sm_clim']
+        self.clim_data = Dataset(self.config['Prior']['sm']['sm_clim']
                                  ['climatology_file'])
 
     def _extract_climatology(self):
@@ -358,7 +373,8 @@ class RoughnessPrior(MapPrior):
 
 
 def get_mean_state_vector(config_file):
-    """return state vector and inverse covariance matrix for priors.
+    """
+    Return state vector and inverse covariance matrix for priors.
 
     :param config_file: path to config file
     :returns: state vector and inverse covariance matrix

@@ -19,6 +19,10 @@ Inference: # inference config
 
 Prior:
   priors:
+    - sm_clim
+    # - sm_recent
+    # - veg_pft
+  sm:
     sm_clim:
       type: climatology
       climatology_file: ../aux_data/CCI_SM_climatology_eur_merged_inv.nc
@@ -31,12 +35,11 @@ Prior:
     #     model:
     #         - API
     #         - other
-
+  # veg:
     # veg_pft:
     #   type: pft
     #   database: /aux_data/some_DB
     # veg_spec:
     #   type: species
     #   database: /user_data/some_DB
-  add_config:
     # - 

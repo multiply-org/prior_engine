@@ -114,7 +114,7 @@ class PriorEngine(object):
         # calculate prior
         # state_vector, c_prior_inv = prior.calc()
 
-        return prior.calc()
+        return prior.initialize()
 
     def _concat_priors(self, prior_dict):
         """ Concatenate individual state vectors and covariance matrices
@@ -147,7 +147,14 @@ class Prior(object):
         assert self.ptype is not None, 'Invalid prior type'
         assert self.config is not None, 'No config available.'
 
-    def calc(self):
+    def initialize(self):
+        """Initialiszation routine. Should be implemented in child class.
+        Prior calculation is initialized here.
+
+        :returns: 
+        :rtype: 
+
+        """
         assert False, 'Should be implemented in child class'
 
 
@@ -184,7 +191,7 @@ class SoilMoisturePrior(Prior):
     def __init__(self, **kwargs):
         super(SoilMoisturePrior, self).__init__(**kwargs)
 
-    def calc(self):
+    def initialize(self):
         """
         Initialize prior specific (climatological, ...) calculation.
 

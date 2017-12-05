@@ -385,4 +385,4 @@ def get_mean_state_vector(config_file):
 
 
 if __name__ == '__main__':
-    get_mean_state_vector(config_file="./sample_config_prior.yml")
+    print(get_mean_state_vector(config_file="./sample_config_prior.yml"))

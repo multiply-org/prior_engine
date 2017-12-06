@@ -22,6 +22,12 @@ sdist/
 var/
 wheels/
 *.egg-info/
+
+*.pyc
+.cache/
+# emacs temp files
+.#*
+
 .installed.cfg
 *.egg
 

@@ -1,12 +1,12 @@
 General:
-    - roi: POLYGON ( (0, 0), (0,1 )) # blahblah
-    - start_time: 2017-01-01
-    - end_time: 2017-12-31
-    - time_interval: 1 # 1 day
-    - spatial_resolution : 10 # metres
-    - state_mask: /path/to/my/state_mask.tif # Or shape?
-    - output_directory_root: /some/where/
-    # - output_prefix: my_test_33	
+    roi: POLYGON ((48.0 11.3, 48.2 11.300, 48.1 11.1, 48.0 11, 48.0 11.3))
+    start_time: 2017-01-01
+    end_time: 2017-12-31
+    time_interval: 1 # 1 day
+    spatial_resolution : 10 # metres
+    state_mask: /path/to/my/state_mask.tif # Or shape?
+    output_directory_root: /some/where/
+    # output_prefix: my_test_33	
 
 Inference: # inference config
     - parameters:
@@ -19,6 +19,10 @@ Inference: # inference config
 
 Prior:
   priors:
+    - sm_clim
+    # - sm_recent
+    # - veg_pft
+  sm:
     sm_clim:
       type: climatology
       climatology_file: ../aux_data/CCI_SM_climatology_eur_merged_inv.nc
@@ -31,12 +35,11 @@ Prior:
     #     model:
     #         - API
     #         - other
-
+  # veg:
     # veg_pft:
     #   type: pft
     #   database: /aux_data/some_DB
     # veg_spec:
     #   type: species
     #   database: /user_data/some_DB
-  add_config:
     # - 

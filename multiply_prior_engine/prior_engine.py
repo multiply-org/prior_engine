@@ -82,7 +82,7 @@ class PriorEngine(object):
         prior.
 
         :param p: prior name (e.g. sm_clim)
-        :returns: prior file
+        :returns: prior data
         :rtype:
 
         """
@@ -195,7 +195,7 @@ class SoilMoisturePrior(Prior):
         """
         Initialize prior specific (climatological, ...) calculation.
 
-        :returns: nothing
+        :returns: p, C_prior_inv
         """
         if self.ptype == 'climatology':
             # self.prior = self._calc_climatological_prior()

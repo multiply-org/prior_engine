@@ -88,7 +88,7 @@ class PriorEngine(object):
         """
         if p[:2] == 'sm':
             # assert self.priors[p]['type'] is not None, \
-            ptype = self.config['Prior']['sm'][p]['type']
+            ptype = self.config['Prior']['priors'][p]['type']
             assert ptype is not None, \
                 'No prior type for soil moisture prior specified!'
 
@@ -120,7 +120,7 @@ class PriorEngine(object):
         """ Concatenate individual state vectors and covariance matrices
         for sm, veg, ..
 
-        :returns: dictionary with keys beeing superordinate prior name (sm, ..)
+        :returns: dictionary with keys being superordinate prior name (sm, ..)
         :rtype: dictionary
 
         """
@@ -128,9 +128,9 @@ class PriorEngine(object):
         # all_priors = np.concatenate((p, std), axis=0)
         # all_cov = np.concatenate((p, std), axis=0)
         res_concat = {}
-        for key in self.config['Prior'].keys():
-            if key == 'priors':
-                continue
+        for key in self.config['Prior']['priors'].keys():
+            # if key == 'priors':
+            #     continue
             temp_dict = {k: v for (k, v) in prior_dict.items() if key in k}
             res_concat.update({key: list(zip(temp_dict.values()))})
 
@@ -211,13 +211,13 @@ class SoilMoisturePrior(Prior):
         Part of prior._calc_climatological_prior().
 
         """
-        assert (self.config['Prior']['sm']['sm_clim']
-                           ['climatology_file']) is not None,\
+        climatology_file = self.config['Prior']['priors']['sm_clim']['climatology_file']
+        assert climatology_file is not None,\
             'There is no climatology file specified in the config!'
 
         # use xarray:
         # self.clim_data = xr.open_dataset(self.config['priors']['sm_clim']
-        self.clim_data = Dataset(self.config['Prior']['sm']['sm_clim']
+        self.clim_data = Dataset(self.config['Prior']['priors']['sm_clim']
                                  ['climatology_file'])
 
     def _extract_climatology(self):

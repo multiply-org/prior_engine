@@ -61,11 +61,12 @@ class PriorEngine(object):
         for p in self.priors:
             res.update({p: self._get_prior(p)})
 
-        return self._concat_priors(res)
+        # return self._concat_priors(res)
+        return res
 
     def _get_config(self):
         """
-        Load confing from self.configfile.
+        Load config from self.configfile.
         writes to self.config.
 
         :returns: nothing
@@ -131,6 +132,8 @@ class PriorEngine(object):
         for key in self.config['Prior'].keys():
             if key == 'priors':
                 continue
+            # concatenate all values v for keys k if k contains key from
+            # self.config Prior keys('sm')
             temp_dict = {k: v for (k, v) in prior_dict.items() if key in k}
             res_concat.update({key: list(zip(temp_dict.values()))})
 
@@ -297,12 +300,13 @@ class SoilMoisturePrior(Prior):
         # date_format = ('%Y-%m-%d')
         s = self.config['General']['start_time']
         e = self.config['General']['end_time']
+        interval = self.config['General']['time_interval']
         t_span = (e-s).days + 1
         # print(t_span)
 
         # create list of month ids for every queried point in time:
-        idt = [(s+datetime.timedelta(x)).month
-               for x in range(t_span)]
+        idt = [(s+(datetime.timedelta(int(x)))).month
+               for x in np.arange(0, t_span, interval)]
         # idt_unique = list(set(idt))
 
         # create nd array with correct dimensions (time, x, y):
@@ -385,4 +389,5 @@ def get_mean_state_vector(config_file):
 
 
 if __name__ == '__main__':
-    print(get_mean_state_vector(config_file="./sample_config_prior.yml"))
+    print((get_mean_state_vector(config_file="./sample_config_prior.yml")))
+    # print((get_mean_state_vector(config_file="./sample_config_prior.yml"))['sm_clim'][0].shape)

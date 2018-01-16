@@ -2,26 +2,23 @@
 # -*- coding: utf-8 -*-
 
 """
-    Soil Moisture Prior Engine for MULTIPLY.
+    Prior Engine for MULTIPLY.
 
-    Copyright (C) 2017  Thomas Ramsauer
+    Copyright (C) 2018  Thomas Ramsauer
 """
 
 
 import datetime
-import os
-import tempfile
-
+from dateutil.parser import parse
 import numpy as np
-import shapely
-import shapely.wkt
 import yaml
-from netCDF4 import Dataset
-from scipy import spatial
 
+if __name__ == '__main__':
+    from soilmoisture_prior import RoughnessPrior, SoilMoisturePrior
+    # from vegetation_prior import vegetation_prior
 
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]
-__copyright__ = "Copyright 2017, Thomas Ramsauer"
+__copyright__ = "Copyright 2018, Thomas Ramsauer"
 __credits__ = ["Alexander Löw", "Thomas Ramsauer"]
 __license__ = "GPLv3"
 __version__ = "0.0.1"
@@ -31,20 +28,31 @@ __status__ = "Prototype"
 
 
 class PriorEngine(object):
+    """
+    Prior Engine for MULTIPLY.
+
+    holds prior initialization methods (e.g. config loading).
+    calls specific submodules (soilmoisture_prior, vegetation_prior, ..)
+    """
 
     def __init__(self, **kwargs):
         self.configfile = kwargs.get('config', None)
+        self.date = kwargs.get('date', None)
+        self.variables = kwargs.get('variables', None)
+        # self.priors = self.config['Prior']['priors']
+
         self._get_config()
-        # self.priors = kwargs.get('priors', None)
-        self.priors = self.config['Prior']['priors']
-        # print(self.priors)
         self._check()
 
     def _check(self):
         assert self.config is not None, \
             'Could not load configfile.'
-        assert self.priors is not None, \
-            'There is no prior specified in configfile.'
+        # assert self.priors is not None, \
+        #     'There is no prior specified in configfile.'
+        assert self.date is not None, \
+            'There is no date passed to the Prior Engine.'
+        assert self.variables is not None, \
+            'There are no variables for prior retrieval specified/passed on.'
 
     def get_priors(self):
         """
@@ -57,9 +65,8 @@ class PriorEngine(object):
 
         """
         res = {}
-        # for p in self.priors.keys():
-        for p in self.priors:
-            res.update({p: self._get_prior(p)})
+        for var in self.variables:
+            res.update({var: self._get_prior(var)})
 
         # return self._concat_priors(res)
         return res
@@ -77,45 +84,46 @@ class PriorEngine(object):
             ('There is no prior config information in {}'
              .format(self.configfile))
 
-    def _get_prior(self, p):
-        """ Called by get_priors for all prior keys in config.
-        For specific prior (e.g. sm_clim) get prior info and calculate
-        prior.
+    def _get_prior(self, var):
+        """ Called by get_priors for all variables to be inferred.\
+        For specific variable/prior (e.g. sm climatology) get prior\
+        info and calculate/provide prior.
 
-        :param p: prior name (e.g. sm_clim)
-        :returns: prior file
-        :rtype:
+        :param var: prior name (e.g. sm, lai, ..)
+        :returns: -
+        :rtype: -
 
         """
-        if p[:2] == 'sm':
-            # assert self.priors[p]['type'] is not None, \
-            ptype = self.config['Prior']['sm'][p]['type']
+        # TODO ad correct sub routines from Joris
+        # subengine dictionary contains var: subroutine
+        subengine = {
+            'sm': SoilMoisturePrior,
+            'dielectric_const': '',
+            'roughness': RoughnessPrior,
+            # 'lai': vegetation_prior
+        }
+        var_res = {}
+        assert var in self.config['Prior'].keys(), \
+            'Variable to be inferred not in config.'
+        assert var in subengine,\
+            'Variable to be inferred not in config.'
+        print('for var *{}* getting'.format(var))
+
+        # fill variable specific dictionary with all priors (clim, recent, ..)
+        # TODO concatenation necessary?
+        for ptype in self.config['Prior'][var].keys():
+            print('  '+ptype)
             assert ptype is not None, \
                 'No prior type for soil moisture prior specified!'
-
-            # pass config and prior type to subclass
-            prior = SoilMoisturePrior(ptype=ptype,
-                                      config=self.config)
-            # for ptype in self.priors.sm.type:
-            #     try:
-            #         prior = SoilMoisturePrior(ptype=self.priors[p][ptype])
-            #     except:
-            #         assert False, 'SoilMoisturePrior generation failed.'
-        elif p == 'vegetation':
-            assert False, \
-                ('The veg prior should provide cross-correlated prior'
-                 'information of vegetation characteristics')
-        elif p == 'roughness':
-            prior = RoughnessPrior(ptype=self.priors[p]['type'],
-                                   lc_file=self.config.landcover,
-                                   lut_file=self.config.luts['roughness'])
-        else:
-            assert False, 'Invalid prior'
-
-        # calculate prior
-        # state_vector, c_prior_inv = prior.calc()
-
-        return prior.initialize()
+            # pass conig and prior type to subclass/engine
+            try:
+                prior = subengine[var](ptype=ptype, config=self.config,
+                                       date=self.date)
+            except:
+                assert False, 'Sub-engine for {} not implemented'.format(var)
+            var_res.update({ptype: prior.initialize()})
+        print('prior.')
+        return var_res
 
     def _concat_priors(self, prior_dict):
         """ Concatenate individual state vectors and covariance matrices
@@ -144,159 +152,25 @@ class Prior(object):
     def __init__(self, **kwargs):
         self.ptype = kwargs.get('ptype', None)
         self.config = kwargs.get('config', None)
+        self.date = kwargs.get('date', None)
         self._check()
+        self._create_time_vector()
+        self._create_month_id()
 
     def _check(self):
         assert self.ptype is not None, 'Invalid prior type'
         assert self.config is not None, 'No config available.'
 
-    def initialize(self):
-        """Initialiszation routine. Should be implemented in child class.
-        Prior calculation is initialized here.
+    def _create_time_vector(self):
+        """Creates a time vector dependent on start & end time and time interval
+        from config file.
+        A vector containing datetime objects is written to self.time_vector.
+        A vector containing months ids (1-12) for each timestep is written to
+        self.time_vector_months.
 
-        :returns: 
-        :rtype: 
-
+        :returns: -
+        :rtype: -
         """
-        assert False, 'Should be implemented in child class'
-
-
-class MapPrior(Prior):
-    """
-    Prior which is based on a LC map and a LUT
-    """
-    def __init__(self, **kwargs):
-        """
-        Parameters
-        ----------
-        lut_file : str
-            filename of LUT file
-        lc_file : str
-            filename of landcover file
-        """
-        super(MapPrior, self).__init__(**kwargs)
-        self.lut_file = kwargs.get('lut_file', None)
-        assert self.lut_file is not None, 'LUT needs to be provided'
-
-        self.lc_file = kwargs.get('lc_file', None)
-        assert self.lc_file is not None, 'LC file needs to be provided'
-
-        # check that files exist
-        assert os.path.exists(self.lc_file)
-        assert os.path.exists(self.lut_file)
-
-
-class SoilMoisturePrior(Prior):
-    """
-    Soil moisture prior class.
-    Calculation of climatological prior.
-    """
-    def __init__(self, **kwargs):
-        super(SoilMoisturePrior, self).__init__(**kwargs)
-
-    def initialize(self):
-        """
-        Initialize prior specific (climatological, ...) calculation.
-
-        :returns: nothing
-        """
-        if self.ptype == 'climatology':
-            # self.prior = self._calc_climatological_prior()
-            return self._calc_climatological_prior()
-        # elif self.ptype == 'recent':
-            # self.file = self._get_recent_sm_proxy()
-        else:
-            assert False, '{} prior for sm not implemented'.format(self.ptype)
-
-    def _get_climatology_file(self):
-        """
-        Load pre-processed climatology into self.clim_data.
-        Part of prior._calc_climatological_prior().
-
-        """
-        assert (self.config['Prior']['sm']['sm_clim']
-                           ['climatology_file']) is not None,\
-            'There is no climatology file specified in the config!'
-
-        # use xarray:
-        # self.clim_data = xr.open_dataset(self.config['priors']['sm_clim']
-        self.clim_data = Dataset(self.config['Prior']['sm']['sm_clim']
-                                 ['climatology_file'])
-
-    def _extract_climatology(self):
-        """
-        Extract climatology values for ROI.
-        Part of _clac_climatological_prior().
-
-        """
-        clim = self.clim_data.variables['sm'][:]
-        std = self.clim_data.variables['sm_stdev'][:]
-        lats = self.clim_data.variables['lat'][:]
-        lons = self.clim_data.variables['lon'][:]
-
-        ROI_wkt = shapely.wkt.loads(self.config['General']['roi'])
-
-        # minx, miny, maxx, maxy:
-        minx, miny, maxx, maxy = ROI_wkt.bounds
-        ROI = [(minx, miny), (maxx, maxy)]
-
-        # TODO insert check for ROI bounds:
-        # if POI[0] < np.amin(lats) or POI[0] > np.amax(lats) or\
-        #    POI[1] < np.amin(lons) or POI[1] > np.amax(lons):
-        #     raise ValueError("POI's latitude and longitude out of bounds.")
-
-        # stack all raveled lats and lons from climatology
-        # combined_LAT_LON results in e.g.
-        # [[ 34.625 -10.875]
-        #  [ 34.625 -10.625]
-        #  [ 34.625 -10.375]...]
-        combined_LAT_LON = np.dstack([lats.ravel(), lons.ravel()])[0]
-        mytree = spatial.cKDTree(combined_LAT_LON)
-        idx, idy = [], []
-        # for all coordinate pairs in ROI search indexes in combined_LAT_LON:
-        for i in range(len(ROI)):
-            dist, indexes = mytree.query(ROI[i])
-            x, y = tuple(combined_LAT_LON[indexes])
-            idx.append(indexes % clim.shape[2])
-            idy.append(int(np.ceil(indexes / clim.shape[2])))
-
-        # TODO check assignment
-        # print(idx, idy)
-
-        # extract sm data
-        sm_area_ = clim[:, min(idy):max(idy)+1, :]
-        sm_area = sm_area_[:, :, min(idx):max(idx)+1]
-
-        # extract sm stddef data
-        sm_area_std_ = std[:, min(idy):max(idy)+1, :]
-        sm_area_std = sm_area_std_[:, :, min(idx):max(idx)+1]
-        # sm_area_std = np.std(sm_area, axis=(1, 2))
-        # sm_area_mean = np.mean(sm_area, axis=(1, 2))
-
-        # TODO Respect spatial resolution in config file.
-        #      Adjust result accordingly.
-
-        # print(sm_area)
-        self.clim = sm_area
-        self.std = sm_area_std
-
-    def _calc_climatological_prior(self):
-        """
-        Calculate climatological prior.
-        Reads climatological file and extracts proper values for given
-        timespan and -interval.
-        Then converts the means and stds to state vector and covariance
-        matrices.
-
-        :returns: state vector and covariance matrix
-        :rtype: tuple
-
-        """
-        self._get_climatology_file()
-        self._extract_climatology()
-
-        # TODO limit to months
-
         # date_format = ('%Y-%m-%d')
         s = self.config['General']['start_time']
         e = self.config['General']['end_time']
@@ -304,90 +178,53 @@ class SoilMoisturePrior(Prior):
         t_span = (e-s).days + 1
         # print(t_span)
 
+        # create time vector
+
+        self.time_vector = [(s+(datetime.timedelta(int(x))))
+                            for x in np.arange(0, t_span, interval)]
+
         # create list of month ids for every queried point in time:
-        idt = [(s+(datetime.timedelta(int(x)))).month
-               for x in np.arange(0, t_span, interval)]
-        # idt_unique = list(set(idt))
+        idt_months = [(s+(datetime.timedelta(int(x)))).month
+                      for x in np.arange(0, t_span, interval)]
+        self.time_vector_months = idt_months
 
-        # create nd array with correct dimensions (time, x, y):
-        p = np.ndarray(shape=(len(idt), self.clim.shape[1],
-                              self.clim.shape[2]),
-                       dtype=float)
-        std = p.copy()
+    def _create_month_id(self):
+        # assert parsing of self.date is working.
+        assert type(parse(self.date)) is datetime.datetime,\
+            'could not parse date {}'.format(self.date)
+        # parse (dateutil) self.date to create datetime.datetime object
+        self.date = parse(self.date)
+        # get month id/number from self.date
+        self.date_month_id = self.date.month
 
-        # read correspending data into mean and std arrays:
-        for i in range(len(idt)):
-            p[i, :, :] = self.clim[idt[i]-1, :, :]
-            std[i, :, :] = self.std[idt[i]-1, :, :]
+    def initialize(self):
+        """Initialiszation routine. Should be implemented in child class.
+        Prior calculation is initialized here.
 
-        # calculate uncertainty with normalization via coefficient of variation
-        # TODO scale uncertainty
-        sm_unc = (std/np.mean(self.clim))
-        # inverse covariance matrix
-        diagon = (1./sm_unc)
-        # print(diagon.shape)
+        :returns: -
+        :rtype: -
 
-        # def create_sparse_matrix(a):
-        #     return sp.sparse.lil_matrix(np.eye(t_span)*a)
-
-        # C_prior_inv = np.apply_along_axis(create_sparse_matrix, 0, diagon)
-        C_prior_inv = diagon
-
-        # DISCUSS TODO
-        # rather write to self.'prior_key' to easy concatenate afterwards
-        # via concat_priors.
-
-        return p, C_prior_inv
-
-    def _get_recent_sm_proxy(self):
-        assert False, "recent sm proxy not implemented"
-
-
-class RoughnessPrior(MapPrior):
-
-    def __init__(self, **kwargs):
-        super(RoughnessPrior, self).__init__(**kwargs)
-
-    def calc(self):
-        if self.ptype == 'climatology':
-            self._read_lut()
-            self._read_lc()
-            self._map_lut()
-            self.file = self.save()
-        else:
-            assert False
-
-    def _read_lut(self):
-        self.lut = 'abc'
-
-    def _read_lc(self):
-        self.lc = 'efg'
-
-    def _map_lut(self):
         """
-        should do the mapping of s, l, ACL type
-        """
-        self.roughness = self.lut + self.lc
-
-    def save(self):
-        """
-        save mapped roughness data to file
-        """
-        return tempfile.mktemp(suffix='.nc')
+        assert False, 'Should be implemented in child class'
 
 
-def get_mean_state_vector(config_file):
+def get_mean_state_vector(date: str, variables: list,
+                          config: str="./sample_config_prior.yml") -> dict:
     """
     Return state vector and inverse covariance matrix for priors.
 
-    :param config_file: path to config file
-    :returns: state vector and inverse covariance matrix
-    :rtype: dictionary
+    :param date: The date (time?) for which the prior needs to be derived
+    :param variables: A list of variables (sm, lai, roughness, ..)
+    for which priors need to be available
 
+    :return: dictionary with keys being the variables and
+    values being tuples of filenames and bands
     """
-    return PriorEngine(config="./sample_config_prior.yml").get_priors()
+
+    return (PriorEngine(date=date, variables=variables,
+                        config=config)
+            .get_priors())
 
 
 if __name__ == '__main__':
-    print((get_mean_state_vector(config_file="./sample_config_prior.yml")))
-    # print((get_mean_state_vector(config_file="./sample_config_prior.yml"))['sm_clim'][0].shape)
+    print(get_mean_state_vector(date="2017-03-01", variables=['sm']))

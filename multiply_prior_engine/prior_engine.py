@@ -112,16 +112,18 @@ class PriorEngine(object):
         # fill variable specific dictionary with all priors (clim, recent, ..)
         # TODO concatenation necessary?
         for ptype in self.config['Prior'][var].keys():
-            print('  '+ptype)
             assert ptype is not None, \
                 'No prior type for soil moisture prior specified!'
             # pass conig and prior type to subclass/engine
             try:
                 prior = subengine[var](ptype=ptype, config=self.config,
                                        date=self.date)
-            except:
-                assert False, 'Sub-engine for {} not implemented'.format(var)
-            var_res.update({ptype: prior.initialize()})
+                var_res.update({ptype: prior.initialize()})
+                print('  '+ptype)
+            except AssertionError as e:
+                print('[WARNING] Sub-engine for *{}* {} prior not implemented!'
+                      .format(ptype, var))
+                # print(e)
         print('prior.')
         return var_res
 

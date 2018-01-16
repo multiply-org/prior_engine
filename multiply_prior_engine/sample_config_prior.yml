@@ -17,6 +17,14 @@ Inference: # inference config
     - a: identity
     - inflation: 1e3
 
+# Prior section conventions
+
+# - 1. sub-level contains all potential variables (sm, roughness, lai, ..)
+#   which are asked for/being inferred from Orchestrator/Inferrence Engine
+#   and for which prior information is provided.
+# - 2. sub-level contains prior type (ptype). These can be commented out
+#   to be omitted. 
+
 Prior:
   sm:
     climatology:

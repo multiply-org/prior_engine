@@ -18,23 +18,22 @@ Inference: # inference config
     - inflation: 1e3
 
 Prior:
-  priors:
-    - sm_clim
-    # - sm_recent
-    # - veg_pft
   sm:
-    sm_clim:
-      type: climatology
+    climatology:
       climatology_file: ../aux_data/CCI_SM_climatology_eur_merged_inv.nc
-    # sm_recent:
-    #       type: recent
-    # sm_static:
-    #       type: static
-    # sm_dynamic:
+    # dynamic:
     #     type: dynamic
     #     model:
     #         - API
     #         - other
+    # recent:
+    #   aux_data = ...
+    # static:
+    #       type: static
+  lai:
+    climatology:
+      database: ../aux_data/new_geotiff
+    model:
   # veg:
     # veg_pft:
     #   type: pft

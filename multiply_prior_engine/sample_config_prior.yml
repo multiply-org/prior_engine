@@ -28,8 +28,8 @@ Inference: # inference config
 Prior:
   sm:
     climatology:
-      climatology_file: ../aux_data/CCI_SM_climatology_eur_merged_inv.nc
-    # dynamic:
+      climatology_dir: ../aux_data/Climatology/SoilMoisture/
+    dynamic:
     #     type: dynamic
     #     model:
     #         - API

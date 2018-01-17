@@ -20,7 +20,7 @@ import shapely.wkt
 from netCDF4 import Dataset
 from scipy import spatial
 
-import prior_engine
+from prior import Prior
 
 
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]
@@ -33,7 +33,7 @@ __email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
 __status__ = "Prototype"
 
 
-class SoilMoisturePrior(prior_engine.Prior):
+class SoilMoisturePrior(Prior):
     """
     Soil moisture prior class.
     Calculation of climatological prior.
@@ -41,7 +41,7 @@ class SoilMoisturePrior(prior_engine.Prior):
     def __init__(self, **kwargs):
         super(SoilMoisturePrior, self).__init__(**kwargs)
 
-    def initialize(self):
+    def RetrievePrior(self):
         """
         Initialize prior specific (climatological, ...) calculation.
 
@@ -52,15 +52,15 @@ class SoilMoisturePrior(prior_engine.Prior):
             # return self._calc_climatological_prior()
 
             # TODO adjust after creating GeoTiffs
-            self.sm_mean_dir = (self.config['Prior']['sm']['climatology']
-                        ['climatology_mean_dir'])
-            self.sm_unc_dir = (self.config['Prior']['sm']['climatology']
-                        ['climatology_unc_dir'])
-            assert self.sm_mean_dir is not None,\
+            self.sm_clim_dir = (self.config['Prior']['sm']['climatology']
+                        ['climatology_dir'])
+            # self.sm_unc_dir = (self.config['Prior']['sm']['climatology']
+                        # ['climatology_unc_dir'])
+            assert self.sm_clim_dir is not None,\
                 'There is no directory for climatology prior (mean) specified!'
-            assert self.sm_unc_dir is not None,\
-                ('There is no directory for climatology prior (uncertainty)'
-                'specified!')
+            # assert self.sm_unc_dir is not None,\
+            #     ('There is no directory for climatology prior (uncertainty)'
+            #     'specified!')
             return self._provide_prior_files()
 
         elif self.ptype == 'recent':
@@ -154,7 +154,7 @@ class SoilMoisturePrior(prior_engine.Prior):
         """
         self.date
 
-        def _get_files(dir, desc):
+        def _get_files(dir):
             """get filenames of climatological prior files from directory.
 
             :param dir: directory conataining the files (mentioned in config)
@@ -166,8 +166,8 @@ class SoilMoisturePrior(prior_engine.Prior):
             for dir_, _, files in os.walk(dir):
                 for fileName in files:
                     if self.ptype == 'climatology':
-                        pattern = (r"ESA_CCI_SM_CLIM_{}_{}.geotiff$"
-                                   .format(desc, self.date_month_id))
+                        pattern = (r"ESA_CCI_SM_CLIM_{}.geotiff$"
+                                   .format(self.date_month_id))
                     elif self.ptype == 'recent':
                         pattern = (r"recent_prior_{}_{}.geotiff$"
                                    .format(desc, self.date))
@@ -177,8 +177,7 @@ class SoilMoisturePrior(prior_engine.Prior):
                     if re.match(pattern, fileName) is not None:
                         return fileName
 
-        return (_get_files(self.sm_mean_dir, 'mean'),
-                _get_files(self.sm_unc_dir, 'unc'))
+        return (_get_files(self.sm_clim_dir))
 
     def _extract_climatology(self):
         """
@@ -241,7 +240,7 @@ class SoilMoisturePrior(prior_engine.Prior):
         assert False, "recent sm proxy not implemented"
 
 
-class MapPrior(prior_engine.Prior):
+class MapPrior(Prior):
     """
     Prior which is based on a LC map and a LUT
     """

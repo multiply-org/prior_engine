@@ -7,15 +7,10 @@
     Copyright (C) 2018  Thomas Ramsauer
 """
 
-
-import datetime
-from dateutil.parser import parse
-import numpy as np
 import yaml
 
-if __name__ == '__main__':
-    from soilmoisture_prior import RoughnessPrior, SoilMoisturePrior
-    # from vegetation_prior import vegetation_prior
+from soilmoisture_prior import RoughnessPrior, SoilMoisturePrior
+from vegetation_prior import VegetationPrior
 
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]
 __copyright__ = "Copyright 2018, Thomas Ramsauer"
@@ -100,7 +95,7 @@ class PriorEngine(object):
             'sm': SoilMoisturePrior,
             'dielectric_const': '',
             'roughness': RoughnessPrior,
-            # 'lai': vegetation_prior
+            'lai': VegetationPrior
         }
         var_res = {}
         assert var in self.config['Prior'].keys(), \
@@ -123,7 +118,7 @@ class PriorEngine(object):
             try:
                 prior = subengine[var](ptype=ptype, config=self.config,
                                        date=self.date)
-                var_res.update({ptype: prior.initialize()})
+                var_res.update({ptype: prior.RetrievePrior()})
                 print('  '+ptype)
             except AssertionError as e:
                 print('[WARNING] Sub-engine for *{}* {} prior not implemented!'
@@ -153,66 +148,6 @@ class PriorEngine(object):
             res_concat.update({key: list(zip(temp_dict.values()))})
 
         return res_concat
-
-
-class Prior(object):
-    def __init__(self, **kwargs):
-        self.ptype = kwargs.get('ptype', None)
-        self.config = kwargs.get('config', None)
-        self.date = kwargs.get('date', None)
-        self._check()
-        self._create_time_vector()
-        self._create_month_id()
-
-    def _check(self):
-        assert self.ptype is not None, 'Invalid prior type'
-        assert self.config is not None, 'No config available.'
-
-    def _create_time_vector(self):
-        """Creates a time vector dependent on start & end time and time interval
-        from config file.
-        A vector containing datetime objects is written to self.time_vector.
-        A vector containing months ids (1-12) for each timestep is written to
-        self.time_vector_months.
-
-        :returns: -
-        :rtype: -
-        """
-        # date_format = ('%Y-%m-%d')
-        s = self.config['General']['start_time']
-        e = self.config['General']['end_time']
-        interval = self.config['General']['time_interval']
-        t_span = (e-s).days + 1
-        # print(t_span)
-
-        # create time vector
-
-        self.time_vector = [(s+(datetime.timedelta(int(x))))
-                            for x in np.arange(0, t_span, interval)]
-
-        # create list of month ids for every queried point in time:
-        idt_months = [(s+(datetime.timedelta(int(x)))).month
-                      for x in np.arange(0, t_span, interval)]
-        self.time_vector_months = idt_months
-
-    def _create_month_id(self):
-        # assert parsing of self.date is working.
-        assert type(parse(self.date)) is datetime.datetime,\
-            'could not parse date {}'.format(self.date)
-        # parse (dateutil) self.date to create datetime.datetime object
-        self.date = parse(self.date)
-        # get month id/number from self.date
-        self.date_month_id = self.date.month
-
-    def initialize(self):
-        """Initialiszation routine. Should be implemented in child class.
-        Prior calculation is initialized here.
-
-        :returns: -
-        :rtype: -
-
-        """
-        assert False, 'Should be implemented in child class'
 
 
 def get_mean_state_vector(date: str, variables: list,

@@ -21,7 +21,7 @@ Prior:
   priors:
     sm_clim:
       type: climatology
-      climatology_file: ../aux_data/CCI_SM_climatology_eur_merged_inv.nc
+      climatology_file: ./aux_data/CCI_SM_climatology_eur_merged_inv.nc
     # sm_recent:
     #       type: recent
     # sm_static:

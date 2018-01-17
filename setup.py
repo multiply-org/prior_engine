@@ -13,7 +13,8 @@ requirements = [
     'shapely',
     'netCDF4',
     'scipy',
-    'yaml'
+    'yaml',
+    'python-dateutil'
 ]
 
 setup(name='multiply-prior-engine',

@@ -728,7 +728,7 @@ class VegetationPrior():
         if parameters==None:
             parameters                              =   ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N', 'ala', 'h', 'bsoil', 'psoil']
 
-        time                                        =   parse(timestr)
+        time                                        =   parse(datestr)
         doystr                                      =   time.strftime('%j')
 
         if ptype=='database':
@@ -745,6 +745,7 @@ if __name__=="__main__":
     # VegPrior.ProcessData()
     filenames                                   =   VegPrior.RetrievePrior(parameters=['lai','cab'], datestr='2007-12-31 04:23',ptype='database')
 
+    print('%s' %filenames)
     # this should give as output:
     #
 

@@ -41,7 +41,7 @@ Prior:
   lai:
     climatology:
       database: ../aux_data/new_geotiff
-    model:
+    # model:
   # veg:
     # veg_pft:
     #   type: pft

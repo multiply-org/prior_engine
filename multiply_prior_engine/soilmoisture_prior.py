@@ -11,6 +11,7 @@
 import datetime
 import os
 import tempfile
+import re
 import numpy as np
 import shapely
 import shapely.wkt
@@ -46,11 +47,25 @@ class SoilMoisturePrior(prior_engine.Prior):
 
         :returns: nothing
         """
+
         if self.ptype == 'climatology':
             # return self._calc_climatological_prior()
+
+            # TODO adjust after creating GeoTiffs
+            self.sm_mean_dir = (self.config['Prior']['sm']['climatology']
+                        ['climatology_mean_dir'])
+            self.sm_unc_dir = (self.config['Prior']['sm']['climatology']
+                        ['climatology_unc_dir'])
+            assert self.sm_mean_dir is not None,\
+                'There is no directory for climatology prior (mean) specified!'
+            assert self.sm_unc_dir is not None,\
+                ('There is no directory for climatology prior (uncertainty)'
+                'specified!')
             return self._provide_prior_files()
+
         elif self.ptype == 'recent':
             return self._get_recent_sm_proxy()
+            return self._provide_prior_files()
         else:
             assert False, '{} prior for sm not implemented'.format(self.ptype)
 
@@ -137,9 +152,33 @@ class SoilMoisturePrior(prior_engine.Prior):
         :rtype: dict
 
         """
-        # TODO adjust after creating GeoTiffs
-        sm_fn = self.config['Prior']['sm']['climatology']['climatology_file']
-        return (sm_fn, self.date_month_id)
+        self.date
+
+        def _get_files(dir, desc):
+            """get filenames of climatological prior files from directory.
+
+            :param dir: directory conataining the files (mentioned in config)
+            :param desc: descriptor of information ('mean'/'unc')
+            :returns: returns list of filenames
+            :rtype: list
+
+            """
+            for dir_, _, files in os.walk(dir):
+                for fileName in files:
+                    if self.ptype == 'climatology':
+                        pattern = (r"ESA_CCI_SM_CLIM_{}_{}.geotiff$"
+                                   .format(desc, self.date_month_id))
+                    elif self.ptype == 'recent':
+                        pattern = (r"recent_prior_{}_{}.geotiff$"
+                                   .format(desc, self.date))
+                    else:
+                        # TODO specify other name patterns
+                        pattern = (r"*")
+                    if re.match(pattern, fileName) is not None:
+                        return fileName
+
+        return (_get_files(self.sm_mean_dir, 'mean'),
+                _get_files(self.sm_unc_dir, 'unc'))
 
     def _extract_climatology(self):
         """
@@ -225,6 +264,7 @@ class MapPrior(prior_engine.Prior):
         # check that files exist
         assert os.path.exists(self.lc_file)
         assert os.path.exists(self.lut_file)
+
 
 class RoughnessPrior(MapPrior):
 

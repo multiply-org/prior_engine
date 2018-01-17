@@ -32,7 +32,7 @@ class PriorEngine(object):
 
     def __init__(self, **kwargs):
         self.configfile = kwargs.get('config', None)
-        self.date = kwargs.get('date', None)
+        self.date = kwargs.get('datestr', None)
         self.variables = kwargs.get('variables', None)
         # self.priors = self.config['Prior']['priors']
 
@@ -150,7 +150,7 @@ class PriorEngine(object):
         return res_concat
 
 
-def get_mean_state_vector(date: str, variables: list,
+def get_mean_state_vector(datestr: str, variables: list,
                           config: str="./sample_config_prior.yml") -> dict:
     """
     Return state vector and inverse covariance matrix for priors.
@@ -163,7 +163,7 @@ def get_mean_state_vector(date: str, variables: list,
     values being tuples of filenames and bands
     """
 
-    return (PriorEngine(date=date, variables=variables,
+    return (PriorEngine(datestr=datestr, variables=variables,
                         config=config)
             .get_priors())
 

@@ -723,7 +723,7 @@ class VegetationPrior():
         filenames                                    =   self.CombineTiles2Virtualfile(parameters)
 
 
-    def RetrievePrior(self,parameters=None, timestr='2007-12-31 04:23', ptype=None):
+    def RetrievePrior(self,parameters=None, datestr='2007-12-31 04:23', ptype=None):
         # Define parameters
         if parameters==None:
             parameters                              =   ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N', 'ala', 'h', 'bsoil', 'psoil']
@@ -743,7 +743,7 @@ if __name__=="__main__":
     VegPrior                                    =   VegetationPrior()
 
     # VegPrior.ProcessData()
-    filenames                                   =   VegPrior.RetrievePrior(parameters=['lai','cab'], timestr='2007-12-31 04:23',ptype='database')
+    filenames                                   =   VegPrior.RetrievePrior(parameters=['lai','cab'], datestr='2007-12-31 04:23',ptype='database')
 
     # this should give as output:
     #

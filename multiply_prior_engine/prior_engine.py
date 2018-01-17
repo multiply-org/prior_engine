@@ -107,13 +107,18 @@ class PriorEngine(object):
             'Variable to be inferred not in config.'
         assert var in subengine,\
             'Variable to be inferred not in config.'
-        print('for var *{}* getting'.format(var))
+        print('for variable *{}* getting'.format(var))
+
+        # test if prior type is specified (else return empty dict):
+        try:
+            self.config['Prior'][var].keys() is not None
+        except AttributeError as e:
+            print('[WARNING] No prior type for soil moisture prior specified!')
+            return
 
         # fill variable specific dictionary with all priors (clim, recent, ..)
         # TODO concatenation necessary?
         for ptype in self.config['Prior'][var].keys():
-            assert ptype is not None, \
-                'No prior type for soil moisture prior specified!'
             # pass conig and prior type to subclass/engine
             try:
                 prior = subengine[var](ptype=ptype, config=self.config,
@@ -124,7 +129,7 @@ class PriorEngine(object):
                 print('[WARNING] Sub-engine for *{}* {} prior not implemented!'
                       .format(ptype, var))
                 # print(e)
-        print('prior.')
+        print('prior files.')
         return var_res
 
     def _concat_priors(self, prior_dict):

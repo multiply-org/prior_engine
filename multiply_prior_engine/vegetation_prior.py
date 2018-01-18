@@ -9,6 +9,7 @@ import os
 import time
 
 import numpy as np
+from dateutil.parser import parse
 from matplotlib import pyplot as plt
 from scipy import interpolate as RegularGridInterpolator
 import datetime
@@ -99,7 +100,7 @@ class VegetationPrior():
 
 
         # 1.2 Define paths
-        self.directory_data         =   '/home/joris/Data/Prior Engine/'
+        self.directory_data         =   '/home/joris/Data/Prior_Engine/'
         self.path2LCC_file          =   self.directory_data + 'LCC/'               +   'ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7_updated.nc'
         self.path2Climate_file      =   self.directory_data + 'Climate/'           +   'sdat_10012_1_20171030_081458445.tif'
         self.path2Meteo_file        =   self.directory_data + 'Meteorological/'    +   'Meteo_.nc'
@@ -173,7 +174,6 @@ class VegetationPrior():
             # self.WriteOutput(LCC_lon, LCC_lat, Prior_avg, Prior_unc, doystr)
 
 
-        return Prior_avg, Prior_unc
 
     def CreateDummyDatabase(self):
 
@@ -231,11 +231,11 @@ class VegetationPrior():
     def RunCrossWalkingTable(self, Path2CWT_tool=None, Path2LC=None):
         # to run the crosswalking tool, the specific requirements for BEAM need to be met (java64bit + ...)
         if Path2CWT_tool==None:
-            Tooldir                                 =  '~/Data/Prior Engine/Tool/lc-user-tools-3.14/'
+            Tooldir                                 =  '~/Data/Prior_Engine/Tool/lc-user-tools-3.14/'
             Path2CWT_tool                           =   Tooldir+ 'bin/remap.sh'
             Path2CWT_file                           =   Tooldir+ 'resources/Default_LCCS2PFT_LUT.csv'
         if Path2LC==None:
-            Path2LC                                 =   '~/Data/Prior Engine/Data/LCC/ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7.nc'
+            Path2LC                                 =   '~/Data/Prior_engine/Data/LCC/ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7.nc'
 
         string2execute                              =   Path2CWT_tool + ' -PuserPFTConversionTable=' + Path2CWT_file + ' ' + Path2LC
         os.system(string2execute)
@@ -644,85 +644,108 @@ class VegetationPrior():
     def Readoutput(self):
         return LCC_lon, LCC_lat, Prior_avg, Prior_unc
 
-    def CombineTiles2Virtualfile(self, parameters):
-        dir         =   '/home/joris/Data/Prior Engine/Priors/'
+    def CombineTiles2Virtualfile(self, parameters, doystr='125'):
 
-        os.chdir(dir)
+        dir         =   self.directory_data + 'Priors/'
 
+        # os.chdir(dir)
+        filenames       =   dict()
         for varname in parameters:
-            filename = 'Priors_' + varname + '_125_global.vrt'
+            filename = 'Priors_' + varname + '_'+ doystr + '_global.vrt'
 
-            os.system('ls Priors*'+varname+'*.tiff > file_list.txt')
-            os.system('gdalbuildvrt -te -180 -90 180 90 ' + filename + ' -input_file_list file_list.txt')
+            os.system('ls '+dir+'Priors*'+varname+'*125*.tiff > '+dir+'file_list.txt')
+            os.system('gdalbuildvrt -te -180 -90 180 90 ' + dir + filename + ' -input_file_list '+dir+'file_list.txt')
 
-        os.chdir('/home/joris/Simulations/Python/multiply/prior-engine/multiply_prior_engine/')
+            filenames[varname] = dir + filename
+        # os.chdir('/home/joris/Simulations/Python/multiply/prior-engine/multiply_prior_engine/')
+        return filenames
+
+    def ProcessData(self,parameters=None, state_mask=None, timestr='2007-12-31 04:23', logger=None, file_prior=None, file_lcc=None,file_biome=None, file_meteo=None):
+        import datetime
+        timea = datetime.datetime.now()
+        # Retrieves a state vector and an inverse covariance matrix
+        #   param parameters: A list of parameters for which priors need to be available those will be inferred).  check
+        #   param state_mask: A georeferenced array that represents the space where solutions will be calculated. Spatial resolution should be set equal to highest observation.
+        #       True values in this array represents pixels where the inference will be carried out
+        #       False values represent pixels for which no priors need to be defined (as those will not be used in the inference)
+        #   param time: The string representing the time for which the prior needs to be derived
+        #   param logger: A logger or "traceability database"
+        #   param file_lcc_biome:
+        #   param file_prior_database:
+        #   param file_meteo
+
+        plt.ion()
+
+        # # Define parameters
+        # if parameters==None:
+        #     parameters                              =   ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N', 'ala', 'h', 'bsoil', 'psoil']
+        #
+        # # 1.1 Define paths
+        # directory_data                              =   '/home/joris/Data/Prior_Engine/'
+        # if file_prior==None:
+        #     file_prior                              =   directory_data + 'Trait_Database/'     + 'Traits.nc'
+        # if file_lcc ==None:
+        #     file_lcc                                =   directory_data +'/LCC/'          + 'ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7_updated.nc'
+        # if file_biome==None:
+        #     file_biome                              =   directory_data +'Climate/'      + 'sdat_10012_1_20171030_081458445.tif'
+        # if file_meteo==None:
+        #     file_meteo                              =   directory_data +'Meteorological/' + 'Meteo_.nc'
+        # file_output                                 =   directory_data +'Priors/' + 'Priors.nc'
+        #
+        # 0. Setup Processing
+        # VegPrior                                    =   VegetationPrior()
+
+        # VegPrior.path2Trait_file                    =   file_prior
+        # VegPrior.path2LCC_file                      =   file_lcc
+        # VegPrior.path2Climate_file                  =   file_biome
+        # VegPrior.path2Meteo_file                    =   file_meteo
+        # VegPrior.path2Traitmap_file                 =   file_output
 
 
-def get_mean_state_vector(parameters=None, state_mask=None, time=None, logger=None, file_prior=None, file_lcc=None,file_biome=None, file_meteo=None):
-    import datetime
-    timea = datetime.datetime.now()
-    # Retrieves a state vector and an inverse covariance matrix
-    #   param parameters: A list of parameters for which priors need to be available those will be inferred).  check
-    #   param state_mask: A georeferenced array that represents the space where solutions will be calculated. Spatial resolution should be set equal to highest observation.
-    #       True values in this array represents pixels where the inference will be carried out
-    #       False values represent pixels for which no priors need to be defined (as those will not be used in the inference)
-    #   param time: The string representing the time for which the prior needs to be derived
-    #   param logger: A logger or "traceability database"
-    #   param file_lcc_biome:
-    #   param file_prior_database:
-    #   param file_meteo
+        #############
+        time                                        =   parse(timestr)
+        doystr                                      =   time.strftime('%j')
+        lon_study_                                  =   np.arange(-180,180,10)
+        lat_study_                                  =   np.arange(-90, 90, 10)
 
-    plt.ion()
+        for lon_study in lon_study_:
+            for lat_study in lat_study_:
+                print('%3.2f %3.2f' % (lon_study, lat_study))
+                VegPrior.lon_study                  =   [lon_study, lon_study+10]
+                VegPrior.lat_study                  =   [lat_study, lat_study+10]
 
-    # Define parameters
-    if parameters==None:
-        parameters                              =   ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N', 'ala', 'h', 'bsoil', 'psoil']
+                # 3. Perform Static processing
+                lon,lat,Prior_pbm_avg,Prior_pbm_unc =   VegPrior.StaticProcessing(parameters)
 
-    # 1.1 Define paths
-    directory_data                              =   '/home/joris/Data/Prior Engine/'
-    if file_prior==None:
-        file_prior                              =   directory_data + 'Trait_Database/'     + 'Traits.nc'
-    if file_lcc ==None:
-        file_lcc                                =   directory_data +'/LCC/'          + 'ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7_updated.nc'
-    if file_biome==None:
-        file_biome                              =   directory_data +'Climate/'      + 'sdat_10012_1_20171030_081458445.tif'
-    if file_meteo==None:
-        file_meteo                              =   directory_data +'Meteorological/' + 'Meteo_.nc'
-    file_output                                 =   directory_data +'Priors/' + 'Priors.nc'
+                # 4. Perform Static processing
+                VegPrior.DynamicProcessing(parameters, lon, lat, Prior_pbm_avg, Prior_pbm_unc, doystr=doystr)
 
-    # 0. Setup Processing
-    VegPrior                                    =   VegetationPrior()
-
-    VegPrior.path2Trait_file                    =   file_prior
-    VegPrior.path2LCC_file                      =   file_lcc
-    VegPrior.path2Climate_file                  =   file_biome
-    VegPrior.path2Meteo_file                    =   file_meteo
-    VegPrior.path2Traitmap_file                 =   file_output
+        filenames                                    =   self.CombineTiles2Virtualfile(parameters)
 
 
-    #############
-    lon_study_                                  =   np.arange(-180,180,10)
-    lat_study_                                  =   np.arange(-90, 90, 10)
+    def RetrievePrior(self,parameters=None, datestr='2007-12-31 04:23', ptype=None):
+        # Define parameters
+        if parameters==None:
+            parameters                              =   ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N', 'ala', 'h', 'bsoil', 'psoil']
 
-    for lon_study in lon_study_:
-        for lat_study in lat_study_:
-            print('%3.2f %3.2f' % (lon_study, lat_study))
-            VegPrior.lon_study                  =   [lon_study, lon_study+10]
-            VegPrior.lat_study                  =   [lat_study, lat_study+10]
+        time                                        =   parse(datestr)
+        doystr                                      =   time.strftime('%j')
 
-            # 3. Perform Static processing
-            lon,lat,Prior_pbm_avg,Prior_pbm_unc =   VegPrior.StaticProcessing(parameters)
+        if ptype=='database':
+            # 0. Setup Processing
+            filenames                               =   self.CombineTiles2Virtualfile(parameters, doystr)
+        else:
+            print('not implemented yet')
 
-            # 4. Perform Static processing
-            Prior_avg, Prior_unc                =   VegPrior.DynamicProcessing(parameters, lon, lat, Prior_pbm_avg, Prior_pbm_unc, doystr='125')
-
-    VegPrior.CombineTiles2Virtualfile(parameters)
-
-    return Prior_avg, Prior_unc
+        return filenames
 
 if __name__=="__main__":
-    Prior_avg, Prior_unc    =   get_mean_state_vector()
+    VegPrior                                    =   VegetationPrior()
 
+    # VegPrior.ProcessData()
+    filenames                                   =   VegPrior.RetrievePrior(parameters=['lai','cab'], datestr='2007-12-31 04:23',ptype='database')
+
+    print('%s' %filenames)
     # this should give as output:
     #
 

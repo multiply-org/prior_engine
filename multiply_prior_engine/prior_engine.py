@@ -32,7 +32,7 @@ class PriorEngine(object):
 
     def __init__(self, **kwargs):
         self.configfile = kwargs.get('config', None)
-        self.date = kwargs.get('datestr', None)
+        self.datestr = kwargs.get('datestr', None)
         self.variables = kwargs.get('variables', None)
         # self.priors = self.config['Prior']['priors']
 
@@ -44,7 +44,7 @@ class PriorEngine(object):
             'Could not load configfile.'
         # assert self.priors is not None, \
         #     'There is no prior specified in configfile.'
-        assert self.date is not None, \
+        assert self.datestr is not None, \
             'There is no date passed to the Prior Engine.'
         assert self.variables is not None, \
             'There are no variables for prior retrieval specified/passed on.'
@@ -108,7 +108,8 @@ class PriorEngine(object):
         try:
             self.config['Prior'][var].keys() is not None
         except AttributeError as e:
-            print('[WARNING] No prior type for soil moisture prior specified!')
+            print('[WARNING] No prior type for {} moisture prior specified!'
+                  .format(var))
             return
 
         # fill variable specific dictionary with all priors (clim, recent, ..)
@@ -117,7 +118,7 @@ class PriorEngine(object):
             # pass conig and prior type to subclass/engine
             try:
                 prior = subengine[var](ptype=ptype, config=self.config,
-                                       date=self.date)
+                                       datestr=self.datestr, variables=var)
                 var_res.update({ptype: prior.RetrievePrior()})
                 print('  '+ptype)
             except AssertionError as e:
@@ -169,4 +170,4 @@ def get_mean_state_vector(datestr: str, variables: list,
 
 
 if __name__ == '__main__':
-    print(get_mean_state_vector(date="2017-03-01", variables=['sm']))
+    print(get_mean_state_vector(datestr="2017-03-01", variables=['sm','lai']))

@@ -12,10 +12,6 @@ import datetime
 from dateutil.parser import parse
 import numpy as np
 
-if __name__ == '__main__':
-    from soilmoisture_prior import RoughnessPrior, SoilMoisturePrior
-    # from vegetation_prior import vegetation_prior
-
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]
 __copyright__ = "Copyright 2018, Thomas Ramsauer"
 __credits__ = ["Alexander Löw", "Thomas Ramsauer"]
@@ -25,11 +21,13 @@ __maintainer__ = "Thomas Ramsauer"
 __email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
 __status__ = "Prototype"
 
+
 class Prior(object):
     def __init__(self, **kwargs):
         self.ptype = kwargs.get('ptype', None)
         self.config = kwargs.get('config', None)
-        self.date = kwargs.get('date', None)
+        self.datestr = kwargs.get('datestr', None)
+        self.variables = kwargs.get('variables', None)
         self._check()
         self._create_time_vector()
         self._create_month_id()
@@ -66,12 +64,17 @@ class Prior(object):
         self.time_vector_months = idt_months
 
     def _create_month_id(self):
+        # parse (dateutil) self.datestr to create datetime.datetime object
+        try:
+            self.date = parse(self.datestr)
+        except TypeError as e:
+            print('[WARNING] No time info was passed to Prior Class!')
+            return
         # assert parsing of self.date is working.
-        assert type(parse(self.date)) is datetime.datetime,\
+        assert type(self.date) is datetime.datetime,\
             'could not parse date {}'.format(self.date)
-        # parse (dateutil) self.date to create datetime.datetime object
-        self.date = parse(self.date)
-        # get month id/number from self.date
+            
+        # get month id/number from self.datestr
         self.date_month_id = self.date.month
 
     def initialize(self):

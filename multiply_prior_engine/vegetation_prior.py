@@ -20,6 +20,9 @@ from netCDF4 import Dataset
 plt.ion()
 
 import multiprocessing
+
+from prior import Prior
+
 def fun(f, q_in, q_out):
     while True:
         i, x = q_in.get()
@@ -87,9 +90,10 @@ def processespercore(varname, PFT, PFT_ids, VegetationPrior):
     return TRAIT_ttf_avg, TRAIT_ttf_unc
 
 
-class VegetationPrior():
+class VegetationPrior(Prior):
 
     def __init__(self, **kwargs):
+        super(VegetationPrior, self).__init__(**kwargs)
         self.config                 = kwargs.get('config', None)
         self.priors                 = kwargs.get('priors', None)
 
@@ -177,7 +181,7 @@ class VegetationPrior():
 
     def CreateDummyDatabase(self):
 
-        # define parameters
+        # define variables
         varnames                                    =   ['lai','cab', 'cb','car', 'cw','cdm', 'N', 'ala','h', 'bsoil','psoil']
         descriptions                                =   ['Effective Leaf Area Index',   'Leaf Chlorophyll Content', 'Leaf Senescent material',  \
                                                          'Leaf Carotonoid Content',     'Leaf Water Content',       'Leaf Dry Mass',            \
@@ -644,13 +648,13 @@ class VegetationPrior():
     def Readoutput(self):
         return LCC_lon, LCC_lat, Prior_avg, Prior_unc
 
-    def CombineTiles2Virtualfile(self, parameters, doystr='125'):
+    def CombineTiles2Virtualfile(self, variables, doystr='125'):
 
         dir         =   self.directory_data + 'Priors/'
 
         # os.chdir(dir)
         filenames       =   dict()
-        for varname in parameters:
+        for varname in variables:
             filename = 'Priors_' + varname + '_'+ doystr + '_global.vrt'
 
             os.system('ls '+dir+'Priors*'+varname+'*125*.tiff > '+dir+'file_list.txt')
@@ -660,11 +664,11 @@ class VegetationPrior():
         # os.chdir('/home/joris/Simulations/Python/multiply/prior-engine/multiply_prior_engine/')
         return filenames
 
-    def ProcessData(self,parameters=None, state_mask=None, timestr='2007-12-31 04:23', logger=None, file_prior=None, file_lcc=None,file_biome=None, file_meteo=None):
+    def ProcessData(self,variables=None, state_mask=None, timestr='2007-12-31 04:23', logger=None, file_prior=None, file_lcc=None,file_biome=None, file_meteo=None):
         import datetime
         timea = datetime.datetime.now()
         # Retrieves a state vector and an inverse covariance matrix
-        #   param parameters: A list of parameters for which priors need to be available those will be inferred).  check
+        #   param variables: A list of variables for which priors need to be available those will be inferred).  check
         #   param state_mask: A georeferenced array that represents the space where solutions will be calculated. Spatial resolution should be set equal to highest observation.
         #       True values in this array represents pixels where the inference will be carried out
         #       False values represent pixels for which no priors need to be defined (as those will not be used in the inference)
@@ -676,9 +680,9 @@ class VegetationPrior():
 
         plt.ion()
 
-        # # Define parameters
-        # if parameters==None:
-        #     parameters                              =   ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N', 'ala', 'h', 'bsoil', 'psoil']
+        # # Define variables
+        # if variables==None:
+        #     variables                              =   ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N', 'ala', 'h', 'bsoil', 'psoil']
         #
         # # 1.1 Define paths
         # directory_data                              =   '/home/joris/Data/Prior_Engine/'
@@ -715,26 +719,30 @@ class VegetationPrior():
                 VegPrior.lat_study                  =   [lat_study, lat_study+10]
 
                 # 3. Perform Static processing
-                lon,lat,Prior_pbm_avg,Prior_pbm_unc =   VegPrior.StaticProcessing(parameters)
+                lon,lat,Prior_pbm_avg,Prior_pbm_unc =   VegPrior.StaticProcessing(variables)
 
                 # 4. Perform Static processing
-                VegPrior.DynamicProcessing(parameters, lon, lat, Prior_pbm_avg, Prior_pbm_unc, doystr=doystr)
+                VegPrior.DynamicProcessing(variables, lon, lat, Prior_pbm_avg, Prior_pbm_unc, doystr=doystr)
 
-        filenames                                    =   self.CombineTiles2Virtualfile(parameters)
+        filenames                                    =   self.CombineTiles2Virtualfile(variables)
 
 
-    def RetrievePrior(self,parameters=None, datestr='2007-12-31 04:23', ptype=None):
-        # Define parameters
-        if parameters==None:
-            parameters                              =   ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N', 'ala', 'h', 'bsoil', 'psoil']
+    def RetrievePrior(self):
+        # Define variables
+        if self.variables is None:
+            self.variables                              =   ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N', 'ala', 'h', 'bsoil', 'psoil']
 
-        time                                        =   parse(datestr)
+        # time                                        =   parse(self.datestr)
+        time                                        =   self.date
         doystr                                      =   time.strftime('%j')
 
-        if ptype=='database':
+        if self.ptype=='database':
             # 0. Setup Processing
-            filenames                               =   self.CombineTiles2Virtualfile(parameters, doystr)
+            # filenames                               =   self.CombineTiles2Virtualfile(variables, doystr)
+            filenames                             =   self.CombineTiles2Virtualfile(self.variables, doystr)
+
         else:
+            filenames                               =   None
             print('not implemented yet')
 
         return filenames
@@ -743,7 +751,7 @@ if __name__=="__main__":
     VegPrior                                    =   VegetationPrior()
 
     # VegPrior.ProcessData()
-    filenames                                   =   VegPrior.RetrievePrior(parameters=['lai','cab'], datestr='2007-12-31 04:23',ptype='database')
+    filenames                                   =   VegPrior.RetrievePrior(variables=['lai','cab'], datestr='2007-12-31 04:23',ptype='database')
 
     print('%s' %filenames)
     # this should give as output:

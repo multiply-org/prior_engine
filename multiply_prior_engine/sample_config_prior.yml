@@ -29,7 +29,7 @@ Prior:
   sm:
     climatology:
       climatology_dir: ../aux_data/Climatology/SoilMoisture/
-    dynamic:
+    # dynamic:
     #     type: dynamic
     #     model:
     #         - API
@@ -39,8 +39,9 @@ Prior:
     # static:
     #       type: static
   lai:
-    climatology:
-      database: ../aux_data/new_geotiff
+    database:
+    #climatology:
+    #  database: ../aux_data/new_geotiff
     # model:
   # veg:
     # veg_pft:

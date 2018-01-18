@@ -61,8 +61,8 @@ class PriorEngine(object):
         """
         res = {}
         for var in self.variables:
-            res.update({var: self._get_prior(var)})
-
+            if var is not 'General':
+                res.update({var: self._get_prior(var)})
         # return self._concat_priors(res)
         return res
 
@@ -95,13 +95,15 @@ class PriorEngine(object):
             'sm': SoilMoisturePrior,
             'dielectric_const': '',
             'roughness': RoughnessPrior,
-            'lai': VegetationPrior
+            'lai': VegetationPrior,
+            'cab': VegetationPrior
         }
         var_res = {}
         assert var in self.config['Prior'].keys(), \
             'Variable to be inferred not in config.'
         assert var in subengine,\
-            'Variable to be inferred not in config.'
+            ('No sub-enginge defined for variable to be inferred ({}).'
+             .format(var))
         print('for variable *{}* getting'.format(var))
 
         # test if prior type is specified (else return empty dict):
@@ -118,7 +120,7 @@ class PriorEngine(object):
             # pass conig and prior type to subclass/engine
             try:
                 prior = subengine[var](ptype=ptype, config=self.config,
-                                       datestr=self.datestr, variables=var)
+                                       datestr=self.datestr, var=var)
                 var_res.update({ptype: prior.RetrievePrior()})
                 print('  '+ptype)
             except AssertionError as e:
@@ -170,4 +172,4 @@ def get_mean_state_vector(datestr: str, variables: list,
 
 
 if __name__ == '__main__':
-    print(get_mean_state_vector(datestr="2017-03-01", variables=['sm','lai']))
+    print(get_mean_state_vector(datestr="2017-03-01", variables=['sm','lai', 'cab']))

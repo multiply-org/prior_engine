@@ -26,6 +26,8 @@ Inference: # inference config
 #   to be omitted. 
 
 Prior:
+  General:
+    directory_data: /home/joris/Data/Prior_Engine/
   sm:
     climatology:
       climatology_dir: ../aux_data/Climatology/SoilMoisture/
@@ -39,6 +41,8 @@ Prior:
     # static:
     #       type: static
   lai:
+    database: 
+  cab:
     database:
     #climatology:
     #  database: ../aux_data/new_geotiff

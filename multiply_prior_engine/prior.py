@@ -27,7 +27,7 @@ class Prior(object):
         self.ptype = kwargs.get('ptype', None)
         self.config = kwargs.get('config', None)
         self.datestr = kwargs.get('datestr', None)
-        self.variables = kwargs.get('variables', None)
+        self.variable = kwargs.get('var', None)
         self._check()
         self._create_time_vector()
         self._create_month_id()

@@ -8,20 +8,21 @@ __email__ = "j.timmermans@cml.leidenuniv.nl"
 import os
 import time
 
+import multiprocessing
+# import datetime
+import gdal
+
 import numpy as np
+
 from dateutil.parser import parse
 from matplotlib import pyplot as plt
 from scipy import interpolate as RegularGridInterpolator
-import datetime
-
-import gdal
 from netCDF4 import Dataset
+
+from prior import Prior
 
 plt.ion()
 
-import multiprocessing
-
-from prior import Prior
 
 def fun(f, q_in, q_out):
     while True:
@@ -29,6 +30,8 @@ def fun(f, q_in, q_out):
         if i is None:
             break
         q_out.put((i, f(x)))
+
+
 def parmap(f, X, nprocs=multiprocessing.cpu_count()):
     q_in = multiprocessing.Queue(1)
     q_out = multiprocessing.Queue()
@@ -46,6 +49,8 @@ def parmap(f, X, nprocs=multiprocessing.cpu_count()):
     [p.join() for p in proc]
 
     return [x for i, x in sorted(res)]
+
+
 def processespercore(varname, PFT, PFT_ids, VegetationPrior):
     TRAIT_ttf_avg = PFT[:, :, 0].astype('float') * 0.
     TRAIT_ttf_unc = PFT[:, :, 0].astype('float') * 0.
@@ -104,7 +109,7 @@ class VegetationPrior(Prior):
 
 
         # 1.2 Define paths
-        self.directory_data         =   '/home/joris/Data/Prior_Engine/'
+        self.directory_data         =   self.config['Prior']['General']['directory_data']
         self.path2LCC_file          =   self.directory_data + 'LCC/'               +   'ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7_updated.nc'
         self.path2Climate_file      =   self.directory_data + 'Climate/'           +   'sdat_10012_1_20171030_081458445.tif'
         self.path2Meteo_file        =   self.directory_data + 'Meteorological/'    +   'Meteo_.nc'
@@ -648,21 +653,23 @@ class VegetationPrior(Prior):
     def Readoutput(self):
         return LCC_lon, LCC_lat, Prior_avg, Prior_unc
 
-    def CombineTiles2Virtualfile(self, variables, doystr='125'):
+    def CombineTiles2Virtualfile(self, variable, doystr='125'):
 
         dir         =   self.directory_data + 'Priors/'
 
         # os.chdir(dir)
         filenames       =   dict()
-        for varname in variables:
-            filename = 'Priors_' + varname + '_'+ doystr + '_global.vrt'
+        # for varname in variable:
+        varname = variable
+        filename = 'Priors_' + varname + '_'+ doystr + '_global.vrt'
 
-            os.system('ls '+dir+'Priors*'+varname+'*125*.tiff > '+dir+'file_list.txt')
-            os.system('gdalbuildvrt -te -180 -90 180 90 ' + dir + filename + ' -input_file_list '+dir+'file_list.txt')
+        os.system('ls '+dir+'Priors*'+varname+'*125*.tiff > '+dir+'file_list.txt')
+        os.system('gdalbuildvrt -te -180 -90 180 90 ' + dir + filename + ' -input_file_list '+dir+'file_list.txt')
 
-            filenames[varname] = dir + filename
+        filenames[varname] = dir + filename
         # os.chdir('/home/joris/Simulations/Python/multiply/prior-engine/multiply_prior_engine/')
-        return filenames
+        # return filenames
+        return filename
 
     def ProcessData(self,variables=None, state_mask=None, timestr='2007-12-31 04:23', logger=None, file_prior=None, file_lcc=None,file_biome=None, file_meteo=None):
         import datetime
@@ -729,7 +736,7 @@ class VegetationPrior(Prior):
 
     def RetrievePrior(self):
         # Define variables
-        if self.variables is None:
+        if self.variable is None:
             self.variables                              =   ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N', 'ala', 'h', 'bsoil', 'psoil']
 
         # time                                        =   parse(self.datestr)
@@ -739,7 +746,7 @@ class VegetationPrior(Prior):
         if self.ptype=='database':
             # 0. Setup Processing
             # filenames                               =   self.CombineTiles2Virtualfile(variables, doystr)
-            filenames                             =   self.CombineTiles2Virtualfile(self.variables, doystr)
+            filenames                             =   self.CombineTiles2Virtualfile(self.variable, doystr)
 
         else:
             filenames                               =   None

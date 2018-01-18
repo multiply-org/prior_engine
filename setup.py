@@ -6,14 +6,14 @@ requirements = [
     'nose',
     'shapely',
     'pyyaml',
-    'pytest', 'nose',
+    'pytest',
+    'nose',
     'shapely',
     'pyyaml',
     'numpy',
     'shapely',
     'netCDF4',
     'scipy',
-    'yaml',
     'python-dateutil'
 ]
 
@@ -22,13 +22,13 @@ setup(name='multiply-prior-engine',
       description='MULTIPLY Prior Engine',
       author='MULTIPLY Team',
       packages=['multiply_prior_engine'],
-      entry_points={
-          'file_system_plugins': [
-              'local_file_system = multiply_data_access:local_file_system.LocalFileSystemAccessor',
-          ],
-          'meta_info_provider_plugins': [
-              'json_meta_info_provider = multiply_data_access:json_meta_info_provider.JsonMetaInfoProviderAccessor',
-          ],
-      },
+      # entry_points={
+      #     'file_system_plugins': [
+      #         'local_file_system = multiply_data_access:local_file_system.LocalFileSystemAccessor',
+      #     ],
+      #     'meta_info_provider_plugins': [
+      #         'json_meta_info_provider = multiply_data_access:json_meta_info_provider.JsonMetaInfoProviderAccessor',
+      #     ],
+      # },
       install_requires=requirements
 )

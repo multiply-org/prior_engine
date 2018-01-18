@@ -5,7 +5,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Welcome to MULTIPLY Prior Engine’s documentation! &#8212; prior-engine  documentation</title>
+    <title>Prior Engine module &#8212; prior-engine  documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script type="text/javascript">
@@ -23,7 +23,7 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Prior Engine module" href="modules.html" />
+    <link rel="prev" title="Welcome to MULTIPLY Prior Engine’s documentation!" href="index.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -39,22 +39,11 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="welcome-to-multiply-prior-engine-s-documentation">
-<h1>Welcome to MULTIPLY Prior Engine’s documentation!<a class="headerlink" href="#welcome-to-multiply-prior-engine-s-documentation" title="Permalink to this headline">¶</a></h1>
-<div class="toctree-wrapper compound">
-<p class="caption"><span class="caption-text">Contents:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="modules.html">Prior Engine <em>module</em></a><ul>
-<li class="toctree-l2"><a class="reference internal" href="modules.html#prior-engine-class">Prior Engine <em>class</em></a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules.html#prior-class">Prior <em>class</em></a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules.html#soilmoistureprior-subclass">SoilMoisturePrior <em>subclass</em></a></li>
-<li class="toctree-l2"><a class="reference internal" href="modules.html#get-mean-state-vector-function">get_mean_state_vector <em>function</em></a></li>
-</ul>
-</li>
-</ul>
-</div>
-<<<<<<< HEAD
-<span class="target" id="module-multiply_prior_engine"></span><dl class="class">
+  <div class="section" id="module-multiply_prior_engine">
+<span id="prior-engine-module"></span><h1>Prior Engine <em>module</em><a class="headerlink" href="#module-multiply_prior_engine" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="prior-engine-class">
+<h2>Prior Engine <em>class</em><a class="headerlink" href="#prior-engine-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
 <dt id="multiply_prior_engine.PriorEngine">
 <em class="property">class </em><code class="descclassname">multiply_prior_engine.</code><code class="descname">PriorEngine</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#multiply_prior_engine.PriorEngine" title="Permalink to this definition">¶</a></dt>
 <dd><dl class="method">
@@ -129,6 +118,34 @@ inverse covariance matrix) as key/value</td>
 
 </dd></dl>
 
+</div>
+<div class="section" id="prior-class">
+<h2>Prior <em>class</em><a class="headerlink" href="#prior-class" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="multiply_prior_engine.Prior">
+<em class="property">class </em><code class="descclassname">multiply_prior_engine.</code><code class="descname">Prior</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#multiply_prior_engine.Prior" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="multiply_prior_engine.Prior.initialize">
+<code class="descname">initialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#multiply_prior_engine.Prior.initialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialiszation routine. Should be implemented in child class.
+Prior calculation is initialized here.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="soilmoistureprior-subclass">
+<h2>SoilMoisturePrior <em>subclass</em><a class="headerlink" href="#soilmoistureprior-subclass" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="multiply_prior_engine.SoilMoisturePrior">
 <em class="property">class </em><code class="descclassname">multiply_prior_engine.</code><code class="descname">SoilMoisturePrior</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#multiply_prior_engine.SoilMoisturePrior" title="Permalink to this definition">¶</a></dt>
@@ -184,6 +201,9 @@ Part of prior._calc_climatological_prior().</p>
 
 </dd></dl>
 
+</div>
+<div class="section" id="get-mean-state-vector-function">
+<h2>get_mean_state_vector <em>function</em><a class="headerlink" href="#get-mean-state-vector-function" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
 <dt id="multiply_prior_engine.get_mean_state_vector">
 <code class="descclassname">multiply_prior_engine.</code><code class="descname">get_mean_state_vector</code><span class="sig-paren">(</span><em>config_file</em><span class="sig-paren">)</span><a class="headerlink" href="#multiply_prior_engine.get_mean_state_vector" title="Permalink to this definition">¶</a></dt>
@@ -202,16 +222,7 @@ Part of prior._calc_climatological_prior().</p>
 </table>
 </dd></dl>
 
-=======
->>>>>>> c11099200cf0626103e34e93f920ffda0879dcf7
 </div>
-<div class="section" id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
-<ul class="simple">
-<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
-<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
-<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
-</ul>
 </div>
 
 
@@ -220,7 +231,7 @@ Part of prior._calc_climatological_prior().</p>
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-<h1 class="logo"><a href="#">prior-engine</a></h1>
+<h1 class="logo"><a href="index.html">prior-engine</a></h1>
 
 
 
@@ -231,15 +242,21 @@ Part of prior._calc_climatological_prior().</p>
 
 <h3>Navigation</h3>
 <p class="caption"><span class="caption-text">Contents:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="modules.html">Prior Engine <em>module</em></a></li>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Prior Engine <em>module</em></a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#prior-engine-class">Prior Engine <em>class</em></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#prior-class">Prior <em>class</em></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#soilmoistureprior-subclass">SoilMoisturePrior <em>subclass</em></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#get-mean-state-vector-function">get_mean_state_vector <em>function</em></a></li>
+</ul>
+</li>
 </ul>
 
 <div class="relations">
 <h3>Related Topics</h3>
 <ul>
-  <li><a href="#">Documentation overview</a><ul>
-      <li>Next: <a href="modules.html" title="next chapter">Prior Engine <em>module</em></a></li>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Welcome to MULTIPLY Prior Engine’s documentation!</a></li>
   </ul></li>
 </ul>
 </div>
@@ -265,7 +282,7 @@ Part of prior._calc_climatological_prior().</p>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |
-      <a href="_sources/index.rst.txt"
+      <a href="_sources/modules.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

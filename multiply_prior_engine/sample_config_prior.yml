@@ -17,24 +17,32 @@ Inference: # inference config
     - a: identity
     - inflation: 1e3
 
+# Prior section conventions
+
+# - 1. sub-level contains all potential variables (sm, roughness, lai, ..)
+#   which are asked for/being inferred from Orchestrator/Inferrence Engine
+#   and for which prior information is provided.
+# - 2. sub-level contains prior type (ptype). These can be commented out
+#   to be omitted. 
+
 Prior:
-  priors:
-    - sm_clim
-    # - sm_recent
-    # - veg_pft
   sm:
-    sm_clim:
-      type: climatology
-      climatology_file: ../aux_data/CCI_SM_climatology_eur_merged_inv.nc
-    # sm_recent:
-    #       type: recent
-    # sm_static:
-    #       type: static
-    # sm_dynamic:
+    climatology:
+      climatology_dir: ../aux_data/Climatology/SoilMoisture/
+    # dynamic:
     #     type: dynamic
     #     model:
     #         - API
     #         - other
+    # recent:
+    #   aux_data = ...
+    # static:
+    #       type: static
+  lai:
+    database:
+    #climatology:
+    #  database: ../aux_data/new_geotiff
+    # model:
   # veg:
     # veg_pft:
     #   type: pft

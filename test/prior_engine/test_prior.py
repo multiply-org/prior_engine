@@ -7,13 +7,17 @@ import sys
 # from prior_engine import *
 # import multiply_prior_engine
 # from context import multiply_prior_engine
-from multiply_prior_engine import prior_engine, soilmoisture_prior, prior
 myPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(myPath + '/../../multiply_prior_engine/')
+from multiply_prior_engine.prior import Prior
+from multiply_prior_engine.prior_engine import PriorEngine
+from multiply_prior_engine.soilmoisture_prior import SoilMoisturePrior
+# from multiply_prior_engine.prior_engine import Prior_Engine
+
 
 def test_priorengine_init():
     P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
-                    date='2017-01-01',
+                    datestr='2017-01-01',
                     variables=['sm'])
 
     assert P.configfile is not None
@@ -23,7 +27,7 @@ def test_priorengine_init():
 
 def test_priorengine_get_priors():
     P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
-                    date='2017-01-01',
+                    datestr='2017-01-01',
                     variables=['sm'])
     assert type(P.get_priors()) is dict
 
@@ -51,21 +55,12 @@ def test_sm_prior_invalid_ptype():
 
 def test_calc_config():
     P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
-                    date='2017-01-01',
+                    datestr='2017-01-01',
                     variables=['sm'])
     S = SoilMoisturePrior(config=P.config,
                           ptype='climatology')
     assert type(S.config) is dict
 
-
-def test_calc_output():
-    P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
-                    date='2017-01-01',
-                    variables=['sm'])
-    S = SoilMoisturePrior(config=P.config,
-                          ptype='climatology')
-    S.calc()
-    assert os.path.exists(S.file)
 
 
 # def test_roughness():

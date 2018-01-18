@@ -1,11 +1,15 @@
 # import sys
 import os
 import pytest
-
+import sys
 # import tempfile
-from multiply_prior_engine import PriorEngine, soilmoisture_prior
-# from multiply clsoilmoisture_prior import SoilMoisturePrior
-
+# from multiply_prior_engine import *
+# from prior_engine import *
+# import multiply_prior_engine
+# from context import multiply_prior_engine
+from multiply_prior_engine import prior_engine, soilmoisture_prior, prior
+myPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(myPath + '/../../multiply_prior_engine/')
 
 def test_priorengine_init():
     P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',

@@ -1,21 +1,34 @@
 # import sys
 import os
 import pytest
-
-import tempfile
-from multiply_prior_engine import PriorEngine, SoilMoisturePrior
+import sys
+# import tempfile
+# from multiply_prior_engine import *
+# from prior_engine import *
+# import multiply_prior_engine
+# from context import multiply_prior_engine
+myPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(myPath + '/../../multiply_prior_engine/')
+from multiply_prior_engine.prior import Prior
+from multiply_prior_engine.prior_engine import PriorEngine
+from multiply_prior_engine.soilmoisture_prior import SoilMoisturePrior
+# from multiply_prior_engine.prior_engine import Prior_Engine
 
 
 def test_priorengine_init():
-    P = PriorEngine(config='./tests/test_config_prior.yml')
+    P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
+                    datestr='2017-01-01',
+                    variables=['sm'])
 
     assert P.configfile is not None
     assert type(P.configfile) is str
-    assert type(P.priors) is dict
+    # assert type(P.priors) is dict
 
 
 def test_priorengine_get_priors():
-    P = PriorEngine(config='./tests/test_config_prior.yml')
+    P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
+                    datestr='2017-01-01',
+                    variables=['sm'])
     assert type(P.get_priors()) is dict
 
 
@@ -41,23 +54,18 @@ def test_sm_prior_invalid_ptype():
 
 
 def test_calc_config():
-    P = PriorEngine(config='./tests/test_config_prior.yml')
+    P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
+                    datestr='2017-01-01',
+                    variables=['sm'])
     S = SoilMoisturePrior(config=P.config,
                           ptype='climatology')
     assert type(S.config) is dict
 
 
-def test_calc_output():
-    P = PriorEngine(config='./tests/test_config_prior.yml')
-    S = SoilMoisturePrior(config=P.config,
-                          ptype='climatology')
-    S.calc()
-    assert os.path.exists(S.file)
-
 
 # def test_roughness():
 #     lut_file = tempfile.mktemp(suffix='.lut')
-#     lc_file = tempfile.mktemp(suffix='.nc')
+#    lc_file = tempfile.mktemp(suffix='.nc')
 #     gen_file(lut_file)
 #     gen_file(lc_file)
 #     P = RoughnessPrior(ptype='climatology',

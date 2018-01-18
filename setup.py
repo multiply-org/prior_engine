@@ -3,18 +3,6 @@
 from setuptools import setup
 
 requirements = [
-    'nose',
-    'shapely',
-    'pyyaml',
-    'pytest',
-    'nose',
-    'shapely',
-    'pyyaml',
-    'numpy',
-    'shapely',
-    'netCDF4',
-    'scipy',
-    'python-dateutil'
 ]
 
 setup(name='multiply-prior-engine',

@@ -742,8 +742,12 @@ class VegetationPrior():
 if __name__=="__main__":
     VegPrior                                    =   VegetationPrior()
 
-    # VegPrior.ProcessData()
-    filenames                                   =   VegPrior.RetrievePrior(parameters=['lai','cab'], datestr='2007-12-31 04:23',ptype='database')
+    parameters = ['lai', 'cab']
+    # create global files
+    # VegPrior.ProcessData(parameters)
+
+    # create global files
+    filenames                                   =   VegPrior.RetrievePrior(parameters=parameters, datestr='2007-12-31 04:23',ptype='database')
 
     print('%s' %filenames)
     # this should give as output:

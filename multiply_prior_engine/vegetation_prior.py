@@ -11,7 +11,6 @@ import time
 import multiprocessing
 # import datetime
 import gdal
-
 import numpy as np
 
 from dateutil.parser import parse
@@ -763,5 +762,3 @@ if __name__=="__main__":
     print('%s' %filenames)
     # this should give as output:
     #
-
-

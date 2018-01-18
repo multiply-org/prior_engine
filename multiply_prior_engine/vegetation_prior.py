@@ -759,6 +759,7 @@ if __name__=="__main__":
     # VegPrior.ProcessData()
     filenames                                   =   VegPrior.RetrievePrior(variables=['lai','cab'], datestr='2007-12-31 04:23',ptype='database')
 
+
     print('%s' %filenames)
     # this should give as output:
     #

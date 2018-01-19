@@ -27,7 +27,7 @@ Inference: # inference config
 
 Prior:
   General:
-    directory_data: /home/joris/Data/Prior_Engine/
+    directory_data: ../aux_data/Static/Vegetation/
   sm:
     climatology:
       climatology_dir: ../aux_data/Climatology/SoilMoisture/

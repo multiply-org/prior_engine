@@ -3,6 +3,10 @@
 from setuptools import setup
 
 requirements = [
+    'gdal',
+    'numpy',
+    'pyyaml',
+    'shapely'
 ]
 
 setup(name='multiply-prior-engine',

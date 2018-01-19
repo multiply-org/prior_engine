@@ -18,7 +18,7 @@ from matplotlib import pyplot as plt
 from scipy import interpolate as RegularGridInterpolator
 from netCDF4 import Dataset
 
-from prior import Prior
+from .prior import Prior
 
 plt.ion()
 

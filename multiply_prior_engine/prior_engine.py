@@ -9,8 +9,8 @@
 
 import yaml
 
-from soilmoisture_prior import RoughnessPrior, SoilMoisturePrior
-from vegetation_prior import VegetationPrior
+from .soilmoisture_prior import RoughnessPrior, SoilMoisturePrior
+from .vegetation_prior import VegetationPrior
 
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]
 __copyright__ = "Copyright 2018, Thomas Ramsauer"

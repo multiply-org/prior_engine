@@ -20,7 +20,7 @@ import shapely.wkt
 from netCDF4 import Dataset
 from scipy import spatial
 
-from prior import Prior
+from .prior import Prior
 
 
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]

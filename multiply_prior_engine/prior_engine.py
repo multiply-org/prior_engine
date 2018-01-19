@@ -23,8 +23,7 @@ __status__ = "Prototype"
 
 
 class PriorEngine(object):
-    """
-    Prior Engine for MULTIPLY.
+    """Prior Engine for MULTIPLY.
 
     holds prior initialization methods (e.g. config loading).
     calls specific submodules (soilmoisture_prior, vegetation_prior, ..)
@@ -40,6 +39,15 @@ class PriorEngine(object):
         self._check()
 
     def _check(self):
+        """initial check for passed values of 
+        - config
+        - datestr
+        - variables
+
+        :returns: -
+        :rtype: -
+
+        """
         assert self.config is not None, \
             'Could not load configfile.'
         # assert self.priors is not None, \
@@ -52,11 +60,11 @@ class PriorEngine(object):
     def get_priors(self):
         """
         Get prior data.
-        calls *_get_prior* for all priors in config.
+        calls *_get_prior* for all variables (e.g. sm, lai, ..) in config.
 
-        :returns: dictionary with prior names/(state vector,
-                  inverse covariance matrix) as key/value
-        :rtype: dictionary
+        :returns: dictionary with prior names/prior types/filenames as
+                  {key/{key/values}}.
+        :rtype: dictionary of dictionary
 
         """
         res = {}
@@ -71,7 +79,7 @@ class PriorEngine(object):
         Load config from self.configfile.
         writes to self.config.
 
-        :returns: nothing
+        :returns: -
         """
         with open(self.configfile, 'r') as cfg:
             self.config = yaml.load(cfg)
@@ -156,14 +164,15 @@ class PriorEngine(object):
 def get_mean_state_vector(datestr: str, variables: list,
                           config: str="./sample_config_prior.yml") -> dict:
     """
-    Return state vector and inverse covariance matrix for priors.
-
-    :param date: The date (time?) for which the prior needs to be derived
+    Return dictionary with variable dependent sub dictionary with prior type
+    (key) and filenames of prior files (values).
+    
+    :param datestr: The date (time?) for which the prior needs to be derived
     :param variables: A list of variables (sm, lai, roughness, ..)
     for which priors need to be available
 
     :return: dictionary with keys being the variables and
-    values being tuples of filenames and bands
+    values being a dictionary of prior type and filename of prior file.
     """
 
     return (PriorEngine(datestr=datestr, variables=variables,

@@ -17,6 +17,7 @@ Inference: # inference config
     - a: identity
     - inflation: 1e3
 
+Prior:
 # Prior section conventions
 
 # - 1. sub-level contains all potential variables (sm, roughness, lai, ..)
@@ -25,7 +26,6 @@ Inference: # inference config
 # - 2. sub-level contains prior type (ptype). These can be commented out
 #   to be omitted. 
 
-Prior:
   General:
     directory_data: ../aux_data/Static/Vegetation/
   sm:

@@ -4,9 +4,10 @@
 # Copyright (c) 2017 T Ramsauer. All rights reserved.
 
 """
-    Write GeoTiffs from climatology NetCDF files.
+    Write single GeoTiffs from climatology NetCDF files created with
+    geoval module.
 
-    Copyright (C) 2017  Thomas Ramsauer
+    Copyright (C) 2018  Thomas Ramsauer
 """
 
 import os
@@ -15,8 +16,8 @@ import numpy as np
 from netCDF4 import Dataset
 
 
-__author__ = "Joris Timmermans, Thomas Ramsauer"
-__copyright__ = "Joris Timmermans, Thomas Ramsauer"
+__author__ = "Thomas Ramsauer, Joris Timmermans"
+__copyright__ = "Thomas Ramsauer"
 __license__ = "gpl3"
 
 
@@ -25,35 +26,32 @@ def WriteGeoTiff_from_climNetCDF(filename, varname,
                                  new_no_data_value=None,
                                  upper_no_data_thres=None,
                                  lower_no_data_thres=None):
-    """Write GeoTiffs from NetCDF
+    """Write GeoTiffs from climatology NetCDF (generated with geoval module).
 
-    :param filename: 
-    :param varname: 
-    :param lyr_mean: 
-    :param lyr_unc: 
-    :returns: 
-    :rtype: 
+    :param filename: filename of NetCDF file to be processed.
+    :param varname: name of variable in NetCDF file.
+    :param lyr_mean: name of mean layer/variable in NetCDF file.
+    :param lyr_unc:  name of uncertainty layer/variable in NetCDF file.
+    :returns: -
+    :rtype: -
 
     """
     d = Dataset(filename, 'r')
     lons_in = d.variables['lon'][:]
     lats_in = d.variables['lat'][:]
-    # print(d.variables)
     Nlayers = 2
-    # latstr = '[{02.0f} {02.0f}N'.format(lats_in[0], lat_study[1])
-    # lonstr = '[{03.0f} {03.0f}E]'.format(lon_study[0], lon_study[1])
 
     drv = gdal.GetDriverByName("GTIFF")
     for month in np.arange(0, 12, 1):
-        print('month: ' + str(month+1))
+        # print('month: ' + str(month+1))
         fn_out = filename.split('.')[0] + '_{:02d}'.format(month+1) + '.tiff'
         out_shape = (d.variables[lyr_mean][month].shape)
         # print(fn_out, out_shape[0], out_shape[1],Nlayers)
         dst_ds = drv.Create(fn_out, out_shape[1], out_shape[0],
                             Nlayers, gdal.GDT_Float32,
                             options=["COMPRESS=LZW",
-                                    "INTERLEAVE=BAND",
-                                    "TILED=YES"])
+                                     "INTERLEAVE=BAND",
+                                     "TILED=YES"])
         resx = lons_in[0][1] - lons_in[0][0]
         resy = lats_in[1][0] - lats_in[0][0]
         dst_ds.SetGeoTransform([
@@ -66,7 +64,7 @@ def WriteGeoTiff_from_climNetCDF(filename, varname,
             'UNIT["degree",0.0174532925199433],AUTHORITY["EPSG","4326"]]')
 
         means = d.variables[lyr_mean][month][:]
-        unc = d.variables[lyr_unc][month][:] 
+        unc = d.variables[lyr_unc][month][:]
         if new_no_data_value is not None:
             if upper_no_data_thres is not None:
                 means[means >= upper_no_data_thres] = new_no_data_value
@@ -81,9 +79,14 @@ def WriteGeoTiff_from_climNetCDF(filename, varname,
         dst_ds = None
 
 
-if __name__ == '__main__':
+def main():
+    # TODO make actual CLI for main()
     os.chdir('/home/thomas/Code/prior-engine/aux_data')
     WriteGeoTiff_from_climNetCDF(filename=('CCI_SM_climatology_eur_merged_inv'
                                  '.nc'), varname='sm', lyr_mean='sm',
                                  lyr_unc='sm_stdev', new_no_data_value=-999,
-                                 upper_no_data_thres=10)
+                                 upper_no_ata_thres=10)
+
+
+if __name__ == '__main__':
+    main()

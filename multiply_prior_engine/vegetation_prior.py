@@ -627,8 +627,8 @@ class VegetationPrior(Prior):
 
     def WriteGeoTiff(self, LCC_lon, LCC_lat, Prior_avg, Prior_unc, doystr='static'):
         Nlayers = 2
-        latstr = '[%02.0f' % self.lat_study[0] + ' %02.0fN]' % self.lat_study[1]
-        lonstr = '[%03.0f' % self.lon_study[0] + ' %03.0fE]' % self.lon_study[1]
+        latstr = '[%02.0f' % self.lat_study[0] + '_%02.0fN]' % self.lat_study[1]
+        lonstr = '[%03.0f' % self.lon_study[0] + '_%03.0fE]' % self.lon_study[1]
 
         varnames = [name for name in Prior_avg.iterkeys()]
         drv = gdal.GetDriverByName("GTIFF")

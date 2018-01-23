@@ -175,7 +175,7 @@ class SoilMoisturePrior(Prior):
                         # TODO specify other name patterns
                         pattern = (r"*")
                     if re.match(pattern, fileName) is not None:
-                        return fileName
+                        return '{}/{}'.format(dir, fileName)
 
         return (_get_files(self.sm_clim_dir))
 

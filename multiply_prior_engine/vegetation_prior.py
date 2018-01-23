@@ -651,9 +651,6 @@ class VegetationPrior(Prior):
             dst_ds.GetRasterBand(2).SetDescription(varname + '-unc')
             dst_ds                                      =   None
 
-    def Readoutput(self):
-        return LCC_lon, LCC_lat, Prior_avg, Prior_unc
-
     def CombineTiles2Virtualfile(self, variable, doystr):
         dir = self.directory_data + 'Priors/'
         file_name = 'Priors_' + variable + '_' + doystr + '_global.vrt'

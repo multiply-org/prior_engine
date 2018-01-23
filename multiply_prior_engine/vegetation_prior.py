@@ -657,7 +657,7 @@ class VegetationPrior(Prior):
         # todo exchange 125 in upcoming versions with doy
         list_of_files = glob.glob(dir + 'Priors*' + variable + '*125*.tiff')
         files = " ".join(list_of_files)
-        subprocess.call('gdalbuildvrt -te -180 -90 180 90 ' + dir + file_name + ' ' + files)
+        os.system('gdalbuildvrt -te -180 -90 180 90 ' + dir + file_name + ' ' + files)
         return '{}/{}'.format(dir, file_name)
 
     def ProcessData(self, variables=None, state_mask=None, timestr='2007-12-31 04:23', logger=None, file_prior=None,

@@ -5,7 +5,9 @@ __version__ = "1.0 (06.11.2017)"
 __license__ = "GPLv3"
 __email__ = "j.timmermans@cml.leidenuniv.nl"
 
+import glob
 import os
+import subprocess
 import time
 
 import multiprocessing
@@ -652,23 +654,14 @@ class VegetationPrior(Prior):
     def Readoutput(self):
         return LCC_lon, LCC_lat, Prior_avg, Prior_unc
 
-    def CombineTiles2Virtualfile(self, variable, doystr='125'):
-
-        dir         =   self.directory_data + 'Priors/'
-
-        # os.chdir(dir)
-        filenames       =   dict()
-        # for varname in variable:
-        varname = variable
-        filename = 'Priors_' + varname + '_'+ doystr + '_global.vrt'
-
-        os.system('ls '+dir+'Priors*'+varname+'*125*.tiff > '+dir+'file_list.txt')
-        os.system('gdalbuildvrt -te -180 -90 180 90 ' + dir + filename + ' -input_file_list '+dir+'file_list.txt')
-
-        filenames[varname] = dir + filename
-        # os.chdir('/home/joris/Simulations/Python/multiply/prior-engine/multiply_prior_engine/')
-        # return filenames
-        return filename
+    def CombineTiles2Virtualfile(self, variable, doystr):
+        dir = self.directory_data + 'Priors/'
+        file_name = 'Priors_' + variable + '_' + doystr + '_global.vrt'
+        # todo exchange 125 in upcoming versions with doy
+        list_of_files = glob.glob(dir + 'Priors*' + variable + '*125*.tiff')
+        files = " ".join(list_of_files)
+        subprocess.call('gdalbuildvrt -te -180 -90 180 90 ' + dir + file_name + ' ' + files)
+        return '{}/{}'.format(dir, file_name)
 
     def ProcessData(self,variables=None, state_mask=None, timestr='2007-12-31 04:23', logger=None, file_prior=None, file_lcc=None,file_biome=None, file_meteo=None):
         import datetime

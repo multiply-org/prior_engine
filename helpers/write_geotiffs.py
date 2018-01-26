@@ -9,7 +9,7 @@
 
     Copyright (C) 2018  Thomas Ramsauer
 """
-
+import pdb
 import os
 import gdal
 import numpy as np
@@ -25,13 +25,20 @@ def WriteGeoTiff_from_climNetCDF(filename, varname,
                                  lyr_mean='mean', lyr_unc='unc',
                                  new_no_data_value=None,
                                  upper_no_data_thres=None,
-                                 lower_no_data_thres=None):
+                                 upper_no_data_thres_unc=None,
+                                 lower_no_data_thres=None,
+                                 lower_no_data_thres_unc=0,
+                                 flip_lat=True):
     """Write GeoTiffs from climatology NetCDF (generated with geoval module).
 
     :param filename: filename of NetCDF file to be processed.
-    :param varname: name of variable in NetCDF file.
+    :param varname: name of variable to be written to Geotiffs.
     :param lyr_mean: name of mean layer/variable in NetCDF file.
     :param lyr_unc:  name of uncertainty layer/variable in NetCDF file.
+    :param new_no_data_value: value to set no data values to
+    :param upper_no_data_thres: values above will be set to new_no_data_value
+    :param lower_no_data_thres: values below will be set to new_no_data_value
+    :param flip_lat: Should latitudes be flipped
     :returns: -
     :rtype: -
 
@@ -65,17 +72,28 @@ def WriteGeoTiff_from_climNetCDF(filename, varname,
 
         means = d.variables[lyr_mean][month][:]
         unc = d.variables[lyr_unc][month][:]
+        # pdb.set_trace()
         if new_no_data_value is not None:
             if upper_no_data_thres is not None:
-                means[means >= upper_no_data_thres] = new_no_data_value
-                unc[unc >= upper_no_data_thres] = new_no_data_value
+                means = np.ma.masked_where(means > upper_no_data_thres, means)
             if lower_no_data_thres is not None:
-                means[means <= lower_no_data_thres] = new_no_data_value
-                unc[unc <= lower_no_data_thres] = new_no_data_value
-        dst_ds.GetRasterBand(1).WriteArray(means[::-1])
+                means = np.ma.masked_where(means < lower_no_data_thres, means)
+            if upper_no_data_thres_unc is not None:
+                unc = np.ma.masked_where(unc > upper_no_data_thres_unc, unc)
+            if lower_no_data_thres_unc is not None:
+                unc = np.ma.masked_where(unc < lower_no_data_thres_unc, unc)
+        if flip_lat:
+            i = -1
+        else:
+            i = 1
+
+        means[means.mask] = new_no_data_value
+        unc[unc.mask] = new_no_data_value
+
+        dst_ds.GetRasterBand(1).WriteArray(means.data[::i])
         dst_ds.GetRasterBand(1).SetDescription(varname + '-mean')
-        dst_ds.GetRasterBand(2).WriteArray(unc[::-1])
-        dst_ds.GetRasterBand(2).SetDescription(varname + '-unc')
+        dst_ds.GetRasterBand(2).WriteArray(unc.data[::i])
+        dst_ds.GetRasterBand(2).SetDescription(varname + '-uncertainty')
         dst_ds = None
 
 
@@ -83,8 +101,11 @@ def main():
     # TODO make actual CLI for main()
     os.chdir('/home/thomas/Code/prior-engine/aux_data')
     WriteGeoTiff_from_climNetCDF(filename=('CCI_SM_climatology_eur_merged_inv'
-                                 '.nc'), varname='sm', lyr_mean='sm',
-                                 lyr_unc='sm_stdev', new_no_data_value=-999,
+                                 '.nc'),
+                                 varname='sm',
+                                 lyr_mean='sm',
+                                 lyr_unc='sm_stdev',
+                                 new_no_data_value=-999,
                                  upper_no_ata_thres=10)
 
 

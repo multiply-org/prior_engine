@@ -4,7 +4,7 @@
   <VRTRasterBand dataType="Float32" band="1">
     <ColorInterp>Gray</ColorInterp>
     <SimpleSource>
-      <SourceFilename relativeToVRT="1">Priors_lai_125_[50 60N]_[000 010E].tiff</SourceFilename>
+      <SourceFilename relativeToVRT="1">Priors_lai_125_[50_60N]_[000_010E].tiff</SourceFilename>
       <SourceBand>1</SourceBand>
       <SourceProperties RasterXSize="3600" RasterYSize="3600" DataType="Float32" BlockXSize="256" BlockYSize="256" />
       <SrcRect xOff="0" yOff="0" xSize="3600" ySize="3600" />
@@ -13,7 +13,7 @@
   </VRTRasterBand>
   <VRTRasterBand dataType="Float32" band="2">
     <SimpleSource>
-      <SourceFilename relativeToVRT="1">Priors_lai_125_[50 60N]_[000 010E].tiff</SourceFilename>
+      <SourceFilename relativeToVRT="1">Priors_lai_125_[50_60N]_[000_010E].tiff</SourceFilename>
       <SourceBand>2</SourceBand>
       <SourceProperties RasterXSize="3600" RasterYSize="3600" DataType="Float32" BlockXSize="256" BlockYSize="256" />
       <SrcRect xOff="0" yOff="0" xSize="3600" ySize="3600" />

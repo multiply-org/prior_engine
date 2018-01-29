@@ -3,7 +3,9 @@
 from setuptools import setup
 
 requirements = [
+    'python-dateutil',
     'gdal',
+    'matplotlib',
     'numpy',
     'pyyaml',
     'shapely'

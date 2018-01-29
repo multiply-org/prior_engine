@@ -52,11 +52,11 @@ class SoilMoisturePrior(Prior):
             # return self._calc_climatological_prior()
 
             # TODO adjust after creating GeoTiffs
-            self.sm_clim_dir = (self.config['Prior']['sm']['climatology']
+            self.sm_dir = (self.config['Prior']['sm']['climatology']
                         ['climatology_dir'])
             # self.sm_unc_dir = (self.config['Prior']['sm']['climatology']
                         # ['climatology_unc_dir'])
-            assert self.sm_clim_dir is not None,\
+            assert self.sm_dir is not None,\
                 'There is no directory for climatology prior (mean) specified!'
             # assert self.sm_unc_dir is not None,\
             #     ('There is no directory for climatology prior (uncertainty)'
@@ -154,7 +154,7 @@ class SoilMoisturePrior(Prior):
         """
         self.date
 
-        def _get_files(dir):
+        def _get_files(dir, vrt=True):
             """get filenames of climatological prior files from directory.
 
             :param dir: directory conataining the files (mentioned in config)
@@ -163,21 +163,45 @@ class SoilMoisturePrior(Prior):
             :rtype: list
 
             """
+            fn = None
+            if self.ptype == 'climatology':
+                pattern = (r"ESA_CCI_SM_clim_{:02d}.tiff$"
+                           .format(self.date_month_id))
+            elif self.ptype == 'recent':
+                pattern = (r"recent_prior_{}_{}.tiff$"
+                           .format(desc, self.date))
+            else:
+                # TODO specify other name patterns
+                pattern = (r"*")
+
             for dir_, _, files in os.walk(dir):
                 for fileName in files:
-                    if self.ptype == 'climatology':
-                        pattern = (r"ESA_CCI_SM_CLIM_{}.geotiff$"
-                                   .format(self.date_month_id))
-                    elif self.ptype == 'recent':
-                        pattern = (r"recent_prior_{}_{}.geotiff$"
-                                   .format(desc, self.date))
-                    else:
-                        # TODO specify other name patterns
-                        pattern = (r"*")
                     if re.match(pattern, fileName) is not None:
-                        return '{}/{}'.format(dir, fileName)
+                        fn = fileName
 
-        return (_get_files(self.sm_clim_dir))
+                        # TODO should be an option in config?!
+                        if vrt:
+                            try:
+                                temp_fn = ('{}_prior_{}_{:02d}.vrt'
+                                           .format(self.variable,
+                                                   self.ptype,
+                                                   self.date_month_id))
+                                os.system('gdalbuildvrt -te -180 -90 180 90 '
+                                          '{} {}'.format(self.sm_dir+temp_fn,
+                                                         self.sm_dir+fn))
+                                # TODO if file exists:
+                                return '{}/{}'.format(dir, temp_fn)
+                            # TODO does not catch gdal error:
+                            except:
+                                print('Cannot create .vrt prior file.')
+                                return '{}/{}'.format(dir, fn)
+                        else:
+                            return '{}/{}'.format(dir, fn)
+            assert fn is not None, ('Did not find {} {} prior files'
+                                    ' (pattern: \'{}\')!'
+                                    .format(self.variable,
+                                            self.ptype, pattern))
+        return (_get_files(self.sm_dir))
 
     def _extract_climatology(self):
         """

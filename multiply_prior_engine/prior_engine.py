@@ -23,10 +23,10 @@ __status__ = "Prototype"
 
 
 class PriorEngine(object):
-    """Prior Engine for MULTIPLY.
+    """ Prior Engine for MULTIPLY.
 
-    holds prior initialization methods (e.g. config loading).
-    calls specific submodules (soilmoisture_prior, vegetation_prior, ..)
+        holds prior initialization methods (e.g. config loading).
+        calls specific submodules (soilmoisture_prior, vegetation_prior, ..)
     """
 
     def __init__(self, **kwargs):
@@ -132,8 +132,9 @@ class PriorEngine(object):
                 var_res.update({ptype: prior.RetrievePrior()})
                 print('  '+ptype)
             except AssertionError as e:
-                print('[WARNING] Sub-engine for *{}* {} prior not implemented!'
-                      .format(ptype, var))
+                # print('[WARNING] Sub-engine for *{}* {} prior not implemented!'
+                      # .format(ptype, var))
+                print('[WARNING] ', e)
                 # print(e)
         print('prior files.')
         return var_res

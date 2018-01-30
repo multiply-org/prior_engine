@@ -190,13 +190,13 @@ class SoilMoisturePrior(Prior):
                                           '{} {}'.format(self.sm_dir+temp_fn,
                                                          self.sm_dir+fn))
                                 # TODO if file exists:
-                                return '{}/{}'.format(dir, temp_fn)
+                                return '{}{}'.format(dir, temp_fn)
                             # TODO does not catch gdal error:
                             except:
                                 print('Cannot create .vrt prior file.')
-                                return '{}/{}'.format(dir, fn)
+                                return '{}{}'.format(dir, fn)
                         else:
-                            return '{}/{}'.format(dir, fn)
+                            return '{}{}'.format(dir, fn)
             assert fn is not None, ('Did not find {} {} prior files'
                                     ' (pattern: \'{}\')!'
                                     .format(self.variable,

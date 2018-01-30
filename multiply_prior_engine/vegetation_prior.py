@@ -658,7 +658,7 @@ class VegetationPrior(Prior):
         list_of_files = glob.glob(dir + 'Priors*' + variable + '*125*.tiff')
         files = " ".join(list_of_files)
         os.system('gdalbuildvrt -te -180 -90 180 90 ' + dir + file_name + ' ' + files)
-        return '{}/{}'.format(dir, file_name)
+        return '{}{}'.format(dir, file_name)
 
     def ProcessData(self, variables=None, state_mask=None, timestr='2007-12-31 04:23', logger=None, file_prior=None,
                     file_lcc=None, file_biome=None, file_meteo=None):

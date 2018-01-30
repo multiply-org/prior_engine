@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-    Prior Engine for MULTIPLY.
+    Prior Class for MULTIPLY.
 
     Copyright (C) 2018  Thomas Ramsauer
 """

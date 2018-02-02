@@ -31,6 +31,8 @@ Prior:
   sm:
     climatology:
       climatology_dir: ../aux_data/Climatology/SoilMoisture/
+    munich:
+      dir: ../aux_data/munich/SoilMoisture/
     # dynamic:
     #     type: dynamic
     #     model:

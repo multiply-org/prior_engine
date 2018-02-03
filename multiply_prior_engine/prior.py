@@ -46,10 +46,14 @@ class Prior(object):
         :returns: -
         :rtype: -
         """
-        # date_format = ('%Y-%m-%d')
+        date_format = ('%Y-%m-%d')
         s = self.config['General']['start_time']
         e = self.config['General']['end_time']
         interval = self.config['General']['time_interval']
+        if type(s) is str:
+            s = datetime.datetime.strptime(s, date_format)
+        if type(e) is str:
+            e = datetime.datetime.strptime(e, date_format)
         t_span = (e-s).days + 1
         # print(t_span)
 

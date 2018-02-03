@@ -61,13 +61,16 @@ class SoilMoisturePrior(Prior):
             # assert self.sm_unc_dir is not None,\
             #     ('There is no directory for climatology prior (uncertainty)'
             #     'specified!')
-            return self._provide_prior_files()
+        elif self.ptype == 'munich':
+            self.sm_dir = (self.config['Prior']['sm']['munich']
+                         ['dir'])
 
         elif self.ptype == 'recent':
             return self._get_recent_sm_proxy()
-            return self._provide_prior_files()
         else:
             assert False, '{} prior for sm not implemented'.format(self.ptype)
+
+        return self._provide_prior_files()
 
     def _calc_climatological_prior(self):
         """
@@ -167,6 +170,9 @@ class SoilMoisturePrior(Prior):
             if self.ptype == 'climatology':
                 pattern = (r"ESA_CCI_SM_clim_{:02d}.tiff$"
                            .format(self.date_month_id))
+            elif self.ptype == 'munich':
+                pattern = (r"{}.tiff$"
+                           .format(self.date.date()))
             elif self.ptype == 'recent':
                 pattern = (r"recent_prior_{}_{}.tiff$"
                            .format(desc, self.date))
@@ -189,14 +195,21 @@ class SoilMoisturePrior(Prior):
                                 os.system('gdalbuildvrt -te -180 -90 180 90 '
                                           '{} {}'.format(self.sm_dir+temp_fn,
                                                          self.sm_dir+fn))
-                                # TODO if file exists:
-                                return '{}/{}'.format(dir, temp_fn)
-                            # TODO does not catch gdal error:
-                            except:
+                                # os.system('gdalwarp {} {} -te -180 -90 180 90'
+                                #           '-t_srs EPSG:4326 -of VRT'
+                                #           .format(self.sm_dir+fn,
+                                #                   self.sm_dir+temp_fn))
+                                # # TODO if file exists:
+                                res = '{}{}'.format(dir, temp_fn)
+                                if os.path.isfile(res):
+                                    return res                            # TODO does not catch gdal error:
+                                else:
+                                    raise FileNotFoundError
+                            except FileNotFoundError as e:
                                 print('Cannot create .vrt prior file.')
-                                return '{}/{}'.format(dir, fn)
+                                return '{}{}'.format(dir, fn)
                         else:
-                            return '{}/{}'.format(dir, fn)
+                            return '{}{}'.format(dir, fn)
             assert fn is not None, ('Did not find {} {} prior files'
                                     ' (pattern: \'{}\')!'
                                     .format(self.variable,

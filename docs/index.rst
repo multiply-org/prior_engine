@@ -6,11 +6,15 @@
 Welcome to MULTIPLY Prior Engine's documentation!
 =================================================
 
+Contents
+---------
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
 
-
+   readme
+   multiply_prior_engine
+   
+.. mdinclude:: ../README.md
 
 Indices and tables
 ==================

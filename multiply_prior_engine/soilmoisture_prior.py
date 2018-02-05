@@ -210,8 +210,9 @@ class SoilMoisturePrior(Prior):
                                 return '{}{}'.format(dir, fn)
                         else:
                             return '{}{}'.format(dir, fn)
-            assert fn is not None, ('Did not find {} {} prior files'
-                                    ' (pattern: \'{}\')!'
+            # AssertionError is caught by the prior engine:
+            assert fn is not None, ('Soil Moisture Prior: Did not find {} {} '
+                                    'prior files (pattern: \'{}\')!'
                                     .format(self.variable,
                                             self.ptype, pattern))
         return (_get_files(self.sm_dir))

@@ -131,6 +131,7 @@ class PriorEngine(object):
                                        datestr=self.datestr, var=var)
                 var_res.update({ptype: prior.RetrievePrior()})
                 print('  '+ptype)
+            # If no file is found: module should throw AssertionError
             except AssertionError as e:
                 # print('[WARNING] Sub-engine for *{}* {} prior not implemented!'
                       # .format(ptype, var))

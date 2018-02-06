@@ -212,7 +212,7 @@ class SoilMoisturePrior(Prior):
                             return '{}{}'.format(dir, fn)
                     # temp fix for munich files
                     else:
-                        if re.match(self.datestr, filename) is not None:
+                        if re.match(self.datestr, fileName) is not None:
                             fn = fileName
                             return '{}{}'.format(dir, fn)
             # AssertionError is caught by the prior engine:

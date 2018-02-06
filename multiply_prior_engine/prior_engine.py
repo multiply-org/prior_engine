@@ -104,7 +104,11 @@ class PriorEngine(object):
             'dielectric_const': '',
             'roughness': RoughnessPrior,
             'lai': VegetationPrior,
-            'cab': VegetationPrior
+            'cab': VegetationPrior,
+            'car': VegetationPrior,
+            'cdm': VegetationPrior,
+            'cw': VegetationPrior,
+            'N': VegetationPrior
         }
         var_res = {}
         assert var in self.config['Prior'].keys(), \

@@ -733,7 +733,14 @@ class VegetationPrior(Prior):
         file_name = 'Priors_' + variable + '_' + doystr + '_global.vrt'
         # todo exchange 125 in upcoming versions with doy
         list_of_files = glob.glob(dir + 'Priors*' + variable + '*125*.tiff')
-        files = " ".join(list_of_files)
+
+	list_of_files2 = []
+	for filename in list_of_files:
+	    list_of_files2.append('"' + filename + '"')
+
+    
+	files = " ".join(list_of_files2)
+
         os.system('gdalbuildvrt -te -180 -90 180 90 ' + dir + file_name
                   + ' ' + files)
         return '{}{}'.format(dir, file_name)

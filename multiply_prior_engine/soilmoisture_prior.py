@@ -63,7 +63,7 @@ class SoilMoisturePrior(Prior):
             #     'specified!')
         elif self.ptype == 'munich':
             self.sm_dir = (self.config['Prior']['sm']['munich']
-                         ['dir'])
+                           ['munich_ir'])
 
         elif self.ptype == 'recent':
             return self._get_recent_sm_proxy()
@@ -185,36 +185,35 @@ class SoilMoisturePrior(Prior):
                     if re.match(pattern, fileName) is not None:
                         fn = fileName
 
-                        # TODO should be an option in config?!
-                        if vrt:
-                            try:
-                                temp_fn = ('{}_prior_{}_{:02d}.vrt'
-                                           .format(self.variable,
-                                                   self.ptype,
-                                                   self.date_month_id))
-                                os.system('gdalbuildvrt -te -180 -90 180 90 '
-                                          '{} {}'.format(self.sm_dir+temp_fn,
-                                                         self.sm_dir+fn))
-                                # os.system('gdalwarp {} {} -te -180 -90 180 90'
-                                #           '-t_srs EPSG:4326 -of VRT'
-                                #           .format(self.sm_dir+fn,
-                                #                   self.sm_dir+temp_fn))
-                                # # TODO if file exists:
-                                res = '{}{}'.format(dir, temp_fn)
-                                if os.path.isfile(res):
-                                    return res                            # TODO does not catch gdal error:
-                                else:
-                                    raise FileNotFoundError
-                            except FileNotFoundError as e:
-                                print('Cannot create .vrt prior file.')
-                                return '{}{}'.format(dir, fn)
-                        else:
-                            return '{}{}'.format(dir, fn)
                     # temp fix for munich files
-                    else:
-                        if re.match(self.datestr, fileName) is not None:
-                            fn = fileName
+                    elif re.match(self.datestr, fileName) is not None:
+                        fn = fileName
+                            # return '{}{}'.format(dir, fn)
+                    # TODO should be an option in config?!
+                    if vrt:
+                        try:
+                            temp_fn = ('{}_prior_{}_{:02d}.vrt'
+                                        .format(self.variable,
+                                                self.ptype,
+                                                self.date_month_id))
+                            os.system('gdalbuildvrt -te -180 -90 180 90 '
+                                        '{} {}'.format(self.sm_dir+temp_fn,
+                                                        self.sm_dir+fn))
+                            # os.system('gdalwarp {} {} -te -180 -90 180 90'
+                            #           '-t_srs EPSG:4326 -of VRT'
+                            #           .format(self.sm_dir+fn,
+                            #                   self.sm_dir+temp_fn))
+                            # # TODO if file exists:
+                            res = '{}{}'.format(dir, temp_fn)
+                            if os.path.isfile(res):
+                                return res                            # TODO does not catch gdal error:
+                            else:
+                                raise FileNotFoundError
+                        except FileNotFoundError as e:
+                            print('Cannot create .vrt prior file.')
                             return '{}{}'.format(dir, fn)
+                    else:
+                        return '{}{}'.format(dir, fn)
             # AssertionError is caught by the prior engine:
             assert fn is not None, ('Soil Moisture Prior: Did not find {} {} '
                                     'prior files (pattern: \'{}\')!'

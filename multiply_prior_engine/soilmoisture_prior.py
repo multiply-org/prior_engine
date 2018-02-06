@@ -63,7 +63,7 @@ class SoilMoisturePrior(Prior):
             #     'specified!')
         elif self.ptype == 'munich':
             self.sm_dir = (self.config['Prior']['sm']['munich']
-                           ['munich_ir'])
+                           ['munich_dir'])
 
         elif self.ptype == 'recent':
             return self._get_recent_sm_proxy()

@@ -208,8 +208,8 @@ class SoilMoisturePrior(Prior):
                             if os.path.isfile(res):
                                 return res                            # TODO does not catch gdal error:
                             else:
-                                raise FileNotFoundError
-                        except FileNotFoundError as e:
+                                raise AssertionError
+                        except AssertionError as e:
                             print('Cannot create .vrt prior file.')
                             return '{}{}'.format(dir, fn)
                     else:

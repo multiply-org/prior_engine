@@ -34,6 +34,8 @@ class PriorEngine(object):
         self.datestr = kwargs.get('datestr', None)
         self.variables = kwargs.get('variables', None)
         # self.priors = self.config['Prior']['priors']
+        # TODO get previous state.
+        # TODO get subengines
 
         self._get_config()
         self._check()
@@ -56,6 +58,7 @@ class PriorEngine(object):
             'There is no date passed to the Prior Engine.'
         assert self.variables is not None, \
             'There are no variables for prior retrieval specified/passed on.'
+        # TODO Should previous state be integrated here?
 
     def get_priors(self):
         """
@@ -98,6 +101,7 @@ class PriorEngine(object):
 
         """
         # TODO ad correct sub routines from Joris
+        # TODO get list from external file.
         # subengine dictionary contains var: subroutine
         subengine = {
             'sm': SoilMoisturePrior,
@@ -127,7 +131,8 @@ class PriorEngine(object):
             return
 
         # fill variable specific dictionary with all priors (clim, recent, ..)
-        # TODO concatenation necessary?
+        # TODO concatenation necessary? Should a concatenated prior state vector
+        # be returned instead/as additional form
         for ptype in self.config['Prior'][var].keys():
             # pass conig and prior type to subclass/engine
             try:
@@ -140,7 +145,6 @@ class PriorEngine(object):
                 # print('[WARNING] Sub-engine for *{}* {} prior not implemented!'
                       # .format(ptype, var))
                 print('[WARNING] ', e)
-                # print(e)
         print('prior files.')
         return var_res
 

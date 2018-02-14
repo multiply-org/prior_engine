@@ -7,10 +7,16 @@
     Copyright (C) 2018  Thomas Ramsauer
 """
 
+import logging
+import os
+import pdb
+import sys
+
 import yaml
 
 from .soilmoisture_prior import RoughnessPrior, SoilMoisturePrior
 from .vegetation_prior import VegetationPrior
+
 
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]
 __copyright__ = "Copyright 2018, Thomas Ramsauer"
@@ -22,12 +28,44 @@ __email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
 __status__ = "Prototype"
 
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s:%(message)s')
+
+file_handler = logging.FileHandler(__name__ + '.log')
+file_handler.setLevel(logging.WARNING)
+file_handler.setFormatter(formatter)
+
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+# to show output in console. set to higher level to omit.
+# Levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
+stream_handler.setLevel(logging.CRITICAL)
+
+logger.addHandler(file_handler)
+logger.addHandler(stream_handler)
+
+
 class PriorEngine(object):
     """ Prior Engine for MULTIPLY.
 
         holds prior initialization methods (e.g. config loading).
         calls specific submodules (soilmoisture_prior, vegetation_prior, ..)
     """
+
+    # TODO ad correct sub routines from Joris
+    subengine = {
+        'sm': SoilMoisturePrior,
+        'dielectric_const': '',
+        'roughness': RoughnessPrior,
+        'lai': VegetationPrior,
+        'cab': VegetationPrior,
+        'car': VegetationPrior,
+        'cdm': VegetationPrior,
+        'cw': VegetationPrior,
+        'N': VegetationPrior
+    }
 
     def __init__(self, **kwargs):
         self.configfile = kwargs.get('config', None)
@@ -39,7 +77,7 @@ class PriorEngine(object):
         self._check()
 
     def _check(self):
-        """initial check for passed values of 
+        """initial check for passed values of
         - config
         - datestr
         - variables
@@ -97,51 +135,35 @@ class PriorEngine(object):
         :rtype: -
 
         """
-        # TODO ad correct sub routines from Joris
-        # subengine dictionary contains var: subroutine
-        subengine = {
-            'sm': SoilMoisturePrior,
-            'dielectric_const': '',
-            'roughness': RoughnessPrior,
-            'lai': VegetationPrior,
-            'cab': VegetationPrior,
-            'car': VegetationPrior,
-            'cdm': VegetationPrior,
-            'cw': VegetationPrior,
-            'N': VegetationPrior
-        }
         var_res = {}
         assert var in self.config['Prior'].keys(), \
             'Variable to be inferred not in config.'
-        assert var in subengine,\
+        assert var in self.subengine,\
             ('No sub-enginge defined for variable to be inferred ({}).'
              .format(var))
-        print('for variable *{}* getting'.format(var))
+        logger.info('for variable *{}* getting'.format(var))
 
         # test if prior type is specified (else return empty dict):
         try:
             self.config['Prior'][var].keys() is not None
         except AttributeError as e:
-            print('[WARNING] No prior type for {} moisture prior specified!'
-                  .format(var))
+            logger.warning('[WARNING] No prior type for {}'
+                           ' moisture prior specified!'.format(var))
             return
-
         # fill variable specific dictionary with all priors (clim, recent, ..)
         # TODO concatenation necessary?
         for ptype in self.config['Prior'][var].keys():
+
             # pass conig and prior type to subclass/engine
             try:
-                prior = subengine[var](ptype=ptype, config=self.config,
+                logger.info('  ' + ptype + ' prior:')
+                prior = self.subengine[var](ptype=ptype, config=self.config,
                                        datestr=self.datestr, var=var)
                 var_res.update({ptype: prior.RetrievePrior()})
-                print('  '+ptype)
+
             # If no file is found: module should throw AssertionError
             except AssertionError as e:
-                # print('[WARNING] Sub-engine for *{}* {} prior not implemented!'
-                      # .format(ptype, var))
-                print('[WARNING] ', e)
-                # print(e)
-        print('prior files.')
+                logger.exception('{}'.format(e.args[0]))
         return var_res
 
     def _concat_priors(self, prior_dict):
@@ -172,7 +194,7 @@ def get_mean_state_vector(datestr: str, variables: list,
     """
     Return dictionary with variable dependent sub dictionary with prior type
     (key) and filenames of prior files (values).
-    
+
     :param datestr: The date (time?) for which the prior needs to be derived
     :param variables: A list of variables (sm, lai, roughness, ..)
     for which priors need to be available
@@ -187,4 +209,5 @@ def get_mean_state_vector(datestr: str, variables: list,
 
 
 if __name__ == '__main__':
-    print(get_mean_state_vector(datestr="2017-03-01", variables=['sm','lai', 'cab']))
+    print(get_mean_state_vector(
+        datestr="2017-03-01", variables=['sm', 'lai', 'cab']))

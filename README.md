@@ -58,9 +58,9 @@ To install the MULTIPLY Core for development and for the current user, use
 MULTIPLY prior engine is available as Python Package. 
 To import it into your python application, use
 
-    ```python
-	import multiply_prior_engine
-	```
+```python
+import multiply_prior_engine
+```
     
 ## Generating the Documentation
 

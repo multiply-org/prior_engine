@@ -11,8 +11,12 @@ requirements = [
     'shapely'
 ]
 
+__version__ = None
+with open('multiply_prior_engine/version.py') as f:
+    exec(f.read())
+
 setup(name='multiply-prior-engine',
-      version='0.1',
+      version=__version__,
       description='MULTIPLY Prior Engine',
       author='MULTIPLY Team',
       packages=['multiply_prior_engine'],

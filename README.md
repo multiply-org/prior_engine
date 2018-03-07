@@ -43,17 +43,28 @@ To install the MULTIPLY Core for development and for the current user, use
 
     $ python setup.py develop --user
 
+## Module requirements
+
+- `python-dateutil`
+- `gdal`
+- `matplotlib`
+- `numpy`
+- `pyyaml`
+- `shapely`
+ 
+
 ## How to use
 
 MULTIPLY prior engine is available as Python Package. 
 To import it into your python application, use
 
-    $ import multiply_data_access
+    ```python
+	import multiply_prior_engine
+	```
     
 ## Generating the Documentation
 
-We use [Sphinx](http://www.sphinx-doc.org/en/stable/rest.html) to generate the documentation of the MULTIPLY platform 
-on [ReadTheDocs](http://multiply.readthedocs.io/en/latest/). 
+We use [Sphinx](http://www.sphinx-doc.org/en/stable/rest.html) to generate the documentation of the MULTIPLY platform on [ReadTheDocs](http://multiply.readthedocs.io/en/latest/). 
 
 The main documentation of the MULTIPLY platform is to be found in the [MULTIPLY core repository](https://github.com/multiply-org/multiply-core).
 

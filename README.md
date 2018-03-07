@@ -3,11 +3,12 @@
 # prior_engine
 
 [![Build Status](https://travis-ci.org/multiply-org/prior-engine.svg?branch=master)](https://travis-ci.org/multiply-org/prior-engine)
-<!-- [![Documentation Status](https://readthedocs.org/projects/prior-engine/badge/?version=latest)](http://prior-engine.readthedocs.io/en/latest/?badge=latest) -->
 [![Documentation Status](https://readthedocs.org/projects/multiply/badge/?version=latest)](http://multiply.readthedocs.io/en/latest/?badge=latest)
                 
+<!-- [![Documentation Status](https://readthedocs.org/projects/prior-engine/badge/?version=latest)](http://prior-engine.readthedocs.io/en/latest/?badge=latest) -->
+
 This repository contains the prior engine for the MULTIPLY main platform.
-It provides *a priori* information to the [Inference Engine]() to support land surface parameter retrieval.
+It provides *a priori* information to the [Inference Engine](https://github.com/multiply-org/KaFKA-InferenceEngine) to support land surface parameter retrieval.
 
 <!-- Add plans and current status? -->
 
@@ -15,13 +16,13 @@ It provides *a priori* information to the [Inference Engine]() to support land s
 
 * `aux_data/` Auxiliary data for prior generation.
 * `doc` - The documentation of all prior engine classes and function definitions. 
-<!-- * `helpers/` - Helper functions. -->
 * `multiply_prior-engine/` - The main prior engine software package.
 as source of information and orientation.
 * `recipe` Conda installation recipe.
 * `test/` - The test package.
 * `setup.py` - main build script, to be run with Python 3.6
 * `LICENSE.md` - License of software in repository.
+<!-- * `helpers/` - Helper functions. -->
 
 ## How to install
 
@@ -54,7 +55,7 @@ To import it into your python application, use
 We use [Sphinx](http://www.sphinx-doc.org/en/stable/rest.html) to generate the documentation of the MULTIPLY platform 
 on [ReadTheDocs](http://multiply.readthedocs.io/en/latest/). 
 
-The main documentation of the MULTIPLY platform is to be found in the [MULTIPLY core repository](https://github.com/multiply-org/multiply-core)
+The main documentation of the MULTIPLY platform is to be found in the [MULTIPLY core repository](https://github.com/multiply-org/multiply-core).
 
 If there is a need to build the *prior engine specific* docs locally, these additional software packages are required:
 

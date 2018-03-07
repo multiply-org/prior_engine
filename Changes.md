@@ -18,8 +18,8 @@ All notable changes to this project will be documented in this file.
 -
 
 
-[Unreleased]: https://github.com/multiply-org/prior-engine/compare/0.3...HEAD
-[0.3]: https://github.com/multiply-org/prior-engine/compare/c76e059...0.3
+[Unreleased]: https://github.com/multiply-org/prior-engine/compare/v0.3...HEAD
+[0.3]: https://github.com/multiply-org/prior-engine/compare/c76e059...v0.3
 
 ---
 *The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)

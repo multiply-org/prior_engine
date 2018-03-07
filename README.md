@@ -1,6 +1,6 @@
 <img alt="MULTIPLY" align="right" src="https://raw.githubusercontent.com/multiply-org/multiply-core/master/doc/source/_static/logo/Multiply_multicolour.png" />
 
-# prior_engine
+# MULTIPLY Prior Engine
 
 [![Build Status](https://travis-ci.org/multiply-org/prior-engine.svg?branch=master)](https://travis-ci.org/multiply-org/prior-engine)
 [![Documentation Status](https://readthedocs.org/projects/multiply/badge/?version=latest)](http://multiply.readthedocs.io/en/latest/?badge=latest)
@@ -9,13 +9,13 @@
 
 This repository contains the prior engine for the MULTIPLY main platform.
 It provides *a priori* information to the [Inference Engine](https://github.com/multiply-org/KaFKA-InferenceEngine) to support land surface parameter retrieval.
-
+The documentation is part of the MULTIPLY core documentation on [ReadTheDocs](http://multiply.readthedocs.io/en/latest/). 
 <!-- Add plans and current status? -->
 
 ## Contents
 
 * `aux_data/` Auxiliary data for prior generation.
-* `doc` - The documentation of all prior engine classes and function definitions. 
+* `doc` - The auto generated documentation of all prior engine classes and function definitions. 
 * `multiply_prior-engine/` - The main prior engine software package.
 as source of information and orientation.
 * `recipe` Conda installation recipe.
@@ -66,7 +66,7 @@ import multiply_prior_engine
 
 We use [Sphinx](http://www.sphinx-doc.org/en/stable/rest.html) to generate the documentation of the MULTIPLY platform on [ReadTheDocs](http://multiply.readthedocs.io/en/latest/). 
 
-The main documentation of the MULTIPLY platform is to be found in the [MULTIPLY core repository](https://github.com/multiply-org/multiply-core).
+The source files of the main documentation of the MULTIPLY platform is to be found in the [MULTIPLY core repository](https://github.com/multiply-org/multiply-core).
 
 If there is a need to build the *prior engine specific* docs locally, these additional software packages are required:
 

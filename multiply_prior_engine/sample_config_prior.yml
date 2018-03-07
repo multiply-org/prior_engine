@@ -27,12 +27,12 @@ Prior:
 #   to be omitted. 
 
   General:
-    directory_data: ../aux_data/Static/Vegetation/
+    directory_data: ./aux_data/Static/Vegetation/
   sm:
     climatology:
-      climatology_dir: ../aux_data/Climatology/SoilMoisture/
+      climatology_dir: ./aux_data/Climatology/SoilMoisture/
     munich:
-      dir: ../aux_data/munich/SoilMoisture/
+      dir: ./aux_data/munich/SoilMoisture/
     # dynamic:
     #     type: dynamic
     #     model:

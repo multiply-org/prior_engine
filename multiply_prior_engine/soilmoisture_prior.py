@@ -38,6 +38,7 @@ class SoilMoisturePrior(Prior):
     Soil moisture prior class.
     Calculation of climatological prior.
     """
+
     def __init__(self, **kwargs):
         super(SoilMoisturePrior, self).__init__(**kwargs)
 
@@ -47,29 +48,32 @@ class SoilMoisturePrior(Prior):
 
         :returns: nothing
         """
+        self.sm_dir = None  # set None as old sm_dir may be present from loop.
+        try:
+            if self.ptype == 'climatology':
+                # TODO adjust after creating GeoTiffs
+                self.sm_dir = (self.config['Prior']['sm']['climatology']
+                               ['climatology_dir'])
 
-        if self.ptype == 'climatology':
-            # return self._calc_climatological_prior()
+            elif self.ptype == 'munich':
+                self.sm_dir = (self.config['Prior']['sm']['munich']
+                               ['munich_dir'])
 
-            # TODO adjust after creating GeoTiffs
-            self.sm_dir = (self.config['Prior']['sm']['climatology']
-                        ['climatology_dir'])
-            # self.sm_unc_dir = (self.config['Prior']['sm']['climatology']
-                        # ['climatology_unc_dir'])
-            assert self.sm_dir is not None,\
-                'There is no directory for climatology prior (mean) specified!'
-            # assert self.sm_unc_dir is not None,\
-            #     ('There is no directory for climatology prior (uncertainty)'
-            #     'specified!')
-        elif self.ptype == 'munich':
-            self.sm_dir = (self.config['Prior']['sm']['munich']
-                           ['munich_dir'])
+            elif self.ptype == 'recent':
+                return self._get_recent_sm_proxy()
 
-        elif self.ptype == 'recent':
-            return self._get_recent_sm_proxy()
+            else:
+                assert False, '{} prior for sm not implemented'.format(
+                    self.ptype)
+
+        except KeyError as e:
+            assert self.sm_dir is not None, \
+                ('Soil Moisture Prior: Cannot find directory information for '
+                 '"{}" prior in config file!'.format(self.ptype))
         else:
-            assert False, '{} prior for sm not implemented'.format(self.ptype)
-
+            assert os.path.isdir(self.sm_dir), ('Directory does not exist or'
+                                                ' cannot be found: {}'
+                                                .format(self.sm_dir))
         return self._provide_prior_files()
 
     def _calc_climatological_prior(self):
@@ -93,11 +97,11 @@ class SoilMoisturePrior(Prior):
         s = self.config['General']['start_time']
         e = self.config['General']['end_time']
         interval = self.config['General']['time_interval']
-        t_span = (e-s).days + 1
+        t_span = (e - s).days + 1
         # print(t_span)
 
         # create list of month ids for every queried point in time:
-        idt = [(s+(datetime.timedelta(int(x)))).month
+        idt = [(s + (datetime.timedelta(int(x)))).month
                for x in np.arange(0, t_span, interval)]
         # idt_unique = list(set(idt))
 
@@ -109,14 +113,14 @@ class SoilMoisturePrior(Prior):
 
         # read correspending data into mean and std arrays:
         for i in range(len(idt)):
-            p[i, :, :] = self.clim[idt[i]-1, :, :]
-            std[i, :, :] = self.std[idt[i]-1, :, :]
+            p[i, :, :] = self.clim[idt[i] - 1, :, :]
+            std[i, :, :] = self.std[idt[i] - 1, :, :]
 
         # calculate uncertainty with normalization via coefficient of variation
         # TODO scale uncertainty
-        sm_unc = (std/np.mean(self.clim))
+        sm_unc = (std / np.mean(self.clim))
         # inverse covariance matrix
-        diagon = (1./sm_unc)
+        diagon = (1. / sm_unc)
         # print(diagon.shape)
 
         # def create_sparse_matrix(a):
@@ -155,8 +159,7 @@ class SoilMoisturePrior(Prior):
         :rtype: dict
 
         """
-        self.date
-
+        # self.date
         def _get_files(dir, vrt=True):
             """get filenames of climatological prior files from directory.
 
@@ -168,6 +171,7 @@ class SoilMoisturePrior(Prior):
             """
             fn = None
             if self.ptype == 'climatology':
+                # TODO pattern from config file > make engine more accessible?
                 pattern = (r"ESA_CCI_SM_clim_{:02d}.tiff$"
                            .format(self.date_month_id))
             elif self.ptype == 'munich':
@@ -188,37 +192,37 @@ class SoilMoisturePrior(Prior):
                     # temp fix for munich files
                     elif re.match(self.datestr, fileName) is not None:
                         fn = fileName
-                            # return '{}{}'.format(dir, fn)
+                        # return '{}{}'.format(dir, fn)
             # AssertionError is caught by the prior engine:
             assert fn is not None, ('Soil Moisture Prior: Did not find {} {} '
-                                    'prior files (pattern: \'{}\')!'
-                                    .format(self.variable,
-                                            self.ptype, pattern))
+                                    'prior files in {} (pattern: \'{}\')!'
+                                    .format(self.variable, self.ptype,
+                                            self.sm_dir, pattern))
             # TODO should be an option in config?!
             if vrt:
                 try:
                     temp_fn = ('{}_prior_{}_{:02d}.vrt'
-                                .format(self.variable,
-                                        self.ptype,
-                                        self.date_month_id))
+                               .format(self.variable,
+                                       self.ptype,
+                                       self.date_month_id))
                     os.system('gdalbuildvrt -te -180 -90 180 90 '
-                                '{} {}'.format(self.sm_dir+temp_fn,
-                                                self.sm_dir+fn))
+                              '{} {}'.format(self.sm_dir + temp_fn,
+                                             self.sm_dir + fn))
                     # os.system('gdalwarp {} {} -te -180 -90 180 90'
                     #           '-t_srs EPSG:4326 -of VRT'
                     #           .format(self.sm_dir+fn,
                     #                   self.sm_dir+temp_fn))
-                    # # TODO if file exists:
                     res = '{}{}'.format(dir, temp_fn)
+                    # TODO does not catch gdal error:
                     if os.path.isfile(res):
-                        return res                            # TODO does not catch gdal error:
+                        return res
                     else:
-                        raise AssertionError
+                        raise AssertionError('Cannot create .vrt prior file.')
                 except AssertionError as e:
-                    print('Cannot create .vrt prior file.')
                     return '{}{}'.format(dir, fn)
             else:
                 return '{}{}'.format(dir, fn)
+
         return (_get_files(self.sm_dir))
 
     def _extract_climatology(self):
@@ -262,12 +266,12 @@ class SoilMoisturePrior(Prior):
         # print(idx, idy)
 
         # extract sm data
-        sm_area_ = clim[:, min(idy):max(idy)+1, :]
-        sm_area = sm_area_[:, :, min(idx):max(idx)+1]
+        sm_area_ = clim[:, min(idy):max(idy) + 1, :]
+        sm_area = sm_area_[:, :, min(idx):max(idx) + 1]
 
         # extract sm stddef data
-        sm_area_std_ = std[:, min(idy):max(idy)+1, :]
-        sm_area_std = sm_area_std_[:, :, min(idx):max(idx)+1]
+        sm_area_std_ = std[:, min(idy):max(idy) + 1, :]
+        sm_area_std = sm_area_std_[:, :, min(idx):max(idx) + 1]
         # sm_area_std = np.std(sm_area, axis=(1, 2))
         # sm_area_mean = np.mean(sm_area, axis=(1, 2))
 
@@ -286,6 +290,7 @@ class MapPrior(Prior):
     """
     Prior which is based on a LC map and a LUT
     """
+
     def __init__(self, **kwargs):
         """
         Parameters

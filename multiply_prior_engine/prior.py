@@ -29,8 +29,8 @@ class Prior(object):
         self.datestr = kwargs.get('datestr', None)
         self.variable = kwargs.get('var', None)
         self._check()
-        self._create_time_vector()
-        self._create_month_id()
+        self.time_vector, self.time_vector_months = self._create_time_vector()
+        self.date = self._create_datetime()
 
     def _check(self):
         assert self.ptype is not None, 'Invalid prior type'
@@ -59,27 +59,28 @@ class Prior(object):
 
         # create time vector
 
-        self.time_vector = [(s+(datetime.timedelta(int(x))))
-                            for x in np.arange(0, t_span, interval)]
+        time_vector = [(s+(datetime.timedelta(int(x))))
+                       for x in np.arange(0, t_span, interval)]
 
         # create list of month ids for every queried point in time:
-        idt_months = [(s+(datetime.timedelta(int(x)))).month
-                      for x in np.arange(0, t_span, interval)]
-        self.time_vector_months = idt_months
+        time_vector_months = [(s+(datetime.timedelta(int(x)))).month
+                              for x in np.arange(0, t_span, interval)]
+        return time_vector, time_vector_months
 
-    def _create_month_id(self):
+    def _create_datetime(self):
         # parse (dateutil) self.datestr to create datetime.datetime object
         try:
-            self.date = parse(self.datestr)
+            date = parse(self.datestr)
         except TypeError as e:
             print('[WARNING] No time info was passed to Prior Class!')
             return
         # assert parsing of self.date is working.
-        assert type(self.date) is datetime.datetime,\
-            'could not parse date {}'.format(self.date)
-            
+        assert type(date) is datetime.datetime,\
+            'could not parse date {}'.format(date)
+
         # get month id/number from self.datestr
-        self.date_month_id = self.date.month
+        # self.date_month_id = self.date.month
+        return date
 
     def initialize(self):
         """Initialiszation routine. Should be implemented in child class.

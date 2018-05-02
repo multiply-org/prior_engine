@@ -55,6 +55,11 @@ class SoilMoisturePrior(Prior):
                 self.sm_dir = (self.config['Prior']['sm']['climatology']
                                ['climatology_dir'])
 
+            if self.ptype == 'coarse':
+                # TODO adjust after creating GeoTiffs
+                self.sm_dir = (self.config['Prior']['sm']['coarse']
+                               ['coarse_dir'])
+
             elif self.ptype == 'munich':
                 self.sm_dir = (self.config['Prior']['sm']['munich']
                                ['munich_dir'])
@@ -160,7 +165,7 @@ class SoilMoisturePrior(Prior):
 
         """
         # self.date
-        def _get_files(dir, vrt=True):
+        def _get_files(dir, return_vrt=True):
             """get filenames of climatological prior files from directory.
 
             :param dir: directory conataining the files (mentioned in config)
@@ -173,7 +178,10 @@ class SoilMoisturePrior(Prior):
             if self.ptype == 'climatology':
                 # TODO pattern from config file > make engine more accessible?
                 pattern = (r"ESA_CCI_SM_clim_{:02d}.tiff$"
-                           .format(self.date_month_id))
+                           .format(self.date.month))
+            elif self.ptype == 'coarse':
+                pattern = (r"SMAP_{}*.tif$"
+                           .format(str(self.date.date().replace('-','')))
             elif self.ptype == 'munich':
                 pattern = (r"{}.tiff$"
                            .format(self.date.date()))
@@ -184,27 +192,65 @@ class SoilMoisturePrior(Prior):
                 # TODO specify other name patterns
                 pattern = (r"*")
 
-            for dir_, _, files in os.walk(dir):
-                for fileName in files:
-                    if re.match(pattern, fileName) is not None:
-                        fn = fileName
+            # TODO use glob.glob w recursive option here? would account for
+            # multiple files as well
+            fn_list = sorted(glob.glob('{}/{}'.format(dir, pattern),
+                                  recursive=True))
 
-                    # temp fix for munich files
-                    elif re.match(self.datestr, fileName) is not None:
-                        fn = fileName
-                        # return '{}{}'.format(dir, fn)
             # AssertionError is caught by the prior engine:
-            assert fn is not None, ('Soil Moisture Prior: Did not find {} {} '
-                                    'prior files in {} (pattern: \'{}\')!'
-                                    .format(self.variable, self.ptype,
-                                            self.sm_dir, pattern))
+            assert fn_list is not None and len(fn_list) > 0,
+                           ('Soil Moisture Prior: Did not find {} {} '
+                            'prior files in {} (pattern: \'{}\')!'
+                            .format(self.variable, self.ptype,
+                                    self.sm_dir, pattern))
+
+            if len(fn_list) > 1:
+                # create list of alphabet for gdal funciton call
+                abc = [chr(i) for i in range(ord('A'),ord('Z')+1)]
+                mean_instr, unc_instr, calc_instr = '', '', ''
+                # create input strings for gdal calculate call
+                for i, f in enumerate(fn_list):
+                    mean_instr += ('-{abc} {fn} --{abc} 1'
+                                   .format(abc=abc[i], fn=f))
+                    unc_instr += ('-{abc} {fn} --{abc} 2'
+                                  .format(abc=abc[i], fn=f))
+                calc_instr = '+'.join(map(str, abc[:i+1]))
+                # create temporary files to write mean mean&unc to
+                mean_tf = tempfile.NamedTemporaryFile(suffix='.vrt')
+                unc_tf = tempfile.NamedTemporaryFile(suffix='.vrt')
+                # create means of input file mean and uncertainty files
+                subprocess.call('gdal_calc.py {} --outfile={} --calc="{}/{}"'
+                                .format(mean_instr, mean_tf.name, calc_instr,
+                                        str(len(fn_list))),
+                                shell=True, check=True)
+                subprocess.call('gdal_calc.py {} --outfile={} --calc="{}/{}"'
+                                .format(unc_instr, unc_tf.name, calc_instr,
+                                        str(len(fn_list))),
+                                shell=True, check=True)
+                # write combined/averaged mean&uncertainty info to generic file
+                out_fn = self.ptype+self.date.date+'.vrt'
+                # TODO write to temporary file as well or create tiff.
+                gdal.BuildVRT(out_fn, [mean_tf, unc_tf], separate=True)
+                # close/delete temporary files
+                mean_tf.close()
+                unc_tf.close()
+                fn = out_fn
+
+            else:
+                fn = fn_list[0]
+
             # TODO should be an option in config?!
-            if vrt:
+            if return_vrt:
+                try:
+                     test = gdal.Open(fn)
+                except:
+                    raise AssertionError('Cannot open .vrt prior file ({})'
+                                         .format(fn))
                 try:
                     temp_fn = ('{}_prior_{}_{:02d}.vrt'
                                .format(self.variable,
                                        self.ptype,
-                                       self.date_month_id))
+                                       self.date.month))
                     os.system('gdalbuildvrt -te -180 -90 180 90 '
                               '{} {}'.format(self.sm_dir + temp_fn,
                                              self.sm_dir + fn))

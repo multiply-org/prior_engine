@@ -156,12 +156,15 @@ class SoilMoisturePrior(Prior):
                                  ['climatology_file'])
 
     def _provide_prior_files(self):
-        """provide file names, bands .. for inference engine
+        """return file names of requested prior files
 
-        :returns: 2 dictionaries (mean, var) w keys being variables\
-        (SM, LAI, ..) and values being file name/descriptors pointing\
-        to bands in netcdf files.
-        :rtype: dict
+        :returns: absolute path to prior file for requested prior.
+        The file is gdal-compatible to be used in inference engine - either
+        GeoTiff or VRT format. 
+        It includes 2 bands:
+         1. mean value raster
+         2. uncertainty raster
+        :rtype: string
 
         """
         # self.date
@@ -175,6 +178,8 @@ class SoilMoisturePrior(Prior):
 
             """
             fn = None
+            # TODO read pattern from config file to allow user defined input
+            # (has to be written to the config-file in a 'config step' first)
             if self.ptype == 'climatology':
                 # TODO pattern from config file > make engine more accessible?
                 pattern = (r"ESA_CCI_SM_clim_{:02d}.tiff$"

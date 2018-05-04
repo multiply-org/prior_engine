@@ -47,6 +47,26 @@ logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
 
 
+def _get_config(configfile):
+    """
+    Load config from self.configfile.
+    writes to self.config.
+
+    :returns: -
+    """
+    try:
+        with open(configfile, 'r') as cfg:
+            config = yaml.load(cfg)
+    except FileNotFoundError as e:
+        print(e)
+        print('Info: current directory: {}'.format(os.getcwd()))
+        sys.exit()
+    assert config['Prior'] is not None, \
+        ('There is no prior config information in {}'
+            .format(self.configfile))
+    return config
+
+
 class PriorEngine(object):
     """ Prior Engine for MULTIPLY.
 
@@ -68,14 +88,20 @@ class PriorEngine(object):
     }
 
     def __init__(self, **kwargs):
-        self.configfile = kwargs.get('config', None)
+        try:
+            while self.configfile is not None:
+                self.configfile = kwargs.get('config', None)
+                self.configfile = kwargs.get('configfile', None)
+                self.configfile = './sample_config_prior.yml'
+        except:
+            assert os.path.exists(self.configfile)
         self.datestr = kwargs.get('datestr', None)
         self.variables = kwargs.get('variables', None)
         # self.priors = self.config['Prior']['priors']
         # TODO get previous state.
         # TODO get subengines
 
-        self._get_config()
+        self.config = _get_config(self.configfile)
         self._check()
 
     def _check(self):
@@ -101,7 +127,8 @@ class PriorEngine(object):
     def get_priors(self):
         """
         Get prior data.
-        calls *_get_prior* for all variables (e.g. sm, lai, ..) in config.
+        calls *_get_prior* for all variables (e.g. sm, lai, ..) passed on to
+        get_mean_state_vector method.
 
         :returns: dictionary with prior names/prior types/filenames as
                   {key/{key/values}}.
@@ -110,23 +137,10 @@ class PriorEngine(object):
         """
         res = {}
         for var in self.variables:
-            if var is not 'General':
-                res.update({var: self._get_prior(var)})
+            res.update({var: self._get_prior(var)})
         # return self._concat_priors(res)
         return res
 
-    def _get_config(self):
-        """
-        Load config from self.configfile.
-        writes to self.config.
-
-        :returns: -
-        """
-        with open(self.configfile, 'r') as cfg:
-            self.config = yaml.load(cfg)
-        assert self.config['Prior'] is not None, \
-            ('There is no prior config information in {}'
-             .format(self.configfile))
 
     def _get_prior(self, var):
         """ Called by get_priors for all variables to be inferred.\
@@ -161,8 +175,11 @@ class PriorEngine(object):
             # pass conig and prior type to subclass/engine
             try:
                 logger.info('  ' + ptype + ' prior:')
+                # initialize specific prior *Class Object*
+                # e.g. VegetationPrior as 'prior':
                 prior = self.subengine[var](ptype=ptype, config=self.config,
-                                       datestr=self.datestr, var=var)
+                                            datestr=self.datestr, var=var)
+                # call RetrievePrior from specific prior class:
                 var_res.update({ptype: prior.RetrievePrior()})
 
             # If no file is found: module should throw AssertionError

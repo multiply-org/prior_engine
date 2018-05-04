@@ -32,6 +32,7 @@ wheels/
 .cache/
 # emacs temp files
 .#*
+*~
 
 .installed.cfg
 *.egg

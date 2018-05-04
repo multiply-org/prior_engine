@@ -9,15 +9,17 @@
 
 
 import datetime
+import glob
 import os
-import tempfile
+import subprocess
 import re
+import tempfile
+
 import numpy as np
 import shapely
 import shapely.wkt
-# import yaml
-
 from netCDF4 import Dataset
+from osgeo import gdal
 from scipy import spatial
 
 from .prior import Prior
@@ -46,7 +48,7 @@ class SoilMoisturePrior(Prior):
         """
         Initialize prior specific (climatological, ...) calculation.
 
-        :returns: nothing
+        :returns: 
         """
         self.sm_dir = None  # set None as old sm_dir may be present from loop.
         try:
@@ -55,7 +57,7 @@ class SoilMoisturePrior(Prior):
                 self.sm_dir = (self.config['Prior']['sm']['climatology']
                                ['climatology_dir'])
 
-            if self.ptype == 'coarse':
+            elif self.ptype == 'coarse':
                 # TODO adjust after creating GeoTiffs
                 self.sm_dir = (self.config['Prior']['sm']['coarse']
                                ['coarse_dir'])
@@ -67,6 +69,11 @@ class SoilMoisturePrior(Prior):
             elif self.ptype == 'recent':
                 return self._get_recent_sm_proxy()
 
+            # TODO add user defined priors as user1, user2 to config file?
+            # --> check for passed information (dir, files?) and start
+            # correlating computations
+            elif 'user' in self.ptype:
+                pass
             else:
                 assert False, '{} prior for sm not implemented'.format(
                     self.ptype)
@@ -186,7 +193,7 @@ class SoilMoisturePrior(Prior):
                            .format(self.date.month))
             elif self.ptype == 'coarse':
                 pattern = (r"SMAP_{}*.tif$"
-                           .format(str(self.date.date().replace('-','')))
+                           .format(str(self.date.date().replace('-', ''))))
             elif self.ptype == 'munich':
                 pattern = (r"{}.tiff$"
                            .format(self.date.date()))
@@ -203,15 +210,15 @@ class SoilMoisturePrior(Prior):
                                   recursive=True))
 
             # AssertionError is caught by the prior engine:
-            assert fn_list is not None and len(fn_list) > 0,
-                           ('Soil Moisture Prior: Did not find {} {} '
-                            'prior files in {} (pattern: \'{}\')!'
-                            .format(self.variable, self.ptype,
-                                    self.sm_dir, pattern))
+            assert fn_list is not None and len(fn_list) > 0, \
+                ('Soil Moisture Prior: Did not find {} {} '
+                 'prior files in {} (pattern: \'{}\')!'
+                 .format(self.variable, self.ptype, self.sm_dir, pattern))
 
+            # merge files if more than one for current timestep
             if len(fn_list) > 1:
                 # create list of alphabet for gdal funciton call
-                abc = [chr(i) for i in range(ord('A'),ord('Z')+1)]
+                abc = [chr(i) for i in range(ord('A'), ord('Z')+1)]
                 mean_instr, unc_instr, calc_instr = '', '', ''
                 # create input strings for gdal calculate call
                 for i, f in enumerate(fn_list):

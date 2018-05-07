@@ -60,13 +60,13 @@ class UserPriorInput(object):
             self.configfile = kwargs.get('configfile', None)
         self.config = _get_config(self.configfile)
 
-        # TODO read variables from config? are all possibly to infer variables
+        # TODO really read vars from config? are all possibly to infer vars
         # included? or is it better to have a defined list somewhere
         # (e.g. as class variable in PriorEngine like subengines)?
         self.variables = [k for k in self.config['Prior'].keys()
                           if k != 'General']
 
-    def check_user_config(self):
+    def check_for_user_config(self):
         """Checks subsection of user prior config for specific information
         and extracts them (e.g. directory).
 
@@ -77,7 +77,7 @@ class UserPriorInput(object):
         self.userconf = self.config['Prior'][self.variable][self.ptype]
         for k in self.userconf.keys():
             if 'dir' in k:
-                self.dir = k 
+                self.dir = k
             if 'other_options' in k:
                 pass
 
@@ -90,15 +90,18 @@ class UserPriorInput(object):
         :rtype: int
 
         """
+        # TODO add possibility for other names. these must be stored somewhere.
         existing_userprior = 0
         for ptype in self.config.keys():
             if 'user' in ptype:
                 existing_userprior += 1
         return existing_userprior
 
-    def _write_userconf(self):
-        """write gathered user input to configfile.
+    def _generate_userconf(self, configfile: str, new_configuration: dict):
+        """ generate dictionary with user prior information.
 
+        :param configfile: filename of configuration file to write
+        :param: new_configuration: dicitonary holding new prior information
         :returns: -
         :rtype: -
 
@@ -108,18 +111,57 @@ class UserPriorInput(object):
         #     configfile_name = 'user_config.yml'
 
         # add information to config dictionary
+
         count = self._count_defined_userpriors()
         self.config['Prior'][self.variable].update(
             {'user{}'.format(count+1):
-                {'dir': self.prior_directory}
-                # {''}
+                new_configuration
              })
-        # write self.config to new configfile
-        with open(self.configfile, 'w') as cfg:
-            cfg.write(yaml.dump(self.config, default_flow_style=False))
 
-    def define_prior(self):
-        """CLI to write config of user defined prior.
+    def write_config(self, configuration, configfile):
+        """Write configuration to a YAML file.
+
+        :param configuration: 
+        :param configfile: 
+        :returns: 
+        :rtype: 
+
+        """
+        with open(configfile, 'w') as cfg:
+            cfg.write(yaml.dump(configuration, default_flow_style=False))
+
+    def show_config(self, only_prior=True):
+        """Display current prior configuration. Print to stdout and return.
+
+        :returns: (prior engine) configuration
+        :rtype: dictionary
+
+        """
+        if self.configfile is not None:
+            if only_prior:
+                print('MULTIPLY Prior Engine Configuration \n({}):\n{}'
+                    .format(self.configfile, self.config))
+                return self.config['Prior']
+            else:
+                print('MULTIPLY Configuration \n({}):\n{}'
+                    .format(self.configfile, self.config))
+                return self.config
+        else:
+            print('MULTIPLY Configuration file has not been specified yet.'
+                  ' Please specify \'configfile=\' when initializing class.')
+            sys.exit()
+
+    def delete_prior(self, variable, ptype):
+        """Delete / Unselect prior in config.
+
+        :returns: 
+        :rtype: 
+
+        """
+        pass
+
+    def add_prior_cli(self):
+        """CLI to include configuration for user defined prior.
 
         :returns: configfile name (with path)
         :rtype: string
@@ -147,8 +189,8 @@ class UserPriorInput(object):
                             required=False,
                             action='store', dest='path_to_config',
                             help=('Directory of new user '
-                                  'config.\nIf None, a temporary file location '
-                                  'will be used.'))
+                                  'config.\nIf None, a temporary file location'
+                                  ' will be used.'))
         parser.add_argument('-fn', '--filename', type=str, metavar='',
                             required=False,
                             action='store', dest='filename',
@@ -158,11 +200,19 @@ class UserPriorInput(object):
                                   'filename will be used.'))
 
         args = parser.parse_args()
+        self.add_prior(**vars(args))
 
-        if args.filename is not None and args.path_to_config is None:
+    def add_prior(self, **kwargs):
+        prior_variable = kwargs.get('prior_variable', None)
+        prior_directory = kwargs.get('prior_directory', None)
+        path_to_config = kwargs.get('path_to_config', None)
+        filename = kwargs.get('filename', None)
+
+        if filename is not None and path_to_config is None:
             print('\n[WARNING] Entered config file name ({}) will be omitted '
                   '--> no path specified (-c/--path_to_config)!\n'
-                  .format(args.filename))
+                  .format(filename))
+
         def _check_path(path):
             try:
                 assert os.path.isdir(path), \
@@ -171,16 +221,19 @@ class UserPriorInput(object):
                 return path
             except AssertionError as e:
                 # TODO creation of new folder?
-                parser.error(e)
+                try:
+                    parser.error(e)
+                except:
+                    raise(e)
 
         # check prior data directory
-        if args.prior_directory is not None:
-            self.prior_directory = _check_path(args.prior_directory)
+        if prior_directory is not None:
+            self.prior_directory = _check_path(prior_directory)
 
         # check config directory
         now = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        if args.path_to_config is not None:
-            path_to_config = _check_path(args.path_to_config)
+        if path_to_config is not None:
+            path_to_config = _check_path(path_to_config)
         else:
             # create temporary files to write config to:
             temp_conf = tempfile.NamedTemporaryFile(
@@ -189,8 +242,8 @@ class UserPriorInput(object):
 
         # if valid path entered but missing filename:
         if not os.path.isfile(path_to_config):
-            if args.filename is not None:
-                self.configfile = os.path.join(path_to_config, args.filename)
+            if filename is not None:
+                self.configfile = os.path.join(path_to_config, filename)
             else:
                 self.configfile = os.path.join(
                     path_to_config, 'PriorEngine_config_{}.yml'.format(now))
@@ -207,42 +260,35 @@ class UserPriorInput(object):
             self.configfile = path_to_config
         print('User config file: {}'.format(self.configfile))
 
-        self.variable = args.prior_variable
-        self._write_userconf()
-        # TODO update self.configname??
-        # self.configfile = temp_conf.name 
+        # used in _generate_userconf for location in config file
+        self.variable = prior_variable
+
+        # so far only directory as user defined configuration implemented
+        # TODO needs more flexibility:
+        nc = {}
+        for arg in kwargs:
+            if arg == 'prior_directory' or \
+               arg == 'other_info_key_word':
+                nc.update({arg: kwargs[arg]})
+
+        # generate new config dictionary with user info included
+        self._generate_userconf(configfile=self.configfile,  # to read config
+                                new_configuration=nc)  # updates self.config
+        # write extended config to file
+        self.write_config(configfile=self.configfile,
+                          configuration=self.config)
+
         # TODO log temp file name, add logger anyways
         return self.configfile
 
 
 def main():
-    # with open("./sample_config_prior.yml", 'r') as cfg:
-    #     config = yaml.load(cfg)
-    # U = UserPrior(ptype='user1', config=config,
-    #               datestr="2017-03-01", var='sm')
-    U = UserPriorInput(configfile="./sample_config_prior.yml")
-    U.define_prior()
-
-# def get_mean_state_vector(datestr: str, variables: list,
-#                           ) -> dict:
-#     """
-#     Return dictionary with variable dependent sub dictionary with prior type
-#     (key) and filenames of prior files (values).
-
-#     :param datestr: The date (time?) for which the prior needs to be derived
-#     :param variables: A list of variables (sm, lai, roughness, ..)
-#     for which priors need to be available
-
-#     :return: dictionary with keys being the variables and
-#     values being a dictionary of prior type and filename of prior file.
-#     """
-
-#     return (PriorEngine(datestr=datestr, variables=variables,
-#                         config=config)
-#             .get_priors())
-
-#                 prior = self.subengine[var](ptype=ptype, config=self.config,
-#                                             datestr=self.datestr, var=var)
+    try:
+        U = UserPriorInput(configfile="./sample_config_prior.yml")
+        U.add_prior_cli()
+    except ModuleNotFoundError as e:
+        print(e)
+        # run from outside module or install properly
 
 
 if __name__ == '__main__':

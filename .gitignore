@@ -3,6 +3,8 @@
 aux_data/
 prior_engine_runner*
 
+# General Exceptions
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -30,7 +32,8 @@ wheels/
 
 *.pyc
 .cache/
-# emacs temp files
+
+# Emacs temp files
 .#*
 *~
 

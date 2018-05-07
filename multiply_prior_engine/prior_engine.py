@@ -63,7 +63,7 @@ def _get_config(configfile):
         sys.exit()
     assert config['Prior'] is not None, \
         ('There is no prior config information in {}'
-            .format(self.configfile))
+         .format(configfile))
     return config
 
 

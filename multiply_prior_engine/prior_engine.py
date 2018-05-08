@@ -67,6 +67,10 @@ def _get_config(configfile):
     return config
 
 
+default_config = os.path.join(os.path.dirname(__file__),
+                              'sample_config_prior.yml')
+
+
 class PriorEngine(object):
     """ Prior Engine for MULTIPLY.
 
@@ -88,13 +92,13 @@ class PriorEngine(object):
     }
 
     def __init__(self, **kwargs):
-        try:
-            while self.configfile is not None:
-                self.configfile = kwargs.get('config', None)
-                self.configfile = kwargs.get('configfile', None)
-                self.configfile = './sample_config_prior.yml'
-        except:
-            assert os.path.exists(self.configfile)
+        self.configfile = None
+        while self.configfile is None:
+            self.configfile = kwargs.get('config', None)
+            self.configfile = kwargs.get('configfile', None)
+            # have a backup/default config:
+            self.configfile = default_config
+        assert os.path.exists(self.configfile)
         self.datestr = kwargs.get('datestr', None)
         self.variables = kwargs.get('variables', None)
         # self.priors = self.config['Prior']['priors']

@@ -10,12 +10,15 @@
 import argparse
 import datetime
 import os
+import sys
 import tempfile
+import warnings
 
 import yaml
 
 from .prior import Prior
-from .prior_engine import _get_config
+from .prior_engine import _get_config, default_config
+
 
 __author__ = "Thomas Ramsauer"
 __copyright__ = "Thomas Ramsauer"
@@ -55,9 +58,18 @@ class UserPrior(Prior):
 class UserPriorInput(object):
 
     def __init__(self, **kwargs):
-        self.configfile = kwargs.get('config', None)
-        if self.configfile is None:
+        # config file so far only needed to verify that variables, which
+        # prior information should be added for, are inferrable.
+        self.configfile = None
+        while self.configfile is None:
+            self.configfile = kwargs.get('config', None)
             self.configfile = kwargs.get('configfile', None)
+            # have a backup/default config:
+            self.configfile = default_config
+
+        assert self.configfile is not None, \
+            ('No configuration filename passed to function. '
+             'Add \'configfile=\' to method call.')
         self.config = _get_config(self.configfile)
 
         # TODO really read vars from config? are all possibly to infer vars
@@ -65,6 +77,10 @@ class UserPriorInput(object):
         # (e.g. as class variable in PriorEngine like subengines)?
         self.variables = [k for k in self.config['Prior'].keys()
                           if k != 'General']
+        # TODO instead read from prior engine?
+        # self.variables = ['sm', 'cab', 'lai']
+        assert self.variables is not None, \
+            'UserPriorInput does not know about possibly to infer variables.'
 
     def check_for_user_config(self):
         """Checks subsection of user prior config for specific information
@@ -80,6 +96,18 @@ class UserPriorInput(object):
                 self.dir = k
             if 'other_options' in k:
                 pass
+
+    def _check_path(self, path):
+        try:
+            assert os.path.isdir(path), \
+                ('Entered path ({}) does not exist!'.format(path))
+            return path
+        except AssertionError as e:
+            # TODO creation of new folder?
+            try:
+                parser.error(e)
+            except:
+                raise(e)
 
     def _count_defined_userpriors(self):
         """Checks if a user defined prior is already defined in config, to:
@@ -101,7 +129,7 @@ class UserPriorInput(object):
         """ generate dictionary with user prior information.
 
         :param configfile: filename of configuration file to write
-        :param: new_configuration: dicitonary holding new prior information
+        :param: new_configuration: dictionary holding new prior information
         :returns: -
         :rtype: -
 
@@ -118,17 +146,62 @@ class UserPriorInput(object):
                 new_configuration
              })
 
-    def write_config(self, configuration, configfile):
+    def write_config(self, configuration, **kwargs):
         """Write configuration to a YAML file.
 
-        :param configuration: 
-        :param configfile: 
-        :returns: 
-        :rtype: 
+        :param configuration: configuration dictionary to write to file.
+        :Keyword Arguments:
+            * *path_to_config* (``str``) --
+              path to config file. if None, a tempfile will be created.
+            * *filename* (``str``) --
+              Filename of new user config. Only has effect if path_to_config
+              is specified.If None, a temporary filename will be used.
+
+        :returns: config file name
+        :rtype: string
 
         """
-        with open(configfile, 'w') as cfg:
+        path_to_config = kwargs.get('path_to_config', None)
+        filename = kwargs.get('filename', None)
+
+        if filename is not None and path_to_config is None:
+            warnings.warn('Entered config file name ({}) will be omitted '
+                          '--> no path specified!'.format(filename), Warning)
+
+        # check config directory
+        now = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        if path_to_config is not None:
+            path_to_config = self._check_path(path_to_config)
+        else:
+            # create temporary files to write config to:
+            temp_conf = tempfile.NamedTemporaryFile(
+                prefix='PriorEngine_config_{}_'.format(now), suffix='.yml')
+            path_to_config = temp_conf.name
+
+        # if valid path entered but missing filename:
+        if not os.path.isfile(path_to_config):
+            if filename is not None:
+                self.configfile = os.path.join(path_to_config, filename)
+            else:
+                self.configfile = os.path.join(
+                    path_to_config, 'PriorEngine_config_{}.yml'.format(now))
+            try:
+                with open(self.configfile, "x") as f:
+                    pass
+                assert os.path.isfile(self.configfile)
+            except FileExistsError as e:
+                self.configfile = os.path.join(
+                    path_to_config, "PriorEngine_config_{}.yml".format(now))
+                with open(self.configfile, "x") as f:
+                    warnings.warn(e, Warning)
+                assert os.path.isfile(self.configfile)
+        else:
+            self.configfile = path_to_config
+        print('User config file: {}'.format(self.configfile))
+
+        with open(self.configfile, 'w') as cfg:
             cfg.write(yaml.dump(configuration, default_flow_style=False))
+        return self.configfile
 
     def show_config(self, only_prior=True):
         """Display current prior configuration. Print to stdout and return.
@@ -139,26 +212,67 @@ class UserPriorInput(object):
         """
         if self.configfile is not None:
             if only_prior:
-                print('MULTIPLY Prior Engine Configuration \n({}):\n{}'
-                    .format(self.configfile, self.config))
+                print('MULTIPLY Prior Engine Configuration \n({}):\n\n{}'
+                      .format(self.configfile, yaml.dump(self.config['Prior'],
+                              default_flow_style=False)))
                 return self.config['Prior']
             else:
                 print('MULTIPLY Configuration \n({}):\n{}'
-                    .format(self.configfile, self.config))
+                      .format(self.configfile, yaml.dump(self.config,
+                              default_flow_style=False)))
                 return self.config
         else:
             print('MULTIPLY Configuration file has not been specified yet.'
                   ' Please specify \'configfile=\' when initializing class.')
-            sys.exit()
+            # sys.exit()
 
-    def delete_prior(self, variable, ptype):
+    def delete_prior(self, variable, ptype, write=True):
         """Delete / Unselect prior in config.
 
+        :param variable: 
+        :param ptype: 
+        :param write: 
         :returns: 
         :rtype: 
 
         """
-        pass
+        try:
+            removed = self.config['Prior'][variable].pop(ptype)
+            print('Removed {} prior configuration.'.format(removed))
+        except KeyError as e:
+            warnings.warn('{}/{} not in configuration'
+                          .format(variable, ptype), Warning)
+        if write:
+            self.write_config(self.config)
+
+    def add_prior(self, prior_variable, **kwargs):
+        # config file specific info (default ones used if not present):
+        path_to_config = kwargs.get('path_to_config', None)
+        filename = kwargs.get('filename', None)
+
+        # so far only directory as user defined configuration implemented
+        # TODO needs more flexibility:
+        prior_directory = kwargs.get('prior_directory', None)
+
+        # used in _generate_userconf for location in config file
+        self.variable = prior_variable
+
+        # check prior data directory
+        if prior_directory is not None:
+            self.prior_directory = self._check_path(prior_directory)
+
+        nc = {}
+        for arg in kwargs:
+            if arg is not 'path_to_config' and\
+               arg is not 'filename':
+                nc.update({arg: kwargs[arg]})
+
+        # generate new config dictionary with user info included
+        self._generate_userconf(configfile=self.configfile,  # to read config
+                                new_configuration=nc)  # updates self.config
+        # write extended config to file
+        self.write_config(path_to_config=path_to_config, filename=filename,
+                          configuration=self.config)
 
     def add_prior_cli(self):
         """CLI to include configuration for user defined prior.
@@ -173,6 +287,9 @@ class UserPriorInput(object):
             prog="user_prior.py",
             # usage='%(prog)s directory [-h] [-p]'
             )
+
+        # TODO add deletion of priors here? new required flags
+        # for 'add', 'delete', 'show'
 
         parser.add_argument('-v', '--prior_variable', type=str, metavar='',
                             action='store', dest='prior_variable',
@@ -201,85 +318,6 @@ class UserPriorInput(object):
 
         args = parser.parse_args()
         self.add_prior(**vars(args))
-
-    def add_prior(self, **kwargs):
-        prior_variable = kwargs.get('prior_variable', None)
-        prior_directory = kwargs.get('prior_directory', None)
-        path_to_config = kwargs.get('path_to_config', None)
-        filename = kwargs.get('filename', None)
-
-        if filename is not None and path_to_config is None:
-            print('\n[WARNING] Entered config file name ({}) will be omitted '
-                  '--> no path specified (-c/--path_to_config)!\n'
-                  .format(filename))
-
-        def _check_path(path):
-            try:
-                assert os.path.isdir(path), \
-                  ('Entered path ({}) does not exist!'.format(path))
-                print('Entered valid path (\'{}\').'.format(path))
-                return path
-            except AssertionError as e:
-                # TODO creation of new folder?
-                try:
-                    parser.error(e)
-                except:
-                    raise(e)
-
-        # check prior data directory
-        if prior_directory is not None:
-            self.prior_directory = _check_path(prior_directory)
-
-        # check config directory
-        now = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-        if path_to_config is not None:
-            path_to_config = _check_path(path_to_config)
-        else:
-            # create temporary files to write config to:
-            temp_conf = tempfile.NamedTemporaryFile(
-                prefix='PriorEngine_config_{}_'.format(now), suffix='.yml')
-            path_to_config = temp_conf.name
-
-        # if valid path entered but missing filename:
-        if not os.path.isfile(path_to_config):
-            if filename is not None:
-                self.configfile = os.path.join(path_to_config, filename)
-            else:
-                self.configfile = os.path.join(
-                    path_to_config, 'PriorEngine_config_{}.yml'.format(now))
-            try:
-                with open(self.configfile, "x") as f:
-                    pass
-                assert os.path.isfile(self.configfile)
-            except FileExistsError as e:
-                self.configfile = os.path.join(
-                    path_to_config, "PriorEngine_config_{}.yml".format(now))
-                with open(self.configfile, "x") as f:
-                    print('\n [WARNING] {}\n'.format(e))
-        else:
-            self.configfile = path_to_config
-        print('User config file: {}'.format(self.configfile))
-
-        # used in _generate_userconf for location in config file
-        self.variable = prior_variable
-
-        # so far only directory as user defined configuration implemented
-        # TODO needs more flexibility:
-        nc = {}
-        for arg in kwargs:
-            if arg == 'prior_directory' or \
-               arg == 'other_info_key_word':
-                nc.update({arg: kwargs[arg]})
-
-        # generate new config dictionary with user info included
-        self._generate_userconf(configfile=self.configfile,  # to read config
-                                new_configuration=nc)  # updates self.config
-        # write extended config to file
-        self.write_config(configfile=self.configfile,
-                          configuration=self.config)
-
-        # TODO log temp file name, add logger anyways
-        return self.configfile
 
 
 def main():

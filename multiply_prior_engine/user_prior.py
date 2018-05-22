@@ -13,6 +13,7 @@ import os
 import sys
 import tempfile
 import warnings
+import pandas as pd
 
 import yaml
 
@@ -246,6 +247,73 @@ class UserPriorInput(object):
             self.write_config(self.config)
 
     def add_prior(self, prior_variable, **kwargs):
+        """Adds directory, which holds user prior data, to config file.
+        The user defined prior data sets have to be in the common form of gdal
+        compatible files (e.g geotiff, vrt, ..). The `import_prior` utility may
+        therefor be utilized. The new config will be written to \
+        `path_to_config` or `filename`, please see `write_config`.
+
+        :param prior_variable: variable, which the user prior data is \
+                               supporting (e.g. lai, sm)
+
+        :Keyword Arguments:
+            * *path_to_config* (``str``) --
+              path to config file. if None, a tempfile will be created.
+            * *filename* (``str``) --
+              Filename of new user config. Only has effect if path_to_config
+              is specified.If None, a temporary filename will be used.
+            * *prior_directory* (``str``) --
+              Directory path where user prior data is stored.
+
+        :returns: 
+        :rtype: 
+
+        """
+        # config file specific info (default ones used if not present):
+        path_to_config = kwargs.get('path_to_config', None)
+        filename = kwargs.get('filename', None)
+
+        # so far only directory as user defined configuration implemented
+        # TODO needs more flexibility:
+        prior_directory = kwargs.get('prior_directory', None)
+        # TODO a date vector for the files has to be passed on or an utility
+        # needs to be created to read the correct data for date (an utility to
+        # find datestrings in filenames)
+        
+        # used in _generate_userconf for location in config file
+        self.variable = prior_variable
+
+        # check prior data directory
+        if prior_directory is not None:
+            self.prior_directory = self._check_path(prior_directory)
+
+        # adding to new config
+        nc = {}
+        for arg in kwargs:
+            if arg is not 'path_to_config' and\
+               arg is not 'filename':
+                nc.update({arg: kwargs[arg]})
+
+        # generate new config dictionary with user info included
+        self._generate_userconf(configfile=self.configfile,  # to read config
+                                new_configuration=nc)  # updates self.config
+        # write extended config to file
+        self.write_config(path_to_config=path_to_config, filename=filename,
+                          configuration=self.config)
+
+    def import_prior(self, prior_variable, **kwargs):
+        """Import user prior data in common MULTIPLY prior data format (gdal
+        compatible file, 2 layers).
+        Subroutines may be called.
+
+        :param arg:
+        :returns:
+        :rtype:
+
+        """
+        # Check for files or dir of input data, and output directory; create
+        # internal directory to store the converted data if not specified
+
         # config file specific info (default ones used if not present):
         path_to_config = kwargs.get('path_to_config', None)
         filename = kwargs.get('filename', None)
@@ -260,19 +328,34 @@ class UserPriorInput(object):
         # check prior data directory
         if prior_directory is not None:
             self.prior_directory = self._check_path(prior_directory)
+        # -------------
 
-        nc = {}
-        for arg in kwargs:
-            if arg is not 'path_to_config' and\
-               arg is not 'filename':
-                nc.update({arg: kwargs[arg]})
+        # Import data with suitable method:
+        # TODO finish section below
+        try:
+            self.read_tabular()
+        except ...:
+            is_netcdf(data)
+            self.read_netcdg()
+            pd.read_csv()
+        # ...
 
-        # generate new config dictionary with user info included
-        self._generate_userconf(configfile=self.configfile,  # to read config
-                                new_configuration=nc)  # updates self.config
-        # write extended config to file
-        self.write_config(path_to_config=path_to_config, filename=filename,
-                          configuration=self.config)
+        def _read_tabular(data):
+            d = pd.read_table(data)
+            return d
+
+        def _read_netcdf(data):
+            # geoval? netCDF4? other? hdf5?
+            pass
+
+        # add prior to config
+        try:
+            self.add_prior(prior_variable=self.variable, ... )
+            return 0
+        except e:
+            # log Error
+            return 99  # ?
+
 
     def add_prior_cli(self):
         """CLI to include configuration for user defined prior.

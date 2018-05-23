@@ -176,25 +176,28 @@ class UserPriorInput(object):
                 prefix='PriorEngine_config_{}_'.format(now), suffix='.yml')
             path_to_config = temp_conf.name
 
-        # if valid path entered but missing filename:
+        # if valid path entered
         if not os.path.isfile(path_to_config):
             if filename is not None:
                 self.configfile = os.path.join(path_to_config, filename)
+            # but missing file name (create generic based on date):
             else:
                 self.configfile = os.path.join(
                     path_to_config, 'PriorEngine_config_{}.yml'.format(now))
             try:
+                # 'x': open for exclusive creation, failing if file exists
                 with open(self.configfile, "x") as f:
                     pass
-                assert os.path.isfile(self.configfile)
             except FileExistsError as e:
                 self.configfile = os.path.join(
                     path_to_config, "PriorEngine_config_{}.yml".format(now))
                 with open(self.configfile, "x") as f:
                     warnings.warn(e, Warning)
-                assert os.path.isfile(self.configfile)
+        # if path is file:
         else:
             self.configfile = path_to_config
+
+        assert os.path.isfile(self.configfile)
         print('User config file: {}'.format(self.configfile))
 
         with open(self.configfile, 'w') as cfg:
@@ -235,6 +238,7 @@ class UserPriorInput(object):
 
         """
         try:
+            # removes entry from dictionary and returns it:
             removed = self.config['Prior'][variable].pop(ptype)
             print('Removed {} prior configuration.'.format(removed))
         except KeyError as e:
@@ -298,7 +302,8 @@ class UserPriorInput(object):
         self.write_config(path_to_config=path_to_config, filename=filename,
                           configuration=self.config)
 
-    def import_prior(self, prior_variable, **kwargs):
+    def import_prior(self, prior_variable: str,
+                     dtype: str['csv', 'netcdf', 'other'],  **kwargs):
         """Import user prior data in common MULTIPLY prior data format (gdal
         compatible file, 2 layers).
         Subroutines may be called.
@@ -328,12 +333,20 @@ class UserPriorInput(object):
         # -------------
 
         # Import data with suitable method:
+
         # TODO finish section below
+
+        dtype = kwargs.get('dtype', None)
+        # possibly dtype = self._find_data_type()
+
+        dtype_method = {'csv': _read_tabular(),
+                        'netCDF': _read_netcdf(),
+                        'other': ''}
         try:
-            self.read_tabular()
+            dtype_method[dtype](data=self.user_file)
         except ...:
             is_netcdf(data)
-            self.read_netcdg()
+            self._read_netcdg()
             pd.read_csv()
         # ...
 
@@ -351,8 +364,6 @@ class UserPriorInput(object):
             return 0
         except e:
             # log Error
-            return 99  # ?
-
 
     def add_prior_cli(self):
         """CLI to include configuration for user defined prior.

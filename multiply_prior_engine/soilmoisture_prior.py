@@ -72,12 +72,13 @@ class SoilMoisturePrior(Prior):
             elif 'user' in self.ptype:
                 pass
             else:
-                assert False, '{} prior for sm not implemented'.format(
-                    self.ptype)
+                msg = '{} prior for sm not implemented'.format(self.ptype)
+                logger.exception(msg)
+                assert False, msg
 
         except KeyError as e:
             assert self.sm_dir is not None, \
-                ('Soil Moisture Prior: Cannot find directory information for '
+                ('Cannot find directory information for '
                  '"{}" prior in config file!'.format(self.ptype))
         else:
             assert os.path.isdir(self.sm_dir), ('Directory does not exist or'
@@ -208,7 +209,7 @@ class SoilMoisturePrior(Prior):
 
             # AssertionError is caught by the prior engine:
             assert fn_list is not None and len(fn_list) > 0, \
-                ('Soil Moisture Prior: Did not find {} {} '
+                ('Did not find {} {} '
                  'prior files in {} (pattern: \'{}\')!'
                  .format(self.variable, self.ptype, self.sm_dir, pattern))
 

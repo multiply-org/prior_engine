@@ -1,8 +1,6 @@
 # /usr/bin/env python
 __author__ = "J Timmermans"
 __copyright__ = "Copyright 2017 J Timmermans"
-__version__ = "1.0 (06.11.2017)"
-__license__ = "GPLv3"
 __email__ = "j.timmermans@cml.leidenuniv.nl"
 
 import glob

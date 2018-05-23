@@ -12,6 +12,9 @@ requirements = [
 ]
 
 __version__ = None
+__status__ = None
+__license__ = None
+
 with open('multiply_prior_engine/version.py') as f:
     exec(f.read())
 

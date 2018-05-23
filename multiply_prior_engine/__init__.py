@@ -3,3 +3,4 @@ from .prior_engine import PriorEngine
 # from .prior import *
 # from .soilmoisture_prior import *
 # from .vegetation_prior import *
+from .version import *

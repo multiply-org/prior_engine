@@ -20,12 +20,9 @@ from .vegetation_prior import VegetationPrior
 
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]
 __copyright__ = "Copyright 2018, Thomas Ramsauer"
-__credits__ = ["Alexander Löw", "Thomas Ramsauer"]
-__license__ = "GPLv3"
-__version__ = "0.0.1"
+__credits__ = "Alexander Löw"
 __maintainer__ = "Thomas Ramsauer"
 __email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
-__status__ = "Prototype"
 
 
 logger = logging.getLogger(__name__)

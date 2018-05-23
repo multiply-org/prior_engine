@@ -22,12 +22,9 @@ from .prior_engine import _get_config, default_config
 
 
 __author__ = "Thomas Ramsauer"
-__copyright__ = "Thomas Ramsauer"
-__license__ = "gpl3"
-__version__ = "0.4.0"
+__copyright__ = "Copyright 2018 Thomas Ramsauer"
 __maintainer__ = "Thomas Ramsauer"
 __email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
-__status__ = "prototype"
 
 
 class UserPrior(Prior):

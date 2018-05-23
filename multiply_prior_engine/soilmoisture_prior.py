@@ -24,6 +24,8 @@ from scipy import spatial
 
 from .prior import Prior
 
+import logging
+logger = logging.getLogger(__name__)
 
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]
 __copyright__ = "Copyright 2018, Thomas Ramsauer"

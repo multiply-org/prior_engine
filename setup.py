@@ -2,14 +2,8 @@
 
 from setuptools import setup
 
-requirements = [
-    'python-dateutil',
-    'gdal',
-    'matplotlib',
-    'numpy',
-    'pyyaml',
-    'shapely'
-]
+with open('requirements.txt') as r:
+    requirements = r.read().splitlines()
 
 __version__ = None
 __status__ = None
@@ -23,13 +17,10 @@ setup(name='multiply-prior-engine',
       description='MULTIPLY Prior Engine',
       author='MULTIPLY Team',
       packages=['multiply_prior_engine'],
-      # entry_points={
-      #     'file_system_plugins': [
-      #         'local_file_system = multiply_data_access:local_file_system.LocalFileSystemAccessor',
-      #     ],
-      #     'meta_info_provider_plugins': [
-      #         'json_meta_info_provider = multiply_data_access:json_meta_info_provider.JsonMetaInfoProviderAccessor',
-      #     ],
-      # },
+      entry_points={
+          'console_scripts': [
+              'local_file_system = multiply_prior_engine.user_prior:main'
+          ]
+      },
       install_requires=requirements
-)
+      )

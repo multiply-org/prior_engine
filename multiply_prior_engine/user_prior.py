@@ -20,6 +20,8 @@ import yaml
 from .prior import Prior
 from .prior_engine import _get_config, default_config
 
+import logging
+logger = logging.getLogger(__name__)
 
 __author__ = "Thomas Ramsauer"
 __copyright__ = "Copyright 2018 Thomas Ramsauer"
@@ -360,10 +362,11 @@ class UserPriorInput(object):
 
         # add prior to config
         try:
-            self.add_prior(prior_variable=self.variable, ... )
+            #self.add_prior(prior_variable=self.variable, ... )
             return 0
-        except e:
+        except Exception as e:
             # log Error
+            pass
 
     def add_prior_cli(self):
         """CLI to include configuration for user defined prior.

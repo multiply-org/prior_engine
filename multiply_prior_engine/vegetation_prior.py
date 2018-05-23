@@ -20,6 +20,9 @@ from netCDF4 import Dataset
 
 from .prior import Prior
 
+import logging
+logger = logging.getLogger(__name__)
+
 plt.ion()
 
 

@@ -35,6 +35,8 @@ class Prior(object):
     def _check(self):
         assert self.ptype is not None, 'Invalid prior type'
         assert self.config is not None, 'No config available.'
+        assert self.datestr is not None, 'No datestr available.'
+        assert self.variable is not None, 'No variable available.'
 
     def _create_time_vector(self):
         """Creates a time vector dependent on start & end time and time interval
@@ -83,6 +85,16 @@ class Prior(object):
         return date
 
     def initialize(self):
+        """Initialiszation routine. Should be implemented in child class.
+        Prior calculation is initialized here.
+
+        :returns: -
+        :rtype: -
+
+        """
+        assert False, 'Should be implemented in child class'
+
+    def RetrievePrior(self):
         """Initialiszation routine. Should be implemented in child class.
         Prior calculation is initialized here.
 

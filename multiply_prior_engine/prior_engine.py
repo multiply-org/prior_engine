@@ -74,6 +74,23 @@ def _get_config(configfile):
 default_config = os.path.join(os.path.dirname(__file__),
                               'sample_config_prior.yml')
 
+default_variables = ['Cab',
+                     'Car',
+                     'Cdm',
+                     'Cb',
+                     'Cw',
+                     'N',
+                     'Albedo',
+                     'LAI',
+                     'Fapar',
+                     'VWC',
+                     'LIDFa',
+                     'H',
+                     'Bsoil',
+                     'Psoil',
+                     'SM',
+                     'SR']
+default_variables_lower = [x.lower() for x in default_variables]
 
 class PriorEngine(object):
     """ Prior Engine for MULTIPLY.

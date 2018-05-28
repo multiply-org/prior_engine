@@ -8,6 +8,7 @@
 """
 
 import argparse
+import csv
 import datetime
 import os
 import sys
@@ -18,7 +19,7 @@ import pandas as pd
 import yaml
 
 from .prior import Prior
-from .prior_engine import _get_config, default_config
+from .prior_engine import _get_config, default_config, default_variables_lower
 
 import logging
 logger = logging.getLogger(__name__)
@@ -41,15 +42,15 @@ class UserPrior(Prior):
         """
         Initialize prior specific (climatological, ...) calculation.
 
-        :returns: 
-        
+        :returns:
+
         """
 
     def userprior_conversion(self):
         """Convert user defined data for compatibility?
 
-        :returns: 
-        :rtype: 
+        :returns:
+        :rtype:
 
         """
         pass
@@ -81,6 +82,9 @@ class UserPriorInput(object):
         # self.variables = ['sm', 'cab', 'lai']
         assert self.variables is not None, \
             'UserPriorInput does not know about possibly to infer variables.'
+
+    def now():
+        return datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
     def check_for_user_config(self):
         """Checks subsection of user prior config for specific information
@@ -153,7 +157,7 @@ class UserPriorInput(object):
         :Keyword Arguments:
             * *path_to_config* (``str``) --
               path to config file. if None, a tempfile will be created.
-            * *filename* (``str``) --
+            * *new_config_filename* (``str``) --
               Filename of new user config. Only has effect if path_to_config
               is specified.If None, a temporary filename will be used.
 
@@ -162,37 +166,41 @@ class UserPriorInput(object):
 
         """
         path_to_config = kwargs.get('path_to_config', None)
-        filename = kwargs.get('filename', None)
+        new_config_filename = kwargs.get('new_config_filename', None)
 
-        if filename is not None and path_to_config is None:
+        if new_config_filename is not None and path_to_config is None:
             warnings.warn('Entered config file name ({}) will be omitted '
-                          '--> no path specified!'.format(filename), Warning)
+                          '--> no path specified!'
+                          .format(new_config_filename), Warning)
 
         # check config directory
-        now = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
         if path_to_config is not None:
             path_to_config = self._check_path(path_to_config)
         else:
             # create temporary files to write config to:
             temp_conf = tempfile.NamedTemporaryFile(
-                prefix='PriorEngine_config_{}_'.format(now), suffix='.yml')
+                prefix='PriorEngine_config_{}_'.format(self.now),
+                suffix='.yml')
             path_to_config = temp_conf.name
 
         # if valid path entered
         if not os.path.isfile(path_to_config):
-            if filename is not None:
-                self.configfile = os.path.join(path_to_config, filename)
+            if new_config_filename is not None:
+                self.configfile = os.path.join(path_to_config,
+                                               new_config_filename)
             # but missing file name (create generic based on date):
             else:
                 self.configfile = os.path.join(
-                    path_to_config, 'PriorEngine_config_{}.yml'.format(now))
+                    path_to_config,
+                    'PriorEngine_config_{}.yml'.format(self.now))
             try:
                 # 'x': open for exclusive creation, failing if file exists
                 with open(self.configfile, "x") as f:
                     pass
             except FileExistsError as e:
                 self.configfile = os.path.join(
-                    path_to_config, "PriorEngine_config_{}.yml".format(now))
+                    path_to_config,
+                    "PriorEngine_config_{}.yml".format(self.now))
                 with open(self.configfile, "x") as f:
                     warnings.warn(e, Warning)
         # if path is file:
@@ -232,11 +240,11 @@ class UserPriorInput(object):
     def delete_prior(self, variable, ptype, write=True):
         """Delete / Unselect prior in config.
 
-        :param variable: 
-        :param ptype: 
-        :param write: 
-        :returns: 
-        :rtype: 
+        :param variable:
+        :param ptype:
+        :param write:
+        :returns:
+        :rtype:
 
         """
         try:
@@ -254,7 +262,7 @@ class UserPriorInput(object):
         The user defined prior data sets have to be in the common form of gdal
         compatible files (e.g geotiff, vrt, ..). The `import_prior` utility may
         therefor be utilized. The new config will be written to \
-        `path_to_config` or `filename`, please see `write_config`.
+        `path_to_config` or `new_config_filename`, please see `write_config`.
 
         :param prior_variable: variable, which the user prior data is \
                                supporting (e.g. lai, sm)
@@ -262,19 +270,19 @@ class UserPriorInput(object):
         :Keyword Arguments:
             * *path_to_config* (``str``) --
               path to config file. if None, a tempfile will be created.
-            * *filename* (``str``) --
+            * *new_config_filename* (``str``) --
               Filename of new user config. Only has effect if path_to_config
               is specified.If None, a temporary filename will be used.
             * *prior_directory* (``str``) --
               Directory path where user prior data is stored.
 
-        :returns: 
-        :rtype: 
+        :returns:
+        :rtype:
 
         """
         # config file specific info (default ones used if not present):
         path_to_config = kwargs.get('path_to_config', None)
-        filename = kwargs.get('filename', None)
+        new_config_filename = kwargs.get('new_config_filename', None)
 
         # so far only directory as user defined configuration implemented
         # TODO needs more flexibility:
@@ -282,7 +290,7 @@ class UserPriorInput(object):
         # TODO a date vector for the files has to be passed on or an utility
         # needs to be created to read the correct data for date (an utility to
         # find datestrings in filenames)
-        
+
         # used in _generate_userconf for location in config file
         self.variable = prior_variable
 
@@ -294,18 +302,18 @@ class UserPriorInput(object):
         nc = {}
         for arg in kwargs:
             if arg is not 'path_to_config' and\
-               arg is not 'filename':
+               arg is not 'new_config_filename':
                 nc.update({arg: kwargs[arg]})
 
         # generate new config dictionary with user info included
         self._generate_userconf(configfile=self.configfile,  # to read config
                                 new_configuration=nc)  # updates self.config
         # write extended config to file
-        self.write_config(path_to_config=path_to_config, filename=filename,
+        self.write_config(path_to_config=path_to_config,
+                          new_config_filename=new_config_filename,
                           configuration=self.config)
 
-    def import_prior(self, prior_variable: str,
-                     dtype: str['csv', 'netcdf', 'other'],  **kwargs):
+    def import_prior(self, prior_variable: str, **kwargs):
         """Import user prior data in common MULTIPLY prior data format (gdal
         compatible file, 2 layers).
         Subroutines may be called.
@@ -320,11 +328,7 @@ class UserPriorInput(object):
 
         # config file specific info (default ones used if not present):
         path_to_config = kwargs.get('path_to_config', None)
-        filename = kwargs.get('filename', None)
-
-        # so far only directory as user defined configuration implemented
-        # TODO needs more flexibility:
-        prior_directory = kwargs.get('prior_directory', None)
+        new_config_filename = kwargs.get('new_config_filename', None)
 
         # used in _generate_userconf for location in config file
         self.variable = prior_variable
@@ -336,37 +340,56 @@ class UserPriorInput(object):
 
         # Import data with suitable method:
 
-        # TODO finish section below
-
-        dtype = kwargs.get('dtype', None)
-        # possibly dtype = self._find_data_type()
-
-        dtype_method = {'csv': _read_tabular(),
-                        'netCDF': _read_netcdf(),
+        filename, dtype = os.path.splitext(self.user_file)
+        dtype_method = {'csv': _read_tabular,
+                        'netCDF': '',
                         'other': ''}
+
+        # *** Temporary limitation: ***
+        if dtype is 'csv':
+            pass
+        else:
+            assert False, ('Currently, only \'.csv\' files are supported as '
+                           'user prior files.')
+        # load data
         try:
             dtype_method[dtype](data=self.user_file)
-        except ...:
-            is_netcdf(data)
-            self._read_netcdg()
-            pd.read_csv()
-        # ...
+        except Exception as e:
+            # TODO
+            raise e
 
         def _read_tabular(data):
-            d = pd.read_table(data)
-            return d
+            with open(data, 'r') as f:
+                reader = csv.reader(f)
+                variable, lat, lon = tuple(reader[0])
+                data = list(reader[1:])
+            assert variable.lower() in default_variables_lower, \
+                ('Variable {} currently not supported as user prior.'
+                 .format(variable))
+            self.variable = variable
+            self.data = data
+            self.latlon = tuple(lat, lon)
+            self.data_type = 'point'
+            return variable, data, lat, lon
 
         def _read_netcdf(data):
             # geoval? netCDF4? other? hdf5?
             pass
 
+        # TODO write to temporary file?!
+        # temp_user_file = tempfile.NamedTemporaryFile(
+        #                      prefix='User_{}_'.format(self.now),
+        #                      suffix='.')
+
         # add prior to config
         try:
-            #self.add_prior(prior_variable=self.variable, ... )
-            return 0
+            self.add_prior(prior_variable=self.variable,
+                           path_to_config=path_to_config,
+                           new_config_filename=new_config_filename)
+            # return 0
         except Exception as e:
+            raise e
             # log Error
-            pass
 
     def add_prior_cli(self):
         """CLI to include configuration for user defined prior.
@@ -385,26 +408,28 @@ class UserPriorInput(object):
         # TODO add deletion of priors here? new required flags
         # for 'add', 'delete', 'show'
 
-        parser.add_argument('-v', '--prior_variable', type=str, metavar='',
+        parser.add_argument('-v', '--prior_variable', type=str,
+                            metavar='',
                             action='store', dest='prior_variable',
                             required=True, choices=self.variables,
                             help=('Variable to use the prior data for.\n'
                                   'Choices are: {}'.format(self.variables)))
-        parser.add_argument('-d', '--prior_directory', type=str, metavar='',
+        parser.add_argument('-d', '--prior_directory', type=str,
+                            metavar='',
                             action='store', dest='prior_directory',
                             required=True,
                             help=('Directory which holds specific user prior'
                                   ' data.'))
 
-        parser.add_argument('-c', '--path_to_config', type=str, metavar='',
-                            required=False,
+        parser.add_argument('-c', '--path_to_config', type=str,
+                            metavar='', required=False,
                             action='store', dest='path_to_config',
                             help=('Directory of new user '
                                   'config.\nIf None, a temporary file location'
                                   ' will be used.'))
-        parser.add_argument('-fn', '--filename', type=str, metavar='',
-                            required=False,
-                            action='store', dest='filename',
+        parser.add_argument('-fn', '--new_config_filename', type=str,
+                            metavar='', required=False,
+                            action='store', dest='new_config_filename',
                             help=('Filename of new user '
                                   'config. Only has effect if path_to_config'
                                   ' is specified.\nIf None, a temporary '

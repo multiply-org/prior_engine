@@ -57,7 +57,25 @@ class UserPrior(Prior):
 
 
 class UserPriorInput(object):
+    """
+    UserPriorInput Class
 
+    This class contains methods to 'add', 'remove' information to the prior
+    configuration and an 'import' method to import prior data provided by the
+    user.
+
+    When adding a prior config to the configuration file, the script checks if
+    other 'user' priors are abundant and adds suitable numbering accordingly.
+    The new configuration information is written to a subsection for the
+    specified variable and labled e.g. 'user1'.
+
+    Deleting means removing the prior specific information from the
+    configuration file.
+
+    ! Currently only tabular data is supported!
+
+
+    """
     def __init__(self, **kwargs):
         # config file so far only needed to verify that variables, which
         # prior information should be added for, are inferrable.
@@ -237,8 +255,8 @@ class UserPriorInput(object):
                   ' Please specify \'configfile=\' when initializing class.')
             # sys.exit()
 
-    def delete_prior(self, variable, ptype, write=True):
-        """Delete / Unselect prior in config.
+    def remove_prior(self, variable, ptype, write=True):
+        """Remove prior from configuration file.
 
         :param variable:
         :param ptype:
@@ -374,7 +392,7 @@ class UserPriorInput(object):
 
         def _read_netcdf(data):
             # geoval? netCDF4? other? hdf5?
-            pass
+            assert False, 'Reading NetCDF files not implemented yet.'
 
         # TODO write to temporary file?!
         # temp_user_file = tempfile.NamedTemporaryFile(
@@ -391,7 +409,7 @@ class UserPriorInput(object):
             raise e
             # log Error
 
-    def add_prior_cli(self):
+    def user_prior_cli(self):
         """CLI to include configuration for user defined prior.
 
         :returns: configfile name (with path)
@@ -404,9 +422,21 @@ class UserPriorInput(object):
             prog="user_prior.py",
             # usage='%(prog)s directory [-h] [-p]'
             )
+        action = parser.add_mutually_exclusive_group(required=True)
+        action.add_argument('-A', '--add',
+                            default=False,
+                            action='store_true', dest='Add',
+                            help=('Add user prior data to configuration.'))
 
-        # TODO add deletion of priors here? new required flags
-        # for 'add', 'delete', 'show'
+        action.add_argument('-I', '--import',
+                            default=False,
+                            action='store_true', dest='Import',
+                            help=('Import user prior data.'))
+
+        action.add_argument('-R', '--remove',
+                            default=False,
+                            action='store_true', dest='Remove',
+                            help=('Remove prior data from configuration.'))
 
         parser.add_argument('-v', '--prior_variable', type=str,
                             metavar='',
@@ -417,9 +447,14 @@ class UserPriorInput(object):
         parser.add_argument('-d', '--prior_directory', type=str,
                             metavar='',
                             action='store', dest='prior_directory',
-                            required=True,
                             help=('Directory which holds specific user prior'
                                   ' data.'))
+
+        parser.add_argument('-p', '--prior_type', type=str,
+                            metavar='',
+                            action='store', dest='ptype',
+                            help=('Prior type. E.g. \'climatological\','
+                                  '\'user1\', ... specified in config file.'))
 
         parser.add_argument('-c', '--path_to_config', type=str,
                             metavar='', required=False,
@@ -436,13 +471,31 @@ class UserPriorInput(object):
                                   'filename will be used.'))
 
         args = parser.parse_args()
-        self.add_prior(**vars(args))
+        actions = [args.Add, args.Remove, args.Import]
+        print(actions)
+
+        # if all(arg is False for arg in actions):
+        #     parser.error('You need to provide an action flag: -A, -I, -R')
+        # if sum(actions) > 1:
+        #     set_args = [name for a in actions
+        #                 for name in vars(args[a])
+        #                 if a is not False]
+        #     parser.error('Only one action flag can be set. You set {}!'
+        #                  .format(set_args))
+        if args.Add:
+            self.add_prior(**vars(args))
+
+        if args.Import:
+            self.import_prior(**vars(args))
+
+        if args.Remove:
+            self.remove_prior(**vars(args))
 
 
 def main():
     try:
         U = UserPriorInput(configfile="./sample_config_prior.yml")
-        U.add_prior_cli()
+        U.user_prior_cli()
     except ModuleNotFoundError as e:
         print(e)
         # run from outside module or install properly

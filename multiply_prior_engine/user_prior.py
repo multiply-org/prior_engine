@@ -10,6 +10,7 @@
 import argparse
 import csv
 import datetime
+import logging
 import os
 import sys
 import tempfile
@@ -20,9 +21,8 @@ import yaml
 
 from .prior import Prior
 from .prior_engine import _get_config, default_config, default_variables_lower
-
-import logging
-logger = logging.getLogger(__name__)
+from .prior_logger import PriorLogger
+logger = PriorLogger().logger()
 
 __author__ = "Thomas Ramsauer"
 __copyright__ = "Copyright 2018 Thomas Ramsauer"
@@ -91,17 +91,11 @@ class UserPriorInput(object):
              'Add \'configfile=\' to method call.')
         self.config = _get_config(self.configfile)
 
-        # TODO really read vars from config? are all possibly to infer vars
-        # included? or is it better to have a defined list somewhere
-        # (e.g. as class variable in PriorEngine like subengines)?
-        self.variables = [k for k in self.config['Prior'].keys()
-                          if k != 'General']
-        # TODO instead read from prior engine?
-        # self.variables = ['sm', 'cab', 'lai']
-        assert self.variables is not None, \
+        self.default_variables_lower = default_variables_lower
+        assert self.default_variables_lower is not None, \
             'UserPriorInput does not know about possibly to infer variables.'
 
-    def now():
+    def now(self):
         return datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
 
     def check_for_user_config(self):
@@ -119,9 +113,9 @@ class UserPriorInput(object):
             if 'other_options' in k:
                 pass
 
-    def _check_path(self, path):
+    def _path_exists(self, path):
         try:
-            assert os.path.isdir(path), \
+            assert os.path.exists(path), \
                 ('Entered path ({}) does not exist!'.format(path))
             return path
         except AssertionError as e:
@@ -131,7 +125,7 @@ class UserPriorInput(object):
             except:
                 raise(e)
 
-    def _count_defined_userpriors(self):
+    def _count_defined_userpriors(self, configfile):
         """Checks if a user defined prior is already defined in config, to:
         Writing user prior config:
            get count so that the next section can be written (user1, user2,...)
@@ -140,9 +134,11 @@ class UserPriorInput(object):
         :rtype: int
 
         """
+        self.config = _get_config(configfile)
         # TODO add possibility for other names. these must be stored somewhere.
         existing_userprior = 0
-        for ptype in self.config.keys():
+        for ptype in self.config['Prior'][self.variable].keys():
+            print(ptype)
             if 'user' in ptype:
                 existing_userprior += 1
         return existing_userprior
@@ -150,7 +146,7 @@ class UserPriorInput(object):
     def _generate_userconf(self, configfile: str, new_configuration: dict):
         """ generate dictionary with user prior information.
 
-        :param configfile: filename of configuration file to write
+        :param configfile: filename of current configuration file
         :param: new_configuration: dictionary holding new prior information
         :returns: -
         :rtype: -
@@ -162,7 +158,7 @@ class UserPriorInput(object):
 
         # add information to config dictionary
 
-        count = self._count_defined_userpriors()
+        count = self._count_defined_userpriors(configfile)
         self.config['Prior'][self.variable].update(
             {'user{}'.format(count+1):
                 new_configuration
@@ -191,26 +187,38 @@ class UserPriorInput(object):
                           '--> no path specified!'
                           .format(new_config_filename), Warning)
 
+        self.check_path_to_config_or_create(path_to_config)
+
+        assert os.path.isfile(self.configfile)
+        logger.info('User config file: {}'.format(self.configfile))
+
+        with open(self.configfile, 'w') as cfg:
+            cfg.write(yaml.dump(configuration, default_flow_style=False))
+        return self.configfile
+
+    def check_path_to_config_or_create(self, path_to_config):
         # check config directory
         if path_to_config is not None:
-            path_to_config = self._check_path(path_to_config)
+            path_to_config = self._path_exists(path_to_config)
         else:
             # create temporary files to write config to:
             temp_conf = tempfile.NamedTemporaryFile(
-                prefix='PriorEngine_config_{}_'.format(self.now),
-                suffix='.yml')
+                prefix='PriorEngine_config_{}_'.format(self.now()),
+                suffix='.yml',
+                delete=False)
             path_to_config = temp_conf.name
 
-        # if valid path entered
+        # if valid path entered but is dir
         if not os.path.isfile(path_to_config):
+            # and entered new config file name
             if new_config_filename is not None:
                 self.configfile = os.path.join(path_to_config,
                                                new_config_filename)
-            # but missing file name (create generic based on date):
+            # but missing new config file name (create generic based on date):
             else:
                 self.configfile = os.path.join(
                     path_to_config,
-                    'PriorEngine_config_{}.yml'.format(self.now))
+                    'PriorEngine_config_{}.yml'.format(self.now()))
             try:
                 # 'x': open for exclusive creation, failing if file exists
                 with open(self.configfile, "x") as f:
@@ -218,35 +226,32 @@ class UserPriorInput(object):
             except FileExistsError as e:
                 self.configfile = os.path.join(
                     path_to_config,
-                    "PriorEngine_config_{}.yml".format(self.now))
+                    "PriorEngine_config_{}.yml".format(self.now()))
                 with open(self.configfile, "x") as f:
                     warnings.warn(e, Warning)
         # if path is file:
         else:
             self.configfile = path_to_config
 
-        assert os.path.isfile(self.configfile)
-        print('User config file: {}'.format(self.configfile))
-
-        with open(self.configfile, 'w') as cfg:
-            cfg.write(yaml.dump(configuration, default_flow_style=False))
-        return self.configfile
-
-    def show_config(self, only_prior=True):
+    def show_config(self, only_prior=False):
         """Display current prior configuration. Print to stdout and return.
 
         :returns: (prior engine) configuration
         :rtype: dictionary
 
         """
+        if type(only_prior) is argparse.Namespace:
+            p = only_prior.only_prior
+        else:
+            p = only_prior
         if self.configfile is not None:
-            if only_prior:
-                print('MULTIPLY Prior Engine Configuration \n({}):\n\n{}'
+            if p:
+                print('\nMULTIPLY Prior Engine Configuration \n({}):\n\n{}\n'
                       .format(self.configfile, yaml.dump(self.config['Prior'],
                               default_flow_style=False)))
                 return self.config['Prior']
             else:
-                print('MULTIPLY Configuration \n({}):\n{}'
+                print('\nMULTIPLY Configuration \n({}):\n\n{}\n'
                       .format(self.configfile, yaml.dump(self.config,
                               default_flow_style=False)))
                 return self.config
@@ -311,10 +316,11 @@ class UserPriorInput(object):
 
         # used in _generate_userconf for location in config file
         self.variable = prior_variable
+        assert self.variable.lower() in default_variables_lower
 
         # check prior data directory
         if prior_directory is not None:
-            self.prior_directory = self._check_path(prior_directory)
+            self.prior_directory = self._path_exists(prior_directory)
 
         # adding to new config
         nc = {}
@@ -322,16 +328,25 @@ class UserPriorInput(object):
             if arg is not 'path_to_config' and\
                arg is not 'new_config_filename':
                 nc.update({arg: kwargs[arg]})
-
+        try:
+            assert any([x is not None for x in nc.values()]), \
+              "No information passed to \'add_prior\' method."
+        except AssertionError as e:
+            # logger.error(e)
+            try:
+                parser.error(e)
+            except:
+                raise e
         # generate new config dictionary with user info included
-        self._generate_userconf(configfile=self.configfile,  # to read config
+        self._generate_userconf(configfile=path_to_config,  # to read config
                                 new_configuration=nc)  # updates self.config
         # write extended config to file
         self.write_config(path_to_config=path_to_config,
                           new_config_filename=new_config_filename,
                           configuration=self.config)
+        self.show_config(only_prior=True)
 
-    def import_prior(self, prior_variable: str, **kwargs):
+    def import_prior(self, prior_variable: str, user_file: str, **kwargs):
         """Import user prior data in common MULTIPLY prior data format (gdal
         compatible file, 2 layers).
         Subroutines may be called.
@@ -352,12 +367,17 @@ class UserPriorInput(object):
         self.variable = prior_variable
 
         # check prior data directory
-        if prior_directory is not None:
-            self.prior_directory = self._check_path(prior_directory)
+        if user_file is not None:
+            self.user_file = self._path_exists(user_file)
+        else:
+            msg = 'No user file name specified!'
+            try:
+                parser.error(msg)
+            except:
+                raise(msg)
         # -------------
 
         # Import data with suitable method:
-
         filename, dtype = os.path.splitext(self.user_file)
         dtype_method = {'csv': _read_tabular,
                         'netCDF': '',
@@ -372,7 +392,9 @@ class UserPriorInput(object):
         # load data
         try:
             dtype_method[dtype](data=self.user_file)
+            logger.info('Imported user file {}.'.format(user_file))
         except Exception as e:
+            logger.error('Could not import user file {}.'.format(user_file))
             # TODO
             raise e
 
@@ -396,7 +418,7 @@ class UserPriorInput(object):
 
         # TODO write to temporary file?!
         # temp_user_file = tempfile.NamedTemporaryFile(
-        #                      prefix='User_{}_'.format(self.now),
+        #                      prefix='User_{}_'.format(self.now()),
         #                      suffix='.')
 
         # add prior to config
@@ -418,61 +440,114 @@ class UserPriorInput(object):
         """
 
         parser = argparse.ArgumentParser(
-            description=('Utility to integrate User Prior data in MULTIPLY'),
+            description=('Utility to integrate User Prior data in '
+                         'MULTIPLY Prior Engine'),
             prog="user_prior.py",
             # usage='%(prog)s directory [-h] [-p]'
             )
-        action = parser.add_mutually_exclusive_group(required=True)
-        action.add_argument('-A', '--add',
-                            default=False,
-                            action='store_true', dest='Add',
-                            help=('Add user prior data to configuration.'))
+        # action = parser.add_mutually_exclusive_group(required=True)
+        # action.add_argument('-A', '--add',
+        #                     default=False,
+        #                     action='store_true', dest='Add',
+        #                     help=('Add user prior data to configuration.'))
 
-        action.add_argument('-I', '--import',
-                            default=False,
-                            action='store_true', dest='Import',
-                            help=('Import user prior data.'))
+        # action.add_argument('-I', '--import',
+        #                     default=False,
+        #                     action='store_true', dest='Import',
+        #                     help=('Import user prior data.'))
 
-        action.add_argument('-R', '--remove',
-                            default=False,
-                            action='store_true', dest='Remove',
-                            help=('Remove prior data from configuration.'))
+        # action.add_argument('-R', '--remove',
+        #                     default=False,
+        #                     action='store_true', dest='Remove',
+        #                     help=('Remove prior data from configuration.'))
 
-        parser.add_argument('-v', '--prior_variable', type=str,
-                            metavar='',
-                            action='store', dest='prior_variable',
-                            required=True, choices=self.variables,
-                            help=('Variable to use the prior data for.\n'
-                                  'Choices are: {}'.format(self.variables)))
-        parser.add_argument('-d', '--prior_directory', type=str,
-                            metavar='',
-                            action='store', dest='prior_directory',
-                            help=('Directory which holds specific user prior'
-                                  ' data.'))
+        subparsers = parser.add_subparsers()
 
-        parser.add_argument('-p', '--prior_type', type=str,
-                            metavar='',
-                            action='store', dest='ptype',
-                            help=('Prior type. E.g. \'climatological\','
-                                  '\'user1\', ... specified in config file.'))
+        parser_Show = subparsers.add_parser('show', aliases='S',
+                                            help='Show current prior config.')
+        parser_Add = subparsers.add_parser('add', aliases='A', help='Add prior'
+                                           ' directory to configuration.')
+        parser_Remove = subparsers.add_parser('remove', aliases='R', help='Remove'
+                                           ' prior information from'
+                                           ' configuration.')
+        parser_Import = subparsers.add_parser('import', aliases='I',
+                                           help='Import user prior data.')
 
-        parser.add_argument('-c', '--path_to_config', type=str,
+        ## Show ##
+
+        parser_Show.set_defaults(func=self.show_config)
+        parser_Show.add_argument('-p', '--only-prior', default=False,
+                                 action='store_true', dest='only_prior',
+                                 help=('Only show prior relevant'
+                                       ' configuration.'))
+
+        ## Add ##
+        parser_Add.set_defaults(func=self.add_prior)
+        parser_Add.add_argument('-c', '--path_to_config', type=str,
                             metavar='', required=False,
                             action='store', dest='path_to_config',
                             help=('Directory of new user '
                                   'config.\nIf None, a temporary file location'
                                   ' will be used.'))
-        parser.add_argument('-fn', '--new_config_filename', type=str,
+        parser_Add.add_argument('-d', '--prior_directory', type=str,
+                            metavar='',
+                            action='store', dest='prior_directory',
+                            help=('Directory which holds specific user prior'
+                                  ' data.'))
+        parser_Add.add_argument('-fn', '--new_config_filename', type=str,
                             metavar='', required=False,
                             action='store', dest='new_config_filename',
                             help=('Filename of new user '
                                   'config. Only has effect if path_to_config'
                                   ' is specified.\nIf None, a temporary '
                                   'filename will be used.'))
+        parser_Add.add_argument('-v', '--prior_variable', type=str,
+                            metavar='',
+                            action='store', dest='prior_variable',
+                            required=True, choices=self.default_variables_lower,
+                            help=('Variable to use the prior data for.\n'
+                                  'Choices are: {}'
+                                  .format(self.default_variables_lower)))
+
+        ## Remove ##
+        parser_Remove.set_defaults(func=self.remove_prior)
+        parser_Remove.add_argument('-v', '--prior_variable', type=str,
+                            metavar='',
+                            action='store', dest='prior_variable',
+                            required=True, choices=self.default_variables_lower,
+                            help=('Variable to use the prior data for.\n'
+                                  'Choices are: {}'
+                                  .format(self.default_variables_lower)))
+        parser_Add.add_argument('-pt', '--prior_type', type=str,
+                            metavar='',
+                            action='store', dest='ptype',
+                            help=('Prior type. E.g. \'climatological\','
+                                  '\'user1\', ... specified in config file.'))
+
+        ## Import ##
+        parser_Import.add_argument('-u', '--user_file', type=str,
+                            metavar='', default=None,
+                            action='store', dest='user_file',
+                            help=('User prior file.'))
 
         args = parser.parse_args()
-        actions = [args.Add, args.Remove, args.Import]
-        print(actions)
+
+        try:
+            args = vars(args)
+            func = args.pop('func')
+            func(**args)
+        except Exception as e:
+            print(e)
+            parser.print_usage()
+
+        # actions = [args.Add, args.Remove, args.Import]
+
+        # args.A(Add) will be None if u(user_file) is not provided
+        # required_together = ('-A', '-u')
+        # if args.Add and args.user_file is None:
+        #     msg = "User prior file was not specified!"
+        #     logger.error(msg)
+        #     parser.error(msg)
 
         # if all(arg is False for arg in actions):
         #     parser.error('You need to provide an action flag: -A, -I, -R')
@@ -482,14 +557,14 @@ class UserPriorInput(object):
         #                 if a is not False]
         #     parser.error('Only one action flag can be set. You set {}!'
         #                  .format(set_args))
-        if args.Add:
-            self.add_prior(**vars(args))
+        # if args.Add:
+        #     self.add_prior(**vars(args))
 
-        if args.Import:
-            self.import_prior(**vars(args))
+        # if args.Import:
+        #     self.import_prior(**vars(args))
 
-        if args.Remove:
-            self.remove_prior(**vars(args))
+        # if args.Remove:
+        #     self.remove_prior(**vars(args))
 
 
 def main():

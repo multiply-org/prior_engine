@@ -28,7 +28,8 @@ __email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s:%(message)s')
+formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s:%(message)s',
+                              datefmt='%m/%d/%Y %I:%M:%S %p')
 
 file_handler = logging.FileHandler(__name__ + '.log')
 file_handler.setLevel(logging.INFO)
@@ -91,6 +92,7 @@ default_variables = ['Cab',
                      'SM',
                      'SR']
 default_variables_lower = [x.lower() for x in default_variables]
+
 
 class PriorEngine(object):
     """ Prior Engine for MULTIPLY.

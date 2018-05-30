@@ -11,6 +11,7 @@
 from abc import ABCMeta, abstractmethod
 import datetime
 from dateutil.parser import parse
+from typing import List
 import numpy as np
 
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]
@@ -24,6 +25,7 @@ __status__ = "Prototype"
 
 
 class PriorCreator(metaclass=ABCMeta):
+
     def __init__(self, **kwargs):
         self.ptype = kwargs.get('ptype', None)
         self.config = kwargs.get('config', None)
@@ -35,6 +37,7 @@ class PriorCreator(metaclass=ABCMeta):
 
     def _check(self):
         assert self.ptype is not None, 'Invalid prior type'
+        #TODO make use of config optional
         assert self.config is not None, 'No config available.'
 
     def _create_time_vector(self):
@@ -56,9 +59,6 @@ class PriorCreator(metaclass=ABCMeta):
         if type(e) is str:
             e = datetime.datetime.strptime(e, date_format)
         t_span = (e-s).days + 1
-        # print(t_span)
-
-        # create time vector
 
         self.time_vector = [(s+(datetime.timedelta(int(x))))
                             for x in np.arange(0, t_span, interval)]
@@ -82,20 +82,15 @@ class PriorCreator(metaclass=ABCMeta):
         # get month id/number from self.datestr
         self.date_month_id = self.date.month
 
-    # @abstractmethod
-    # def initialize(self):
-    #     """Initialization routine. Should be implemented in child class.
-    #     Prior calculation is initialized here.
-    #
-    #     :returns: -
-    #     :rtype: -
-    #
-    #     """
-        # assert False, 'Should be implemented in child class'
-
     @abstractmethod
-    def retrieve_prior_file(self):
+    def compute_prior_file(self) -> str:
         """
-        Might perform some computation, then retrieves the path to a file containing
+        Might perform some computation, then retrieves the path to a file containing the prior info
         :return:
+        """
+
+    @classmethod
+    def get_variable_names(cls) -> List[str]:
+        """
+        :return: A list of the variables that this prior creator is able to create priors for
         """

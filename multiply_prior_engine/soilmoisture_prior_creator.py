@@ -42,7 +42,11 @@ class SoilMoisturePriorCreator(PriorCreator):
     def __init__(self, **kwargs):
         super(SoilMoisturePriorCreator, self).__init__(**kwargs)
 
-    def retrieve_prior_file(self):
+    @classmethod
+    def get_variable_names(cls):
+        return ['sm']
+
+    def compute_prior_file(self):
         """
         Initialize prior specific (climatological, ...) calculation.
 
@@ -344,6 +348,10 @@ class RoughnessPriorCreator(MapPriorCreator):
         """
         return tempfile.mktemp(suffix='.nc')
 
-    def retrieve_prior_file(self):
+    @classmethod
+    def get_variable_names(cls):
+        return ['roughness']
+
+    def compute_prior_file(self):
         assert False, 'roughness prior not implemented'
 

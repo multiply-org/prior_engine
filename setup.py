@@ -3,7 +3,6 @@
 from setuptools import setup
 
 requirements = [
-    'abc',
     'python-dateutil',
     'gdal',
     'matplotlib',
@@ -22,17 +21,11 @@ setup(name='multiply-prior-engine',
       author='MULTIPLY Team',
       packages=['multiply_prior_engine'],
       entry_points={
-          'priors': [
-              'vegetation_prior = multiply_prior_engine:vegetation_prior_creator.VegetationPriorCreator',
-              'soil_moisture_prior = multiply_prior_engine:soil_moisture_prior_creator.SoilMoisturePriorCreator',
-              'roughness_prior = multiply_prior_engine:soil_moisture_prior_creator.RoughnessPriorCreator'
-          ]
-      #     'file_system_plugins': [
-      #         'local_file_system = multiply_data_access:local_file_system.LocalFileSystemAccessor',
-      #     ],
-      #     'meta_info_provider_plugins': [
-      #         'json_meta_info_provider = multiply_data_access:json_meta_info_provider.JsonMetaInfoProviderAccessor',
-      #     ],
+          'prior_creators': [
+              'vegetation_prior_creator = multiply_prior_engine:vegetation_prior_creator.VegetationPriorCreator',
+              'soil_moisture_prior_creator = multiply_prior_engine:soilmoisture_prior_creator.SoilMoisturePriorCreator',
+              'roughness_prior_creator = multiply_prior_engine:soilmoisture_prior_creator.RoughnessPriorCreator',
+          ],
       },
       install_requires=requirements
 )

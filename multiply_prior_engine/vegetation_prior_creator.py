@@ -22,6 +22,8 @@ from netCDF4 import Dataset
 
 from .prior_creator import PriorCreator
 
+SUPPORTED_VARIABLES = ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N', 'ala', 'h', 'bsoil', 'psoil']
+
 plt.ion()
 
 
@@ -159,6 +161,10 @@ class VegetationPriorCreator(PriorCreator):
             'cm': lambda x: (-1 / 100.) * np.log(x),
             'ala': lambda x: 90. * x}
 
+    @classmethod
+    def get_variable_names(cls):
+        return SUPPORTED_VARIABLES
+
     def OfflineProcessing(self):
         """FIXME! briefly describe function
 
@@ -255,8 +261,7 @@ class VegetationPriorCreator(PriorCreator):
         """
 
         # define variables
-        varnames = ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N', 'ala',
-                    'h', 'bsoil', 'psoil']
+        varnames = SUPPORTED_VARIABLES
         descriptions = ['Effective Leaf Area Index',
                         'Leaf Chlorophyll Content', 'Leaf Senescent material',
                         'Leaf Carotonoid Content', 'Leaf Water Content',
@@ -1000,7 +1005,7 @@ class VegetationPriorCreator(PriorCreator):
 
         filenames = self.CombineTiles2Virtualfile(variables)
 
-    def retrieve_prior_file(self):
+    def compute_prior_file(self):
         """FIXME! briefly describe function
 
         :returns: 
@@ -1009,8 +1014,7 @@ class VegetationPriorCreator(PriorCreator):
         """
         # Define variables
         if self.variable is None:
-            self.variables = ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N',
-                              'ala', 'h', 'bsoil', 'psoil']
+            self.variables = SUPPORTED_VARIABLES
 
         # time = parse(self.datestr)
         time = self.date
@@ -1029,14 +1033,13 @@ class VegetationPriorCreator(PriorCreator):
 
 
 if __name__ == "__main__":
-    vegetation_prior = VegetationPriorCreator()
+
+    vegetation_prior = VegetationPriorCreator(var='lai', datestr='2007-12-31 04:23', ptype='database')
 
     # VegPrior.ProcessData()
-    filenames = vegetation_prior.retrieve_prior_file(variables=['lai', 'cab'],
-                                                     datestr='2007-12-31 04:23',
-                                                     ptype='database')
+    filename = vegetation_prior.compute_prior_file()
 
-    print('%s' % filenames)
+    print('%s' % filename)
     # this should give as output:
     #
 

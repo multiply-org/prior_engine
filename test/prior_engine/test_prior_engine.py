@@ -4,9 +4,7 @@ CONFIG_FILE = './test/prior_engine/prior_engine_test_config.yml'
 
 
 def test_prior_engine():
-    prior_engine = PriorEngine(datestr="2017-03-01",
-                               variables=['sm', 'lai', 'cab'],
-                               config=CONFIG_FILE)
+    prior_engine = PriorEngine(datestr="2017-03-01", variables=['sm', 'lai', 'cab'], config=CONFIG_FILE)
     priors = prior_engine.get_priors()
 
     assert 3, len(priors.keys())

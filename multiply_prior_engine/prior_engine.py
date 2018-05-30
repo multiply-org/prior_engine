@@ -8,6 +8,7 @@
 """
 
 import logging
+import pkg_resources
 import os
 import pdb
 import sys
@@ -55,17 +56,13 @@ class PriorEngine(object):
     """
 
     # TODO ad correct sub routines from Joris
-    subengine = {
-        'sm': SoilMoisturePriorCreator,
-        'dielectric_const': '',
-        'roughness': RoughnessPriorCreator,
-        'lai': VegetationPriorCreator,
-        'cab': VegetationPriorCreator,
-        'car': VegetationPriorCreator,
-        'cdm': VegetationPriorCreator,
-        'cw': VegetationPriorCreator,
-        'N': VegetationPriorCreator
-    }
+    subengine = {}
+    prior_creator_registrations = pkg_resources.iter_entry_points('prior_creators')
+    for prior_creator_registration in prior_creator_registrations:
+        prior_creator = prior_creator_registration.load()
+        variable_names = prior_creator.get_variable_names()
+        for variable_name in variable_names:
+            subengine[variable_name] = prior_creator
 
     def __init__(self, **kwargs):
         self.configfile = kwargs.get('config', None)
@@ -161,7 +158,7 @@ class PriorEngine(object):
             try:
                 logger.info('  ' + ptype + ' prior:')
                 prior = self.subengine[var](ptype=ptype, config=self.config, datestr=self.datestr, var=var)
-                var_res.update({ptype: prior.retrieve_prior_file()})
+                var_res.update({ptype: prior.compute_prior_file()})
 
             # If no file is found: module should throw AssertionError
             except AssertionError as e:

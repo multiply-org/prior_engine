@@ -14,8 +14,8 @@ import sys
 
 import yaml
 
-from .soilmoisture_prior import RoughnessPrior, SoilMoisturePrior
-from .vegetation_prior import VegetationPrior
+from .soilmoisture_prior_creator import RoughnessPriorCreator, SoilMoisturePriorCreator
+from .vegetation_prior_creator import VegetationPriorCreator
 
 
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]
@@ -56,15 +56,15 @@ class PriorEngine(object):
 
     # TODO ad correct sub routines from Joris
     subengine = {
-        'sm': SoilMoisturePrior,
+        'sm': SoilMoisturePriorCreator,
         'dielectric_const': '',
-        'roughness': RoughnessPrior,
-        'lai': VegetationPrior,
-        'cab': VegetationPrior,
-        'car': VegetationPrior,
-        'cdm': VegetationPrior,
-        'cw': VegetationPrior,
-        'N': VegetationPrior
+        'roughness': RoughnessPriorCreator,
+        'lai': VegetationPriorCreator,
+        'cab': VegetationPriorCreator,
+        'car': VegetationPriorCreator,
+        'cdm': VegetationPriorCreator,
+        'cw': VegetationPriorCreator,
+        'N': VegetationPriorCreator
     }
 
     def __init__(self, **kwargs):
@@ -149,21 +149,19 @@ class PriorEngine(object):
         # test if prior type is specified (else return empty dict):
         try:
             self.config['Prior'][var].keys() is not None
-        except AttributeError as e:
-            logger.warning('[WARNING] No prior type for {}'
-                           ' moisture prior specified!'.format(var))
+        except AttributeError:
+            logger.warning('[WARNING] No prior type for {} prior specified!'.format(var))
             return
         # fill variable specific dictionary with all priors (clim, recent, ..)
         # TODO concatenation necessary? Should a concatenated prior state vector
         # be returned instead/as additional form
         for ptype in self.config['Prior'][var].keys():
 
-            # pass conig and prior type to subclass/engine
+            # pass config and prior type to subclass/engine
             try:
                 logger.info('  ' + ptype + ' prior:')
-                prior = self.subengine[var](ptype=ptype, config=self.config,
-                                       datestr=self.datestr, var=var)
-                var_res.update({ptype: prior.RetrievePrior()})
+                prior = self.subengine[var](ptype=ptype, config=self.config, datestr=self.datestr, var=var)
+                var_res.update({ptype: prior.retrieve_prior_file()})
 
             # If no file is found: module should throw AssertionError
             except AssertionError as e:
@@ -212,6 +210,7 @@ def get_mean_state_vector(datestr: str, variables: list,
             .get_priors())
 
 
+# Todo What do we need this for?
 if __name__ == '__main__':
     print(get_mean_state_vector(
         datestr="2017-03-01", variables=['sm', 'lai', 'cab']))

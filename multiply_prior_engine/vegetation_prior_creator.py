@@ -20,7 +20,7 @@ from matplotlib import pyplot as plt
 from scipy import interpolate as RegularGridInterpolator
 from netCDF4 import Dataset
 
-from .prior import Prior
+from .prior_creator import PriorCreator
 
 plt.ion()
 
@@ -115,12 +115,12 @@ def processespercore(varname, PFT, PFT_ids, VegetationPrior):
     return TRAIT_ttf_avg, TRAIT_ttf_unc
 
 
-class VegetationPrior(Prior):
+class VegetationPriorCreator(PriorCreator):
     """
     Description
     """
     def __init__(self, **kwargs):
-        super(VegetationPrior, self).__init__(**kwargs)
+        super(VegetationPriorCreator, self).__init__(**kwargs)
         self.config = kwargs.get('config', None)
         self.priors = kwargs.get('priors', None)
 
@@ -987,20 +987,20 @@ class VegetationPrior(Prior):
         for lon_study in lon_study_:
             for lat_study in lat_study_:
                 print('%3.2f %3.2f' % (lon_study, lat_study))
-                VegPrior.lon_study = [lon_study, lon_study + 10]
-                VegPrior.lat_study = [lat_study, lat_study + 10]
+                vegetation_prior.lon_study = [lon_study, lon_study + 10]
+                vegetation_prior.lat_study = [lat_study, lat_study + 10]
 
                 # 3. Perform Static processing
                 lon, lat, Prior_pbm_avg, Prior_pbm_unc = \
-                  VegPrior.StaticProcessing(variables)
+                  vegetation_prior.StaticProcessing(variables)
 
                 # 4. Perform Static processing
-                VegPrior.DynamicProcessing(variables, lon, lat, Prior_pbm_avg,
-                                           Prior_pbm_unc, doystr=doystr)
+                vegetation_prior.DynamicProcessing(variables, lon, lat, Prior_pbm_avg,
+                                                   Prior_pbm_unc, doystr=doystr)
 
         filenames = self.CombineTiles2Virtualfile(variables)
 
-    def RetrievePrior(self):
+    def retrieve_prior_file(self):
         """FIXME! briefly describe function
 
         :returns: 
@@ -1029,12 +1029,12 @@ class VegetationPrior(Prior):
 
 
 if __name__ == "__main__":
-    VegPrior = VegetationPrior()
+    vegetation_prior = VegetationPriorCreator()
 
     # VegPrior.ProcessData()
-    filenames = VegPrior.RetrievePrior(variables=['lai', 'cab'],
-                                       datestr='2007-12-31 04:23',
-                                       ptype='database')
+    filenames = vegetation_prior.retrieve_prior_file(variables=['lai', 'cab'],
+                                                     datestr='2007-12-31 04:23',
+                                                     ptype='database')
 
     print('%s' % filenames)
     # this should give as output:

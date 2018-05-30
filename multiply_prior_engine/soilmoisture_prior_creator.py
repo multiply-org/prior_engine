@@ -20,7 +20,7 @@ import shapely.wkt
 from netCDF4 import Dataset
 from scipy import spatial
 
-from .prior import Prior
+from .prior_creator import PriorCreator
 
 
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]
@@ -33,16 +33,16 @@ __email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
 __status__ = "Prototype"
 
 
-class SoilMoisturePrior(Prior):
+class SoilMoisturePriorCreator(PriorCreator):
     """
     Soil moisture prior class.
     Calculation of climatological prior.
     """
 
     def __init__(self, **kwargs):
-        super(SoilMoisturePrior, self).__init__(**kwargs)
+        super(SoilMoisturePriorCreator, self).__init__(**kwargs)
 
-    def RetrievePrior(self):
+    def retrieve_prior_file(self):
         """
         Initialize prior specific (climatological, ...) calculation.
 
@@ -74,7 +74,7 @@ class SoilMoisturePrior(Prior):
             assert os.path.isdir(self.sm_dir), ('Directory does not exist or'
                                                 ' cannot be found: {}'
                                                 .format(self.sm_dir))
-        return self._provide_prior_files()
+        return self._provide_prior_file()
 
     def _calc_climatological_prior(self):
         """
@@ -150,7 +150,7 @@ class SoilMoisturePrior(Prior):
         self.clim_data = Dataset(self.config['Prior']['sm']['climatology']
                                  ['climatology_file'])
 
-    def _provide_prior_files(self):
+    def _provide_prior_file(self):
         """provide file names, bands .. for inference engine
 
         :returns: 2 dictionaries (mean, var) w keys being variables\
@@ -160,7 +160,7 @@ class SoilMoisturePrior(Prior):
 
         """
         # self.date
-        def _get_files(dir, vrt=True):
+        def _get_file(dir, vrt=True):
             """get filenames of climatological prior files from directory.
 
             :param dir: directory conataining the files (mentioned in config)
@@ -223,7 +223,7 @@ class SoilMoisturePrior(Prior):
             else:
                 return '{}{}'.format(dir, fn)
 
-        return (_get_files(self.sm_dir))
+        return (_get_file(self.sm_dir))
 
     def _extract_climatology(self):
         """
@@ -286,7 +286,7 @@ class SoilMoisturePrior(Prior):
         assert False, "recent sm proxy not implemented"
 
 
-class MapPrior(Prior):
+class MapPriorCreator(PriorCreator):
     """
     Prior which is based on a LC map and a LUT
     """
@@ -300,7 +300,7 @@ class MapPrior(Prior):
         lc_file : str
             filename of landcover file
         """
-        super(MapPrior, self).__init__(**kwargs)
+        super(MapPriorCreator, self).__init__(**kwargs)
         self.lut_file = kwargs.get('lut_file', None)
         assert self.lut_file is not None, 'LUT needs to be provided'
 
@@ -312,10 +312,10 @@ class MapPrior(Prior):
         assert os.path.exists(self.lut_file)
 
 
-class RoughnessPrior(MapPrior):
+class RoughnessPriorCreator(MapPriorCreator):
 
     def __init__(self, **kwargs):
-        super(RoughnessPrior, self).__init__(**kwargs)
+        super(RoughnessPriorCreator, self).__init__(**kwargs)
 
     def calc(self):
         if self.ptype == 'climatology':
@@ -343,3 +343,7 @@ class RoughnessPrior(MapPrior):
         save mapped roughness data to file
         """
         return tempfile.mktemp(suffix='.nc')
+
+    def retrieve_prior_file(self):
+        assert False, 'roughness prior not implemented'
+

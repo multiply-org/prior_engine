@@ -8,6 +8,7 @@
 """
 
 
+from abc import ABCMeta, abstractmethod
 import datetime
 from dateutil.parser import parse
 import numpy as np
@@ -22,7 +23,7 @@ __email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
 __status__ = "Prototype"
 
 
-class Prior(object):
+class PriorCreator(metaclass=ABCMeta):
     def __init__(self, **kwargs):
         self.ptype = kwargs.get('ptype', None)
         self.config = kwargs.get('config', None)
@@ -81,12 +82,20 @@ class Prior(object):
         # get month id/number from self.datestr
         self.date_month_id = self.date.month
 
-    def initialize(self):
-        """Initialiszation routine. Should be implemented in child class.
-        Prior calculation is initialized here.
+    # @abstractmethod
+    # def initialize(self):
+    #     """Initialization routine. Should be implemented in child class.
+    #     Prior calculation is initialized here.
+    #
+    #     :returns: -
+    #     :rtype: -
+    #
+    #     """
+        # assert False, 'Should be implemented in child class'
 
-        :returns: -
-        :rtype: -
-
+    @abstractmethod
+    def retrieve_prior_file(self):
         """
-        assert False, 'Should be implemented in child class'
+        Might perform some computation, then retrieves the path to a file containing
+        :return:
+        """

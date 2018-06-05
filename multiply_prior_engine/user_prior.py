@@ -137,8 +137,9 @@ class UserPriorInput(object):
         self.config = _get_config(configfile)
         # TODO add possibility for other names. these must be stored somewhere.
         existing_userprior = 0
+        logger.debug('Existing ptypes:')
         for ptype in self.config['Prior'][self.variable].keys():
-            print(ptype)
+            logger.debug(ptype)
             if 'user' in ptype:
                 existing_userprior += 1
         return existing_userprior

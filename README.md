@@ -53,23 +53,6 @@ To install the MULTIPLY Core for development and for the current user, use
 - `shapely`
  
 
-## Generating the Documentation
-
-We use [Sphinx](http://www.sphinx-doc.org/en/stable/rest.html) to generate the documentation of the MULTIPLY platform on [ReadTheDocs](http://multiply.readthedocs.io/en/latest/). 
-
-The source files of the main documentation of the MULTIPLY platform is to be found in the [MULTIPLY core repository](https://github.com/multiply-org/multiply-core).
-
-If there is a need to build the *prior engine specific* docs locally, these additional software packages are required:
-
-    $ conda install sphinx sphinx_rtd_theme mock
-    $ conda install -c conda-forge sphinx-argparse
-    $ pip install sphinx_autodoc_annotation
-
-To regenerate the HTML docs, type    
-    
-    $ cd doc
-    $ make html
-
 ## Usage
 
 ### Python Package
@@ -102,17 +85,34 @@ The help and description of the above mentioned sub-commands can be accessed via
 user_prior add -h
 ```
 
-## Reporting issues and feedback
+## Generating the Documentation
 
-If you encounter any bugs with the tool please file an issue in the [Issues](https://github.com/multiply-org/prior-engine/issues "PriorEngine Issues") section of the repository.
+We use [Sphinx](http://www.sphinx-doc.org/en/stable/rest.html) to generate the documentation of the MULTIPLY platform on [ReadTheDocs](http://multiply.readthedocs.io/en/latest/). 
+
+The source files of the main documentation of the MULTIPLY platform is to be found in the [MULTIPLY core repository](https://github.com/multiply-org/multiply-core).
+
+If there is a need to build the *prior engine specific* docs locally, these additional software packages are required:
+
+    $ conda install sphinx sphinx_rtd_theme mock
+    $ conda install -c conda-forge sphinx-argparse
+    $ pip install sphinx_autodoc_annotation
+
+To regenerate the HTML docs, type    
+    
+    $ cd doc
+    $ make html
 
 
 ## Contribution and Development
 
 Once, the package is set up, you are very welcome to contribute to the MULTIPLY Prior Engine.
-Please find information on how to do so in the [CONTRIBUTION.md](https://github.com/multiply-org/prior-engine/blob/master/CONTRIBUTION.md) document.
+Please find corresponding guidelines and further information on how to do so in the [CONTRIBUTION.md](https://github.com/multiply-org/prior-engine/blob/master/CONTRIBUTION.md) document.
 
-## Roadmap and TODO
+### Reporting issues and feedback
+
+If you encounter any bugs with the tool, please file a [new issue](https://github.com/multiply-org/prior-engine/issues/new) while adhering to the above mentioned guidelines.
+
+
 
 ## Authors
 

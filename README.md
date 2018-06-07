@@ -53,15 +53,6 @@ To install the MULTIPLY Core for development and for the current user, use
 - `shapely`
  
 
-## How to use
-
-MULTIPLY prior engine is available as Python Package. 
-To import it into your python application, use
-
-```python
-import multiply_prior_engine
-```
-    
 ## Generating the Documentation
 
 We use [Sphinx](http://www.sphinx-doc.org/en/stable/rest.html) to generate the documentation of the MULTIPLY platform on [ReadTheDocs](http://multiply.readthedocs.io/en/latest/). 
@@ -79,6 +70,50 @@ To regenerate the HTML docs, type
     $ cd doc
     $ make html
 
+## Usage
+
+### Python Package
+
+MULTIPLY prior engine is available as Python Package. 
+To import it into your python application, use
+
+```python
+import multiply_prior_engine
+```
+
+### Command Line Interface
+
+There is a Command Line Interface (CLI) integrated to allow for the following actions:
+
+- add user defined prior data,
+- import user defined prior data,
+- remove/un-select prior data from configuration,
+- show configuration.
+
+The CLI's help can be accessed via `-h` flag:
+
+``` bash 
+user_prior -h
+```
+
+The help and description of the above mentioned sub-commands can be accessed via, e.g.:
+
+``` bash 
+user_prior add -h
+```
+
+## Reporting issues and feedback
+
+If you encounter any bugs with the tool please file an issue in the [Issues](https://github.com/multiply-org/prior-engine/issues "PriorEngine Issues") section of the repository.
+
+
+## Contribution and Development
+
+Once, the package is set up, you are very welcome to contribute to the MULTIPLY Prior Engine.
+Please find information on how to do so in the [CONTRIBUTION.md](https://github.com/multiply-org/prior-engine/blob/master/CONTRIBUTION.md) document.
+
+## Roadmap and TODO
+
 ## Authors
 
 * **Joris Timmermans** - *Work on vegetation priors* 
@@ -88,7 +123,7 @@ To regenerate the HTML docs, type
 
 ## License
 
-This project is licensed under the GPLv3 License - see the [LICENSE.md](LICENSE.md) file for details
+This project is licensed under the GPLv3 License - see the [LICENSE.md](https://github.com/multiply-org/prior-engine/blob/master/LICENSE.md) file for details.
 
 <!-- ## Acknowledgments -->
 

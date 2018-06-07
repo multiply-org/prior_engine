@@ -19,7 +19,7 @@ setup(name='multiply-prior-engine',
       packages=['multiply_prior_engine'],
       entry_points={
           'console_scripts': [
-              'local_file_system = multiply_prior_engine.user_prior:main'
+              'user_prior = multiply_prior_engine.user_prior:main'
           ]
       },
       install_requires=requirements

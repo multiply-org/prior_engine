@@ -16,6 +16,7 @@ import sys
 import tempfile
 import warnings
 import pandas as pd
+import shutil
 
 import yaml
 
@@ -191,6 +192,16 @@ class UserPriorInput(object):
         self.check_path_to_config_or_create(path_to_config)
 
         assert os.path.isfile(self.configfile)
+        if self.configfile == default_config:
+            # create backup file
+            if os.path.exists(default_config):
+                src = os.path.abspath(default_config)
+            a, b = os.path.splitext(src)
+            dest = a + '_backup' + b
+            logger.info('Creating {}.'.format(dest))
+            print('Creating {}.'.format(dest))
+            shutil.copyfile(src, dest)
+            self.configfile_bakup = dest
         logger.info('User config file: {}'.format(self.configfile))
 
         with open(self.configfile, 'w') as cfg:
@@ -198,6 +209,13 @@ class UserPriorInput(object):
         return self.configfile
 
     def check_path_to_config_or_create(self, path_to_config):
+        """Create self.configfile variable with path to config file
+
+        :param path_to_config: 
+        :returns: 
+        :rtype: 
+
+        """
         # check config directory
         if path_to_config is not None:
             path_to_config = self._path_exists(path_to_config)
@@ -306,6 +324,8 @@ class UserPriorInput(object):
         """
         # config file specific info (default ones used if not present):
         path_to_config = kwargs.get('path_to_config', None)
+        if path_to_config is None:
+            path_to_config = default_config
         new_config_filename = kwargs.get('new_config_filename', None)
 
         # so far only directory as user defined configuration implemented

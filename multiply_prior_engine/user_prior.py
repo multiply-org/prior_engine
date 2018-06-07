@@ -553,7 +553,9 @@ class UserPriorInput(object):
                                    action='store', dest='prior_variable',
                                    required=True,
                                    choices=self.default_variables_lower,
-                                   help=('Variable to use the prior data for.'
+                                   help=('Variable for which the prior of '
+                                         'prior type should be removed '
+                                         'from configuration.'
                                          '\nChoices are: {}'.format(
                                              self.default_variables_lower)))
         parser_Add.add_argument('-pt', '--prior_type', type=str,
@@ -564,10 +566,36 @@ class UserPriorInput(object):
                                       ' file.'))
 
         # - Import - #
+        parser_Import.set_defaults(func=self.import_prior)
         parser_Import.add_argument('-u', '--user_file', type=str,
                                    metavar='', default=None,
                                    action='store', dest='user_file',
                                    help=('User prior file.'))
+        parser_Import.add_argument('-v', '--prior_variable', type=str,
+                                   metavar='',
+                                   action='store', dest='prior_variable',
+                                   required=True,
+                                   choices=self.default_variables_lower,
+                                   help=('Variable to use the prior data for.'
+                                         '\nChoices are: {}'.format(
+                                             self.default_variables_lower)))
+
+        parser_Import.add_argument('-c', '--path_to_config', type=str,
+                                   metavar='', required=False,
+                                   action='store', dest='path_to_config',
+                                   help=('Directory of new user '
+                                         'config.\nIf None, a temporary file'
+                                         ' location will be used.'))
+        parser_Import.add_argument('-fn', '--new_config_filename', type=str,
+                                   metavar='', required=False,
+                                   action='store', dest='new_config_filename',
+                                   help=('Filename of new user config. '
+                                         'Only has effect if path_to_config is'
+                                         ' specified.'
+                                         '\nIf None, a temporary filename will'
+                                         ' be used.'))
+
+        # - -
 
         args = parser.parse_args()
 

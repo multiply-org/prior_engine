@@ -331,6 +331,8 @@ class UserPriorInput(object):
         # so far only directory as user defined configuration implemented
         # TODO needs more flexibility:
         prior_directory = kwargs.get('prior_directory', None)
+        user_prior_file = kwargs.get('user_prior_file', None)
+
         # TODO a date vector for the files has to be passed on or an utility
         # needs to be created to read the correct data for date (an utility to
         # find datestrings in filenames)
@@ -342,6 +344,9 @@ class UserPriorInput(object):
         # check prior data directory
         if prior_directory is not None:
             self.prior_directory = self._path_exists(prior_directory)
+        # check user prior file
+        if user_prior_file is not None:
+            assert os.path.isfile(user_prior_file)
 
         # adding to new config
         nc = {}
@@ -401,8 +406,8 @@ class UserPriorInput(object):
         # Import data with suitable method:
         filename, dtype = os.path.splitext(self.user_file)
         dtype_method = {'csv': _read_tabular,
-                        'netCDF': '',
-                        'other': ''}
+                        'netCDF': _read_netcdf,
+                        'other': _read_other}
 
         # *** Temporary limitation: ***
         if dtype is 'csv':
@@ -410,15 +415,35 @@ class UserPriorInput(object):
         else:
             assert False, ('Currently, only \'.csv\' files are supported as '
                            'user prior files.')
-        # load data
+
+        # Load Data:
         try:
             dtype_method[dtype](data=self.user_file)
             logger.info('Imported user file {}.'.format(user_file))
         except Exception as e:
-            logger.error('Could not import user file {}.'.format(user_file))
-            # TODO
+            logger.error('Could not import user file {}.'
+                         ' Data type {} not (yet) supported.'
+                         .format(user_file))
             raise e
 
+        # Convert to gdal compliant file (Inference Engine requirement):
+        
+        # TODO write to temporary file (geotiff)?!
+        # temp_user_file = tempfile.NamedTemporaryFile(
+        #                      prefix='User_{}_'.format(self.now()),
+        #                      suffix='.')
+
+        # add prior to config
+        try:
+            self.add_prior(prior_variable=self.variable,
+                           path_to_config=path_to_config,
+                           new_config_filename=new_config_filename)
+            # return 0
+        except Exception as e:
+            raise e
+            # log Error
+
+        # Methods
         def _read_tabular(data):
             with open(data, 'r') as f:
                 reader = csv.reader(f)
@@ -437,20 +462,6 @@ class UserPriorInput(object):
             # geoval? netCDF4? other? hdf5?
             assert False, 'Reading NetCDF files not implemented yet.'
 
-        # TODO write to temporary file?!
-        # temp_user_file = tempfile.NamedTemporaryFile(
-        #                      prefix='User_{}_'.format(self.now()),
-        #                      suffix='.')
-
-        # add prior to config
-        try:
-            self.add_prior(prior_variable=self.variable,
-                           path_to_config=path_to_config,
-                           new_config_filename=new_config_filename)
-            # return 0
-        except Exception as e:
-            raise e
-            # log Error
 
     def user_prior_cli(self):
         """CLI to include configuration for user defined prior.
@@ -488,13 +499,13 @@ class UserPriorInput(object):
                                             help='Show current prior config.')
         parser_Add = subparsers.add_parser('add', aliases='A', help='Add prior'
                                            ' directory to configuration.')
-        parser_Remove = subparsers.add_parser('remove', aliases='R', help='Remove'
-                                           ' prior information from'
-                                           ' configuration.')
+        parser_Remove = subparsers.add_parser('remove', aliases='R',
+                                              help='Remove prior information'
+                                              ' from configuration.')
         parser_Import = subparsers.add_parser('import', aliases='I',
-                                           help='Import user prior data.')
+                                              help='Import user prior data.')
 
-        ## Show ##
+        # - Show - #
 
         parser_Show.set_defaults(func=self.show_config)
         parser_Show.add_argument('-p', '--only-prior', default=False,
@@ -502,54 +513,61 @@ class UserPriorInput(object):
                                  help=('Only show prior relevant'
                                        ' configuration.'))
 
-        ## Add ##
+        # - Add - #
         parser_Add.set_defaults(func=self.add_prior)
         parser_Add.add_argument('-c', '--path_to_config', type=str,
-                            metavar='', required=False,
-                            action='store', dest='path_to_config',
-                            help=('Directory of new user '
-                                  'config.\nIf None, a temporary file location'
-                                  ' will be used.'))
-        parser_Add.add_argument('-d', '--prior_directory', type=str,
-                            metavar='',
-                            action='store', dest='prior_directory',
-                            help=('Directory which holds specific user prior'
-                                  ' data.'))
+                                metavar='', required=False,
+                                action='store', dest='path_to_config',
+                                help=('Directory of new user '
+                                      'config.\nIf None, a temporary file'
+                                      ' location will be used.'))
         parser_Add.add_argument('-fn', '--new_config_filename', type=str,
-                            metavar='', required=False,
-                            action='store', dest='new_config_filename',
-                            help=('Filename of new user '
-                                  'config. Only has effect if path_to_config'
-                                  ' is specified.\nIf None, a temporary '
-                                  'filename will be used.'))
+                                metavar='', required=False,
+                                action='store', dest='new_config_filename',
+                                help=('Filename of new user config. Only has'
+                                      ' effect if path_to_config is specified.'
+                                      '\nIf None, a temporary filename will be'
+                                      ' used.'))
         parser_Add.add_argument('-v', '--prior_variable', type=str,
-                            metavar='',
-                            action='store', dest='prior_variable',
-                            required=True, choices=self.default_variables_lower,
-                            help=('Variable to use the prior data for.\n'
-                                  'Choices are: {}'
-                                  .format(self.default_variables_lower)))
+                                metavar='',
+                                action='store', dest='prior_variable',
+                                required=True,
+                                choices=self.default_variables_lower,
+                                help=('Variable to use the prior data for.\n'
+                                      'Choices are: {}'
+                                      .format(self.default_variables_lower)))
+        parser_Add.add_argument('-d', '--prior_directory', type=str,
+                                metavar='',
+                                action='store', dest='prior_directory',
+                                help=('Directory which holds specific'
+                                      ' user prior data.'))
+        parser_Add.add_argument('-f', '--user_prior_file', type=str,
+                                metavar='',
+                                action='store', dest='user_prior_file',
+                                help=('User defined prior file.'))
 
-        ## Remove ##
+        # - Remove - #
         parser_Remove.set_defaults(func=self.remove_prior)
         parser_Remove.add_argument('-v', '--prior_variable', type=str,
-                            metavar='',
-                            action='store', dest='prior_variable',
-                            required=True, choices=self.default_variables_lower,
-                            help=('Variable to use the prior data for.\n'
-                                  'Choices are: {}'
-                                  .format(self.default_variables_lower)))
+                                   metavar='',
+                                   action='store', dest='prior_variable',
+                                   required=True,
+                                   choices=self.default_variables_lower,
+                                   help=('Variable to use the prior data for.'
+                                         '\nChoices are: {}'.format(
+                                             self.default_variables_lower)))
         parser_Add.add_argument('-pt', '--prior_type', type=str,
-                            metavar='',
-                            action='store', dest='ptype',
-                            help=('Prior type. E.g. \'climatological\','
-                                  '\'user1\', ... specified in config file.'))
+                                metavar='',
+                                action='store', dest='ptype',
+                                help=('Prior type. E.g. \'climatological\','
+                                      '\'user1\', ... specified in config'
+                                      ' file.'))
 
-        ## Import ##
+        # - Import - #
         parser_Import.add_argument('-u', '--user_file', type=str,
-                            metavar='', default=None,
-                            action='store', dest='user_file',
-                            help=('User prior file.'))
+                                   metavar='', default=None,
+                                   action='store', dest='user_file',
+                                   help=('User prior file.'))
 
         args = parser.parse_args()
 

@@ -91,14 +91,15 @@ So far, priors can only be added as point data for specific variables. User defi
 There is the requirement for a header line specifying the variable name (lai, sm, ...) and geolocation (latitude, longitude) of the data.
 E.g.:
 
-> lai, 10.5564, 48.3124
-> 2017-06-01, 1.01
-> 2017-06-02, 1.01
-> 2017-06-03, 1.2
-> 2017-06-04, 1.25
-> 2017-06-05, 1.4
-> ....
-
+```
+lai, 10.5564, 48.3124
+2017-06-01, 1.01
+2017-06-02, 1.01
+2017-06-03, 1.2
+2017-06-04, 1.25
+2017-06-05, 1.4
+....
+```
 
 
 ## Generating the Documentation

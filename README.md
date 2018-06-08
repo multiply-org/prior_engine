@@ -85,6 +85,22 @@ The help and description of the above mentioned sub-commands can be accessed via
 user_prior add -h
 ```
 
+### Current limitations in the user defined priors
+
+So far, priors can only be added as point data for specific variables. User defined prior data has to be passed to the engine in the form of comma separated values (csv) with dates in the first column and the parameter values in the second column.
+There is the requirement for a header line specifying the variable name (lai, sm, ...) and geolocation (latitude, longitude) of the data.
+E.g.:
+
+> lai, 10.5564, 48.3124
+> 2017-06-01, 1.01
+> 2017-06-02, 1.01
+> 2017-06-03, 1.2
+> 2017-06-04, 1.25
+> 2017-06-05, 1.4
+> ....
+
+
+
 ## Generating the Documentation
 
 We use [Sphinx](http://www.sphinx-doc.org/en/stable/rest.html) to generate the documentation of the MULTIPLY platform on [ReadTheDocs](http://multiply.readthedocs.io/en/latest/). 

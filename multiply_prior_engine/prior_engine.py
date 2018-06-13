@@ -137,8 +137,7 @@ class PriorEngine(object):
         var_res = {}
         assert var in self.config['Prior'].keys(), \
             'Variable to be inferred not in config.'
-        print(self.subengine)
-        assert var in self.subengine,\
+        assert var in self.subengine.keys(),\
             ('No sub-engine defined for variable to be inferred ({}).'
              .format(var))
         logger.info('for variable *{}* getting'.format(var))

@@ -90,6 +90,7 @@ class PriorCreator(metaclass=ABCMeta):
         """
 
     @classmethod
+    @abstractmethod
     def get_variable_names(cls) -> List[str]:
         """
         :return: A list of the variables that this prior creator is able to create priors for

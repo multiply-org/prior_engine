@@ -61,18 +61,15 @@ class SoilMoisturePrior(Prior):
                 self.sm_dir = (self.config['Prior']['sm']['coarse']
                                ['coarse_dir'])
 
-            elif self.ptype == 'munich':
-                self.sm_dir = (self.config['Prior']['sm']['munich']
-                               ['munich_dir'])
-
             elif self.ptype == 'recent':
                 return self._get_recent_sm_proxy()
 
             # TODO add user defined priors as user1, user2 to config file?
             # --> check for passed information (dir, files?) and start
-            # correlating computations
+
             elif 'user' in self.ptype:
-                pass
+                self.sm_dir = (self.config['Prior']['sm']['coarse']
+                               ['user_dir'])
             else:
                 msg = '{} prior for sm not implemented'.format(self.ptype)
                 logger.exception(msg)
@@ -194,9 +191,8 @@ class SoilMoisturePrior(Prior):
             elif self.ptype == 'coarse':
                 pattern = (r"SMAP_{}*.tif$"
                            .format(str(self.date.date().replace('-', ''))))
-            elif self.ptype == 'munich':
-                pattern = (r"{}.tiff$"
-                           .format(self.date.date()))
+            elif 'user' in self.ptype:
+                pattern = (r"user_{}.tiff$".)
             elif self.ptype == 'recent':
                 pattern = (r"recent_prior_{}_{}.tiff$"
                            .format(desc, self.date))
@@ -204,10 +200,8 @@ class SoilMoisturePrior(Prior):
                 # TODO specify other name patterns
                 pattern = (r"*")
 
-            # TODO use glob.glob w recursive option here? would account for
-            # multiple files as well
             fn_list = sorted(glob.glob('{}/{}'.format(dir, pattern),
-                                  recursive=True))
+                             recursive=True))
 
             # AssertionError is caught by the prior engine:
             assert fn_list is not None and len(fn_list) > 0, \

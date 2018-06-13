@@ -55,22 +55,21 @@ class PriorEngine(object):
         calls specific submodules (soilmoisture_prior, vegetation_prior, ..)
     """
 
-    # TODO ad correct sub routines from Joris
-    subengine = {}
-    prior_creator_registrations = pkg_resources.iter_entry_points('prior_creators')
-    for prior_creator_registration in prior_creator_registrations:
-        prior_creator = prior_creator_registration.load()
-        variable_names = prior_creator.get_variable_names()
-        for variable_name in variable_names:
-            subengine[variable_name] = prior_creator
-
     def __init__(self, **kwargs):
         self.configfile = kwargs.get('config', None)
         self.datestr = kwargs.get('datestr', None)
         self.variables = kwargs.get('variables', None)
         # self.priors = self.config['Prior']['priors']
-        # TODO get previous state.
-        # TODO get subengines
+
+        # TODO ad correct sub routines from Joris
+        self.subengine = {}
+        prior_creator_registrations = pkg_resources.iter_entry_points(
+                                        'prior_creators')
+        for prior_creator_registration in prior_creator_registrations:
+            prior_creator = prior_creator_registration.load()
+            variable_names = prior_creator.get_variable_names()
+            for variable_name in variable_names:
+                self.subengine[variable_name] = prior_creator
 
         self._get_config()
         self._check()
@@ -138,6 +137,7 @@ class PriorEngine(object):
         var_res = {}
         assert var in self.config['Prior'].keys(), \
             'Variable to be inferred not in config.'
+        
         assert var in self.subengine,\
             ('No sub-enginge defined for variable to be inferred ({}).'
              .format(var))
@@ -147,10 +147,11 @@ class PriorEngine(object):
         try:
             self.config['Prior'][var].keys() is not None
         except AttributeError:
-            logger.warning('[WARNING] No prior type for {} prior specified!'.format(var))
+            logger.warning('[WARNING] No prior type for {} prior specified!'
+                           .format(var))
             return
         # fill variable specific dictionary with all priors (clim, recent, ..)
-        # TODO concatenation necessary? Should a concatenated prior state vector
+        # TODO concatenation of prior files
         # be returned instead/as additional form
         for ptype in self.config['Prior'][var].keys():
 
@@ -205,9 +206,3 @@ def get_mean_state_vector(datestr: str, variables: list,
     return (PriorEngine(datestr=datestr, variables=variables,
                         config=config)
             .get_priors())
-
-
-# Todo What do we need this for?
-if __name__ == '__main__':
-    print(get_mean_state_vector(
-        datestr="2017-03-01", variables=['sm', 'lai', 'cab']))

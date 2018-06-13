@@ -20,31 +20,78 @@ from .vegetation_prior import VegetationPrior
 
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]
 __copyright__ = "Copyright 2018, Thomas Ramsauer"
-__credits__ = ["Alexander Löw", "Thomas Ramsauer"]
-__license__ = "GPLv3"
-__version__ = "0.0.1"
+__credits__ = "Alexander Löw"
 __maintainer__ = "Thomas Ramsauer"
 __email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
-__status__ = "Prototype"
 
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s:%(message)s')
+formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s:%(message)s',
+                              datefmt='%m/%d/%Y %I:%M:%S %p')
 
 file_handler = logging.FileHandler(__name__ + '.log')
-file_handler.setLevel(logging.WARNING)
+file_handler.setLevel(logging.INFO)
 file_handler.setFormatter(formatter)
 
 stream_handler = logging.StreamHandler()
 stream_handler.setFormatter(formatter)
 # to show output in console. set to higher level to omit.
 # Levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
-stream_handler.setLevel(logging.CRITICAL)
+stream_handler.setLevel(logging.ERROR)
 
 logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
+
+
+def _get_config(configfile):
+    """
+    Load config from self.configfile.
+    writes to self.config.
+
+    :returns: -
+    """
+    try:
+        with open(configfile, 'r') as cfg:
+            config = yaml.load(cfg)
+    except FileNotFoundError as e:
+        logger.INFO('Info: current directory: {}'.format(os.getcwd()))
+        logger.ERROR('{}'.format(e.args[0]))
+        raise
+    try:
+        assert 'Prior' in config.keys(),\
+            ('There is no prior section in configuration file ({}).'
+             .format(configfile))
+        assert config['Prior'] is not None,\
+            ('There is no prior configuration in the config file ({}).'
+             .format(configfile))
+    except AssertionError as e:
+        logger.ERROR('{}'.format(e.args[0]))
+        raise
+    return config
+
+
+default_config = os.path.join(os.path.dirname(__file__),
+                              'sample_config_prior.yml')
+
+default_variables = ['Cab',
+                     'Car',
+                     'Cdm',
+                     'Cb',
+                     'Cw',
+                     'N',
+                     'Albedo',
+                     'LAI',
+                     'Fapar',
+                     'VWC',
+                     'LIDFa',
+                     'H',
+                     'Bsoil',
+                     'Psoil',
+                     'SM',
+                     'SR']
+default_variables_lower = [x.lower() for x in default_variables]
 
 
 class PriorEngine(object):
@@ -68,15 +115,22 @@ class PriorEngine(object):
     }
 
     def __init__(self, **kwargs):
-        self.configfile = kwargs.get('config', None)
+        self.configfile = None
+        while self.configfile is None:
+            self.configfile = kwargs.get('config', None)
+            self.configfile = kwargs.get('configfile', None)
+            # have a backup/default config:
+            self.configfile = default_config
+        assert os.path.exists(self.configfile)
         self.datestr = kwargs.get('datestr', None)
         self.variables = kwargs.get('variables', None)
         # self.priors = self.config['Prior']['priors']
         # TODO get previous state.
         # TODO get subengines
 
-        self._get_config()
+        self.config = _get_config(self.configfile)
         self._check()
+        logger.INFO('Loaded {}.'.format(self.configfile))
 
     def _check(self):
         """initial check for passed values of
@@ -88,20 +142,26 @@ class PriorEngine(object):
         :rtype: -
 
         """
-        assert self.config is not None, \
-            'Could not load configfile.'
-        # assert self.priors is not None, \
-        #     'There is no prior specified in configfile.'
-        assert self.datestr is not None, \
-            'There is no date passed to the Prior Engine.'
-        assert self.variables is not None, \
-            'There are no variables for prior retrieval specified/passed on.'
-        # TODO Should previous state be integrated here?
+        try:
+            assert self.config is not None, \
+               'Could not load configfile.'
+            # assert self.priors is not None, \
+            #     'There is no prior specified in configfile.'
+            assert self.datestr is not None, \
+                'There is no date passed to the Prior Engine.'
+            assert self.variables is not None, \
+                'There are no variables for prior retrieval specified on.'
+            # TODO Should previous state be integrated here?
+            logger.DEBUG('Loaded config:\n{}.'.format(self.config))
+        except AssertionError as e:
+            logger.ERROR('{}'.format(e.args[0]))
+            raise
 
     def get_priors(self):
         """
         Get prior data.
-        calls *_get_prior* for all variables (e.g. sm, lai, ..) in config.
+        calls *_get_prior* for all variables (e.g. sm, lai, ..) passed on to
+        get_mean_state_vector method.
 
         :returns: dictionary with prior names/prior types/filenames as
                   {key/{key/values}}.
@@ -110,23 +170,9 @@ class PriorEngine(object):
         """
         res = {}
         for var in self.variables:
-            if var is not 'General':
-                res.update({var: self._get_prior(var)})
+            res.update({var: self._get_prior(var)})
         # return self._concat_priors(res)
         return res
-
-    def _get_config(self):
-        """
-        Load config from self.configfile.
-        writes to self.config.
-
-        :returns: -
-        """
-        with open(self.configfile, 'r') as cfg:
-            self.config = yaml.load(cfg)
-        assert self.config['Prior'] is not None, \
-            ('There is no prior config information in {}'
-             .format(self.configfile))
 
     def _get_prior(self, var):
         """ Called by get_priors for all variables to be inferred.\
@@ -139,35 +185,48 @@ class PriorEngine(object):
 
         """
         var_res = {}
-        assert var in self.config['Prior'].keys(), \
-            'Variable to be inferred not in config.'
-        assert var in self.subengine,\
-            ('No sub-enginge defined for variable to be inferred ({}).'
-             .format(var))
-        logger.info('for variable *{}* getting'.format(var))
+        try:
+            assert var in self.config['Prior'].keys(), \
+                'Variable to be inferred not in config.'
+            assert var in self.subengine,\
+                ('No sub-enginge defined for variable to be inferred ({}).'
+                .format(var))
+        except AssertionError as e:
+            logger.ERROR('{}'.format(e.args[0]))
+            raise
+        logger.info('Getting prior for variable *{}*.'.format(var))
 
         # test if prior type is specified (else return empty dict):
         try:
             self.config['Prior'][var].keys() is not None
         except AttributeError as e:
             logger.warning('[WARNING] No prior type for {}'
-                           ' moisture prior specified!'.format(var))
+                           ' prior specified!'.format(var))
             return
-        # fill variable specific dictionary with all priors (clim, recent, ..)
-        # TODO concatenation necessary? Should a concatenated prior state vector
-        # be returned instead/as additional form
-        for ptype in self.config['Prior'][var].keys():
 
-            # pass conig and prior type to subclass/engine
+        # Run subengine for all prior types of variable:
+        for ptype in self.config['Prior'][var].keys():
+            # pass config and prior type to subclass/engine
             try:
-                logger.info('  ' + ptype + ' prior:')
+                logger.info('Initializing {} for {} {} prior:'
+                            .format(self.subengine[var], var, ptype))
+                # initialize specific prior *Class Object*
+                # e.g. VegetationPrior as 'prior':
                 prior = self.subengine[var](ptype=ptype, config=self.config,
-                                       datestr=self.datestr, var=var)
+                                            datestr=self.datestr, var=var)
+                # call RetrievePrior from specific prior class:
                 var_res.update({ptype: prior.RetrievePrior()})
 
-            # If no file is found: module should throw AssertionError
+            # Assertions in subengine are passed on here:
+            # e.g. If no file is found: module should throw AssertionError
             except AssertionError as e:
-                logger.exception('{}'.format(e.args[0]))
+                logger.error('{}: {}'.format(self.subengine[var], e.args[0]))
+                raise
+            # for now catch all built-in exceptions
+            except Exception as e:
+                logger.error('{}: {}'.format(self.subengine[var], e.args[0]))
+                raise
+
         return var_res
 
     def _concat_priors(self, prior_dict):

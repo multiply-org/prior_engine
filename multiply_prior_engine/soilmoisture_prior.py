@@ -192,7 +192,7 @@ class SoilMoisturePrior(Prior):
                 pattern = (r"SMAP_{}*.tif$"
                            .format(str(self.date.date().replace('-', ''))))
             elif 'user' in self.ptype:
-                pattern = (r"user_{}.tiff$".)
+                pattern = (r"user_{}.tiff$")
             elif self.ptype == 'recent':
                 pattern = (r"recent_prior_{}_{}.tiff$"
                            .format(desc, self.date))

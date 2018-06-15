@@ -56,8 +56,8 @@ def _get_config(configfile):
         with open(configfile, 'r') as cfg:
             config = yaml.load(cfg)
     except FileNotFoundError as e:
-        logger.INFO('Info: current directory: {}'.format(os.getcwd()))
-        logger.ERROR('{}'.format(e.args[0]))
+        logger.info('Info: current directory: {}'.format(os.getcwd()))
+        logger.error('{}'.format(e.args[0]))
         raise
     try:
         assert 'Prior' in config.keys(),\
@@ -67,7 +67,7 @@ def _get_config(configfile):
             ('There is no prior configuration in the config file ({}).'
              .format(configfile))
     except AssertionError as e:
-        logger.ERROR('{}'.format(e.args[0]))
+        logger.error('{}'.format(e.args[0]))
         raise
     return config
 
@@ -120,7 +120,11 @@ class PriorEngine(object):
             self.configfile = kwargs.get('config', None)
             self.configfile = kwargs.get('configfile', None)
             # have a backup/default config:
+            logger.warning('Using default config file {}. No keyword argument '
+                           'found while initializing '
+                           'SoilMoisturePriorCreator.'.format(default_config))
             self.configfile = default_config
+        print('Using config file: {}'.format(self.configfile))
         assert os.path.exists(self.configfile)
         self.datestr = kwargs.get('datestr', None)
         self.variables = kwargs.get('variables', None)
@@ -130,7 +134,7 @@ class PriorEngine(object):
 
         self.config = _get_config(self.configfile)
         self._check()
-        logger.INFO('Loaded {}.'.format(self.configfile))
+        logger.info('Loaded {}.'.format(self.configfile))
 
     def _check(self):
         """initial check for passed values of
@@ -152,9 +156,9 @@ class PriorEngine(object):
             assert self.variables is not None, \
                 'There are no variables for prior retrieval specified on.'
             # TODO Should previous state be integrated here?
-            logger.DEBUG('Loaded config:\n{}.'.format(self.config))
+            logger.debug('Loaded config:\n{}.'.format(self.config))
         except AssertionError as e:
-            logger.ERROR('{}'.format(e.args[0]))
+            logger.error('{}'.format(e.args[0]))
             raise
 
     def get_priors(self):
@@ -190,9 +194,9 @@ class PriorEngine(object):
                 'Variable to be inferred not in config.'
             assert var in self.subengine,\
                 ('No sub-enginge defined for variable to be inferred ({}).'
-                .format(var))
+                 .format(var))
         except AssertionError as e:
-            logger.ERROR('{}'.format(e.args[0]))
+            logger.error('{}'.format(e.args[0]))
             raise
         logger.info('Getting prior for variable *{}*.'.format(var))
 

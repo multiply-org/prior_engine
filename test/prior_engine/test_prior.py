@@ -47,13 +47,39 @@ def test_sm_prior_invalid_ptype():
         SoilMoisturePrior(ptype='climatologi')
 
 
+def test_calc_variable():
+    P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
+                    datestr='2017-01-01',
+                    variables=['sm'])
+    with pytest.raises(AssertionError,
+                       message=("Expecting AssertionError \
+                                --> no variable specified")):
+        SoilMoisturePrior(config=P.config,
+                          datestr='2017-01-01',
+                          ptype='climatology')
+
+
 def test_calc_config():
+
     P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
                     datestr='2017-01-01',
                     variables=['sm'])
     S = SoilMoisturePrior(config=P.config,
-                          ptype='climatology')
+                          datestr='2017-01-01',
+                          ptype='climatology',
+                          var="sm")
     assert type(S.config) is dict
+
+
+def test_sm_prior_missing_datestr():
+    P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
+                    datestr='2017-01-01',
+                    variables=['sm'])
+    with pytest.raises(AssertionError,
+                       message=("Expecting AssertionError \
+                                --> no datestr specified")):
+        SoilMoisturePrior(config=P.config,
+                          ptype='climatology')
 
 
 

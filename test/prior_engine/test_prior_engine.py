@@ -24,7 +24,8 @@ def test_prior_engine():
             == priors['lai']['database'])
 
     assert 'sm' in priors.keys()
-    assert 1 == len(priors['sm'])
+    # assert 1 == len(priors['sm'])
     assert 'climatology' in priors['sm']
+    assert 'coarse' in priors['sm']
     assert ('./aux_data/Climatology/SoilMoisture/sm_prior_climatology_03.vrt'
             == priors['sm']['climatology'])

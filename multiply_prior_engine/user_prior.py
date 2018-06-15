@@ -31,7 +31,7 @@ __maintainer__ = "Thomas Ramsauer"
 __email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
 
 
-class UserPrior(Prior):
+class UserPriorCreator(Prior):
     """
 
     """

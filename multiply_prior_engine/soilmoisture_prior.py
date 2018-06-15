@@ -68,6 +68,7 @@ class SoilMoisturePrior(Prior):
             # --> check for passed information (dir, files?) and start
 
             elif 'user' in self.ptype:
+                # TODO use self.user_file instead and call UserPriorCreator
                 self.sm_dir = (self.config['Prior']['sm']['coarse']
                                ['user_dir'])
             else:
@@ -186,11 +187,12 @@ class SoilMoisturePrior(Prior):
             # (has to be written to the config-file in a 'config step' first)
             if self.ptype == 'climatology':
                 # TODO pattern from config file > make engine more accessible?
-                pattern = (r"ESA_CCI_SM_clim_{:02d}.tiff$"
+                pattern = (r"ESA_CCI_SM_clim_{:02d}.tiff"
                            .format(self.date.month))
             elif self.ptype == 'coarse':
-                pattern = (r"SMAP_{}*.tif$"
-                           .format(str(self.date.date().replace('-', ''))))
+                pattern = (r"SMAP_{:8d}.tif"
+                           .format(int(str(self.date.date())
+                                       .replace('-', ''))))
             elif 'user' in self.ptype:
                 pattern = (r"user_{}.tiff$")
             elif self.ptype == 'recent':
@@ -240,7 +242,7 @@ class SoilMoisturePrior(Prior):
                 # close/delete temporary files
                 mean_tf.close()
                 unc_tf.close()
-                fn = out_fn
+                fn = os.path.join(dir, out_fn)
 
             else:
                 fn = fn_list[0]
@@ -248,6 +250,7 @@ class SoilMoisturePrior(Prior):
             # TODO should be an option in config?!
             if return_vrt:
                 try:
+                    # TODO Gdal error not caught.
                      test = gdal.Open(fn)
                 except:
                     raise AssertionError('Cannot open .vrt prior file ({})'
@@ -271,9 +274,9 @@ class SoilMoisturePrior(Prior):
                     else:
                         raise AssertionError('Cannot create .vrt prior file.')
                 except AssertionError as e:
-                    return '{}{}'.format(dir, fn)
+                    return '{}'.format(fn)
             else:
-                return '{}{}'.format(dir, fn)
+                return '{}'.format(fn)
 
         return (_get_files(self.sm_dir))
 

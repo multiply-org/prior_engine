@@ -1,8 +1,6 @@
 # /usr/bin/env python
 __author__ = "J Timmermans"
 __copyright__ = "Copyright 2017 J Timmermans"
-__version__ = "1.0 (06.11.2017)"
-__license__ = "GPLv3"
 __email__ = "j.timmermans@cml.leidenuniv.nl"
 
 import glob
@@ -20,7 +18,12 @@ from matplotlib import pyplot as plt
 from scipy import interpolate as RegularGridInterpolator
 from netCDF4 import Dataset
 
-from .prior import Prior
+from .prior_creator import PriorCreator
+
+SUPPORTED_VARIABLES = ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N', 'ala', 'h', 'bsoil', 'psoil']
+
+import logging
+logger = logging.getLogger(__name__)
 
 plt.ion()
 
@@ -115,12 +118,12 @@ def processespercore(varname, PFT, PFT_ids, VegetationPrior):
     return TRAIT_ttf_avg, TRAIT_ttf_unc
 
 
-class VegetationPrior(Prior):
+class VegetationPriorCreator(PriorCreator):
     """
     Description
     """
     def __init__(self, **kwargs):
-        super(VegetationPrior, self).__init__(**kwargs)
+        super(VegetationPriorCreator, self).__init__(**kwargs)
         self.config = kwargs.get('config', None)
         self.priors = kwargs.get('priors', None)
 
@@ -158,6 +161,10 @@ class VegetationPrior(Prior):
             'cw': lambda x: (-1 / 50.) * np.log(x),
             'cm': lambda x: (-1 / 100.) * np.log(x),
             'ala': lambda x: 90. * x}
+
+    @classmethod
+    def get_variable_names(cls):
+        return SUPPORTED_VARIABLES
 
     def OfflineProcessing(self):
         """FIXME! briefly describe function
@@ -255,8 +262,7 @@ class VegetationPrior(Prior):
         """
 
         # define variables
-        varnames = ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N', 'ala',
-                    'h', 'bsoil', 'psoil']
+        varnames = SUPPORTED_VARIABLES
         descriptions = ['Effective Leaf Area Index',
                         'Leaf Chlorophyll Content', 'Leaf Senescent material',
                         'Leaf Carotonoid Content', 'Leaf Water Content',
@@ -987,20 +993,20 @@ class VegetationPrior(Prior):
         for lon_study in lon_study_:
             for lat_study in lat_study_:
                 print('%3.2f %3.2f' % (lon_study, lat_study))
-                VegPrior.lon_study = [lon_study, lon_study + 10]
-                VegPrior.lat_study = [lat_study, lat_study + 10]
+                vegetation_prior.lon_study = [lon_study, lon_study + 10]
+                vegetation_prior.lat_study = [lat_study, lat_study + 10]
 
                 # 3. Perform Static processing
                 lon, lat, Prior_pbm_avg, Prior_pbm_unc = \
-                  VegPrior.StaticProcessing(variables)
+                  vegetation_prior.StaticProcessing(variables)
 
                 # 4. Perform Static processing
-                VegPrior.DynamicProcessing(variables, lon, lat, Prior_pbm_avg,
-                                           Prior_pbm_unc, doystr=doystr)
+                vegetation_prior.DynamicProcessing(variables, lon, lat, Prior_pbm_avg,
+                                                   Prior_pbm_unc, doystr=doystr)
 
         filenames = self.CombineTiles2Virtualfile(variables)
 
-    def RetrievePrior(self):
+    def compute_prior_file(self):
         """FIXME! briefly describe function
 
         :returns: 
@@ -1009,8 +1015,7 @@ class VegetationPrior(Prior):
         """
         # Define variables
         if self.variable is None:
-            self.variables = ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N',
-                              'ala', 'h', 'bsoil', 'psoil']
+            self.variables = SUPPORTED_VARIABLES
 
         # time = parse(self.datestr)
         time = self.date
@@ -1029,14 +1034,13 @@ class VegetationPrior(Prior):
 
 
 if __name__ == "__main__":
-    VegPrior = VegetationPrior()
+
+    vegetation_prior = VegetationPriorCreator(var='lai', datestr='2007-12-31 04:23', ptype='database')
 
     # VegPrior.ProcessData()
-    filenames = VegPrior.RetrievePrior(variables=['lai', 'cab'],
-                                       datestr='2007-12-31 04:23',
-                                       ptype='database')
+    filename = vegetation_prior.compute_prior_file()
 
-    print('%s' % filenames)
+    print('%s' % filename)
     # this should give as output:
     #
 

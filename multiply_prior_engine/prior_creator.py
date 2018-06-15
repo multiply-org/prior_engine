@@ -8,21 +8,24 @@
 """
 
 
+from abc import ABCMeta, abstractmethod
 import datetime
 from dateutil.parser import parse
+from typing import List
 import numpy as np
+
+import logging
+logger = logging.getLogger(__name__)
 
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]
 __copyright__ = "Copyright 2018, Thomas Ramsauer"
-__credits__ = ["Alexander Löw", "Thomas Ramsauer"]
-__license__ = "GPLv3"
-__version__ = "0.0.1"
+__credits__ = "Alexander Löw"
 __maintainer__ = "Thomas Ramsauer"
 __email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
-__status__ = "Prototype"
 
 
-class Prior(object):
+class PriorCreator(metaclass=ABCMeta):
+
     def __init__(self, **kwargs):
         self.ptype = kwargs.get('ptype', None)
         self.config = kwargs.get('config', None)
@@ -34,7 +37,10 @@ class Prior(object):
 
     def _check(self):
         assert self.ptype is not None, 'Invalid prior type'
+        #TODO make use of config optional
         assert self.config is not None, 'No config available.'
+        assert self.datestr is not None, 'No datestr available.'
+        assert self.variable is not None, 'No variable available.'
 
     def _create_time_vector(self):
         """Creates a time vector dependent on start & end time and time interval
@@ -55,9 +61,6 @@ class Prior(object):
         if type(e) is str:
             e = datetime.datetime.strptime(e, date_format)
         t_span = (e-s).days + 1
-        # print(t_span)
-
-        # create time vector
 
         time_vector = [(s+(datetime.timedelta(int(x))))
                        for x in np.arange(0, t_span, interval)]
@@ -82,12 +85,16 @@ class Prior(object):
         # self.date_month_id = self.date.month
         return date
 
-    def initialize(self):
-        """Initialiszation routine. Should be implemented in child class.
-        Prior calculation is initialized here.
-
-        :returns: -
-        :rtype: -
-
+    @abstractmethod
+    def compute_prior_file(self) -> str:
         """
-        assert False, 'Should be implemented in child class'
+        Might perform some computation, then retrieves the path to a file containing the prior info
+        :return:
+        """
+
+    @classmethod
+    @abstractmethod
+    def get_variable_names(cls) -> List[str]:
+        """
+        :return: A list of the variables that this prior creator is able to create priors for
+        """

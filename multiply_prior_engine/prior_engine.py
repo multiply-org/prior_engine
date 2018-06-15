@@ -8,14 +8,15 @@
 """
 
 import logging
+import pkg_resources
 import os
 import pdb
 import sys
 
 import yaml
 
-from .soilmoisture_prior import RoughnessPrior, SoilMoisturePrior
-from .vegetation_prior import VegetationPrior
+from .soilmoisture_prior_creator import RoughnessPriorCreator, SoilMoisturePriorCreator
+from .vegetation_prior_creator import VegetationPriorCreator
 
 
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]
@@ -56,8 +57,8 @@ def _get_config(configfile):
         with open(configfile, 'r') as cfg:
             config = yaml.load(cfg)
     except FileNotFoundError as e:
-        logger.INFO('Info: current directory: {}'.format(os.getcwd()))
-        logger.ERROR('{}'.format(e.args[0]))
+        logger.info('Info: current directory: {}'.format(os.getcwd()))
+        logger.error('{}'.format(e.args[0]))
         raise
     try:
         assert 'Prior' in config.keys(),\
@@ -67,7 +68,7 @@ def _get_config(configfile):
             ('There is no prior configuration in the config file ({}).'
              .format(configfile))
     except AssertionError as e:
-        logger.ERROR('{}'.format(e.args[0]))
+        logger.error('{}'.format(e.args[0]))
         raise
     return config
 
@@ -101,36 +102,36 @@ class PriorEngine(object):
         calls specific submodules (soilmoisture_prior, vegetation_prior, ..)
     """
 
-    # TODO ad correct sub routines from Joris
-    subengine = {
-        'sm': SoilMoisturePrior,
-        'dielectric_const': '',
-        'roughness': RoughnessPrior,
-        'lai': VegetationPrior,
-        'cab': VegetationPrior,
-        'car': VegetationPrior,
-        'cdm': VegetationPrior,
-        'cw': VegetationPrior,
-        'N': VegetationPrior
-    }
-
     def __init__(self, **kwargs):
         self.configfile = None
-        while self.configfile is None:
-            self.configfile = kwargs.get('config', None)
+        self.configfile = kwargs.get('config', None)
+        if self.configfile is None:
             self.configfile = kwargs.get('configfile', None)
+        if self.configfile is None:
             # have a backup/default config:
+            logger.warning('Using default config file {}. No keyword argument '
+                           'found while initializing '
+                           'SoilMoisturePriorCreator.'.format(default_config))
             self.configfile = default_config
+        print('Using config file: {}'.format(self.configfile))
         assert os.path.exists(self.configfile)
         self.datestr = kwargs.get('datestr', None)
         self.variables = kwargs.get('variables', None)
         # self.priors = self.config['Prior']['priors']
-        # TODO get previous state.
-        # TODO get subengines
+
+        # TODO ad correct sub routines from Joris
+        self.subengine = {}
+        prior_creator_registrations = pkg_resources.iter_entry_points(
+                                        'prior_creators')
+        for prior_creator_registration in prior_creator_registrations:
+            prior_creator = prior_creator_registration.load()
+            variable_names = prior_creator.get_variable_names()
+            for variable_name in variable_names:
+                self.subengine[variable_name] = prior_creator
 
         self.config = _get_config(self.configfile)
         self._check()
-        logger.INFO('Loaded {}.'.format(self.configfile))
+        logger.info('Loaded {}.'.format(self.configfile))
 
     def _check(self):
         """initial check for passed values of
@@ -152,9 +153,9 @@ class PriorEngine(object):
             assert self.variables is not None, \
                 'There are no variables for prior retrieval specified on.'
             # TODO Should previous state be integrated here?
-            logger.DEBUG('Loaded config:\n{}.'.format(self.config))
+            logger.debug('Loaded config:\n{}.'.format(self.config))
         except AssertionError as e:
-            logger.ERROR('{}'.format(e.args[0]))
+            logger.error('{}'.format(e.args[0]))
             raise
 
     def get_priors(self):
@@ -190,22 +191,24 @@ class PriorEngine(object):
                 'Variable to be inferred not in config.'
             assert var in self.subengine,\
                 ('No sub-enginge defined for variable to be inferred ({}).'
-                .format(var))
+                 .format(var))
         except AssertionError as e:
-            logger.ERROR('{}'.format(e.args[0]))
+            logger.error('{}'.format(e.args[0]))
             raise
         logger.info('Getting prior for variable *{}*.'.format(var))
 
         # test if prior type is specified (else return empty dict):
         try:
             self.config['Prior'][var].keys() is not None
-        except AttributeError as e:
-            logger.warning('[WARNING] No prior type for {}'
-                           ' prior specified!'.format(var))
+        except AttributeError:
+            logger.warning('[WARNING] No prior type for {} prior specified!'
+                           .format(var))
             return
-
-        # Run subengine for all prior types of variable:
+        # fill variable specific dictionary with all priors (clim, recent, ..)
+        # TODO concatenation of prior files
+        # be returned instead/as additional form
         for ptype in self.config['Prior'][var].keys():
+
             # pass config and prior type to subclass/engine
             try:
                 logger.info('Initializing {} for {} {} prior:'
@@ -214,8 +217,7 @@ class PriorEngine(object):
                 # e.g. VegetationPrior as 'prior':
                 prior = self.subengine[var](ptype=ptype, config=self.config,
                                             datestr=self.datestr, var=var)
-                # call RetrievePrior from specific prior class:
-                var_res.update({ptype: prior.RetrievePrior()})
+                var_res.update({ptype: prior.compute_prior_file()})
 
             # Assertions in subengine are passed on here:
             # e.g. If no file is found: module should throw AssertionError
@@ -269,8 +271,3 @@ def get_mean_state_vector(datestr: str, variables: list,
     return (PriorEngine(datestr=datestr, variables=variables,
                         config=config)
             .get_priors())
-
-
-if __name__ == '__main__':
-    print(get_mean_state_vector(
-        datestr="2017-03-01", variables=['sm', 'lai', 'cab']))

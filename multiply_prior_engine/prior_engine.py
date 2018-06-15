@@ -8,14 +8,15 @@
 """
 
 import logging
+import pkg_resources
 import os
 import pdb
 import sys
 
 import yaml
 
-from .soilmoisture_prior import RoughnessPrior, SoilMoisturePrior
-from .vegetation_prior import VegetationPrior
+from .soilmoisture_prior_creator import RoughnessPriorCreator, SoilMoisturePriorCreator
+from .vegetation_prior_creator import VegetationPriorCreator
 
 
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]
@@ -101,19 +102,6 @@ class PriorEngine(object):
         calls specific submodules (soilmoisture_prior, vegetation_prior, ..)
     """
 
-    # TODO ad correct sub routines from Joris
-    subengine = {
-        'sm': SoilMoisturePrior,
-        'dielectric_const': '',
-        'roughness': RoughnessPrior,
-        'lai': VegetationPrior,
-        'cab': VegetationPrior,
-        'car': VegetationPrior,
-        'cdm': VegetationPrior,
-        'cw': VegetationPrior,
-        'N': VegetationPrior
-    }
-
     def __init__(self, **kwargs):
         self.configfile = None
         self.configfile = kwargs.get('config', None)
@@ -130,8 +118,16 @@ class PriorEngine(object):
         self.datestr = kwargs.get('datestr', None)
         self.variables = kwargs.get('variables', None)
         # self.priors = self.config['Prior']['priors']
-        # TODO get previous state.
-        # TODO get subengines
+
+        # TODO ad correct sub routines from Joris
+        self.subengine = {}
+        prior_creator_registrations = pkg_resources.iter_entry_points(
+                                        'prior_creators')
+        for prior_creator_registration in prior_creator_registrations:
+            prior_creator = prior_creator_registration.load()
+            variable_names = prior_creator.get_variable_names()
+            for variable_name in variable_names:
+                self.subengine[variable_name] = prior_creator
 
         self.config = _get_config(self.configfile)
         self._check()
@@ -204,13 +200,15 @@ class PriorEngine(object):
         # test if prior type is specified (else return empty dict):
         try:
             self.config['Prior'][var].keys() is not None
-        except AttributeError as e:
-            logger.warning('[WARNING] No prior type for {}'
-                           ' prior specified!'.format(var))
+        except AttributeError:
+            logger.warning('[WARNING] No prior type for {} prior specified!'
+                           .format(var))
             return
-
-        # Run subengine for all prior types of variable:
+        # fill variable specific dictionary with all priors (clim, recent, ..)
+        # TODO concatenation of prior files
+        # be returned instead/as additional form
         for ptype in self.config['Prior'][var].keys():
+
             # pass config and prior type to subclass/engine
             try:
                 logger.info('Initializing {} for {} {} prior:'
@@ -219,8 +217,7 @@ class PriorEngine(object):
                 # e.g. VegetationPrior as 'prior':
                 prior = self.subengine[var](ptype=ptype, config=self.config,
                                             datestr=self.datestr, var=var)
-                # call RetrievePrior from specific prior class:
-                var_res.update({ptype: prior.RetrievePrior()})
+                var_res.update({ptype: prior.compute_prior_file()})
 
             # Assertions in subengine are passed on here:
             # e.g. If no file is found: module should throw AssertionError
@@ -274,8 +271,3 @@ def get_mean_state_vector(datestr: str, variables: list,
     return (PriorEngine(datestr=datestr, variables=variables,
                         config=config)
             .get_priors())
-
-
-if __name__ == '__main__':
-    print(get_mean_state_vector(
-        datestr="2017-03-01", variables=['sm', 'lai', 'cab']))

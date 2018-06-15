@@ -18,6 +18,11 @@ setup(name='multiply-prior-engine',
       author='MULTIPLY Team',
       packages=['multiply_prior_engine'],
       entry_points={
+          'prior_creators': [
+              'vegetation_prior_creator = multiply_prior_engine:vegetation_prior_creator.VegetationPriorCreator',
+              'soil_moisture_prior_creator = multiply_prior_engine:soilmoisture_prior_creator.SoilMoisturePriorCreator',
+              'roughness_prior_creator = multiply_prior_engine:soilmoisture_prior_creator.RoughnessPriorCreator',
+          ],
           'console_scripts': [
               'user_prior = multiply_prior_engine.user_prior:main'
           ]

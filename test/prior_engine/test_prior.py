@@ -4,9 +4,9 @@ import pytest
 import sys
 myPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(myPath + '/../../multiply_prior_engine/')
-from multiply_prior_engine.prior import Prior
+from multiply_prior_engine.prior_creator import PriorCreator
 from multiply_prior_engine.prior_engine import PriorEngine
-from multiply_prior_engine.soilmoisture_prior import SoilMoisturePrior
+from multiply_prior_engine.soilmoisture_prior_creator import SoilMoisturePriorCreator
 
 
 def test_priorengine_init():
@@ -30,21 +30,21 @@ def test_sm_prior_init():
     with pytest.raises(AssertionError,
                        message=("Expecting AssertionError \
                                 --> no config specified")):
-        SoilMoisturePrior()
+        SoilMoisturePriorCreator()
 
 
 def test_sm_prior_no_ptype():
     with pytest.raises(AssertionError,
                        message=("Expecting AssertionError \
                                 --> no config specified")):
-        SoilMoisturePrior()
+        SoilMoisturePriorCreator()
 
 
 def test_sm_prior_invalid_ptype():
     with pytest.raises(AssertionError,
                        message=("Expecting AssertionError \
                                 --> no config specified")):
-        SoilMoisturePrior(ptype='climatologi')
+        SoilMoisturePriorCreator(ptype='climatologi')
 
 
 def test_calc_variable():
@@ -54,9 +54,9 @@ def test_calc_variable():
     with pytest.raises(AssertionError,
                        message=("Expecting AssertionError \
                                 --> no variable specified")):
-        SoilMoisturePrior(config=P.config,
-                          datestr='2017-01-01',
-                          ptype='climatology')
+        SoilMoisturePriorCreator(config=P.config,
+                                 datestr='2017-01-01',
+                                 ptype='climatology')
 
 
 def test_calc_config():
@@ -64,10 +64,10 @@ def test_calc_config():
     P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
                     datestr='2017-01-01',
                     variables=['sm'])
-    S = SoilMoisturePrior(config=P.config,
-                          datestr='2017-01-01',
-                          ptype='climatology',
-                          var="sm")
+    S = SoilMoisturePriorCreator(config=P.config,
+                                 datestr='2017-01-01',
+                                 ptype='climatology',
+                                 var="sm")
     assert type(S.config) is dict
 
 
@@ -77,9 +77,9 @@ def test_sm_prior_missing_datestr():
                     variables=['sm'])
     with pytest.raises(AssertionError,
                        message=("Expecting AssertionError \
-                                --> no datestr specified")):
-        SoilMoisturePrior(config=P.config,
-                          ptype='climatology')
+                                --> no datestr & variable specified")):
+        SoilMoisturePriorCreator(config=P.config,
+                                 ptype='climatology')
 
 
 

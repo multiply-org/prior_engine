@@ -202,7 +202,7 @@ class SoilMoisturePrior(Prior):
                 # TODO specify other name patterns
                 pattern = (r"*")
 
-            fn_list = sorted(glob.glob('{}/{}'.format(dir, pattern),
+            fn_list = sorted(glob.glob('{}{}'.format(dir, pattern),
                              recursive=True))
 
             # AssertionError is caught by the prior engine:
@@ -260,9 +260,8 @@ class SoilMoisturePrior(Prior):
                                .format(self.variable,
                                        self.ptype,
                                        self.date.month))
-                    os.system('gdalbuildvrt -te -180 -90 180 90 '
-                              '{} {}'.format(self.sm_dir + temp_fn,
-                                             self.sm_dir + fn))
+                    os.system('gdalbuildvrt -te -180 -90 180 90 {} {}'
+                              .format(os.path.join(self.sm_dir, temp_fn), fn))
                     # os.system('gdalwarp {} {} -te -180 -90 180 90'
                     #           '-t_srs EPSG:4326 -of VRT'
                     #           .format(self.sm_dir+fn,

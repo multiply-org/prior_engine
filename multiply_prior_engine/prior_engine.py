@@ -116,9 +116,10 @@ class PriorEngine(object):
 
     def __init__(self, **kwargs):
         self.configfile = None
-        while self.configfile is None:
-            self.configfile = kwargs.get('config', None)
+        self.configfile = kwargs.get('config', None)
+        if self.configfile is None:
             self.configfile = kwargs.get('configfile', None)
+        if self.configfile is None:
             # have a backup/default config:
             logger.warning('Using default config file {}. No keyword argument '
                            'found while initializing '

@@ -21,7 +21,7 @@ import shutil
 import yaml
 
 from .prior import Prior
-from .prior_engine import _get_config, default_config, default_variables_lower
+from .prior_engine import _get_config, PriorEngine
 from .prior_logger import PriorLogger
 logger = PriorLogger().logger()
 
@@ -85,7 +85,7 @@ class UserPriorInput(object):
             self.configfile = kwargs.get('config', None)
             self.configfile = kwargs.get('configfile', None)
             # have a backup/default config:
-            self.configfile = default_config
+            self.configfile = PriorEngine.default_config
 
         assert self.configfile is not None, \
             ('No configuration filename passed to function. '
@@ -192,10 +192,10 @@ class UserPriorInput(object):
         self.check_path_to_config_or_create(path_to_config)
 
         assert os.path.isfile(self.configfile)
-        if self.configfile == default_config:
+        if self.configfile == PriorEngine.default_config:
             # create backup file
-            if os.path.exists(default_config):
-                src = os.path.abspath(default_config)
+            if os.path.exists(PriorEngine.default_config):
+                src = os.path.abspath(PriorEngine.default_config)
             a, b = os.path.splitext(src)
             dest = a + '_backup' + b
             logger.info('Creating {}.'.format(dest))
@@ -325,7 +325,7 @@ class UserPriorInput(object):
         # config file specific info (default ones used if not present):
         path_to_config = kwargs.get('path_to_config', None)
         if path_to_config is None:
-            path_to_config = default_config
+            path_to_config = PriorEngine.default_config
         new_config_filename = kwargs.get('new_config_filename', None)
 
         # so far only directory as user defined configuration implemented

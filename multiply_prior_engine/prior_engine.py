@@ -73,9 +73,6 @@ def _get_config(configfile):
     return config
 
 
-default_config = os.path.join(os.path.dirname(__file__),
-                              'sample_config_prior.yml')
-
 default_variables = ['Cab',
                      'Car',
                      'Cdm',
@@ -101,6 +98,9 @@ class PriorEngine(object):
         holds prior initialization methods (e.g. config loading).
         calls specific submodules (soilmoisture_prior, vegetation_prior, ..)
     """
+
+    default_config = os.path.join(os.path.dirname(__file__),
+                                  'sample_config_prior.yml')
 
     def __init__(self, **kwargs):
         self.configfile = None

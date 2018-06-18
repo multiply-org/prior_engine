@@ -121,6 +121,7 @@ class PriorEngine(object):
 
         # TODO ad correct sub routines from Joris
         self.subengine = {}
+        logger.info('Loading sub-engines for variables.')
         prior_creator_registrations = pkg_resources.iter_entry_points(
                                         'prior_creators')
         for prior_creator_registration in prior_creator_registrations:
@@ -128,6 +129,8 @@ class PriorEngine(object):
             variable_names = prior_creator.get_variable_names()
             for variable_name in variable_names:
                 self.subengine[variable_name] = prior_creator
+                logger.info('Sub-engine for {}: {}.'
+                            .format(variable_name, prior_creator))
         logger.info('Got sub-engines for {}.'
                     .format([k for k in self.subengine.keys()]))
 
@@ -152,6 +155,8 @@ class PriorEngine(object):
             #     'There is no prior specified in configfile.'
             assert self.datestr is not None, \
                 'There is no date passed to the Prior Engine.'
+            assert len(self.subengine) > 0, \
+                'There is no sub-engine specified in the Prior Engine.'
             assert self.variables is not None, \
                 'There are no variables for prior retrieval specified on.'
             # TODO Should previous state be integrated here?

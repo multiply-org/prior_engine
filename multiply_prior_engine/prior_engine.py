@@ -128,6 +128,8 @@ class PriorEngine(object):
             variable_names = prior_creator.get_variable_names()
             for variable_name in variable_names:
                 self.subengine[variable_name] = prior_creator
+        logger.info('Got sub-engines for {}.'
+                    .format([k for k in self.subengine.keys()]))
 
         self.config = _get_config(self.configfile)
         self._check()
@@ -190,8 +192,9 @@ class PriorEngine(object):
             assert var in self.config['Prior'].keys(), \
                 'Variable to be inferred not in config.'
             assert var in self.subengine,\
-                ('No sub-enginge defined for variable to be inferred ({}).'
-                 .format(var))
+                ('No sub-engine defined for variable to be inferred ({}).\n'
+                 'Current sub-engines:\n{}'
+                 .format(var, self.subengine))
         except AssertionError as e:
             logger.error('{}'.format(e.args[0]))
             raise

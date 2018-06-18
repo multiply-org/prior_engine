@@ -110,9 +110,9 @@ class PriorEngine(object):
         if self.configfile is None:
             # have a backup/default config:
             logger.warning('Using default config file {}. No keyword argument '
-                           'found while initializing '
-                           'SoilMoisturePriorCreator.'.format(default_config))
-            self.configfile = default_config
+                           'found while initializing SoilMoisturePriorCreator.'
+                           .format(self.default_config))
+            self.configfile = self.default_config
         print('Using config file: {}'.format(self.configfile))
         assert os.path.exists(self.configfile)
         self.datestr = kwargs.get('datestr', None)

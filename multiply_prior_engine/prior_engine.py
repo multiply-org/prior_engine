@@ -120,10 +120,13 @@ class PriorEngine(object):
         # self.priors = self.config['Prior']['priors']
 
         # TODO ad correct sub routines from Joris
+
         self.subengine = {}
         logger.info('Loading sub-engines for variables.')
-        prior_creator_registrations = pkg_resources.iter_entry_points(
-                                        'prior_creators')
+        prior_creator_registrations = list(pkg_resources.iter_entry_points(
+                                           'prior_creators'))
+        logger.info('Got following prior_creator_registrations from entry '
+                    'points: {}'.format(prior_creator_registrations))
         for prior_creator_registration in prior_creator_registrations:
             prior_creator = prior_creator_registration.load()
             variable_names = prior_creator.get_variable_names()

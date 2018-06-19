@@ -20,7 +20,7 @@ import shutil
 
 import yaml
 
-from .prior import Prior
+from .prior import PriorCreator
 from .prior_engine import _get_config, PriorEngine
 from .prior_logger import PriorLogger
 logger = PriorLogger().logger()
@@ -31,13 +31,13 @@ __maintainer__ = "Thomas Ramsauer"
 __email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
 
 
-class UserPriorCreator(Prior):
+class UserPriorCreator(PriorCreator):
     """
 
     """
 
     def __init__(self, **kwargs):
-        super(UserPrior, self).__init__(**kwargs)
+        super(UserPriorCreator, self).__init__(**kwargs)
 
     def RetrievePrior(self):
         """

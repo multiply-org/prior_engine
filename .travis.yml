@@ -49,4 +49,4 @@ install:
   - pip install https://github.com/multiply-org/prior-engine/zipball/master
 
 script:
-- pytest
+- pytest -vs

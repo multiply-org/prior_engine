@@ -12,6 +12,7 @@ import pkg_resources
 import os
 import pdb
 import sys
+import tempfile
 
 import yaml
 
@@ -25,6 +26,12 @@ __credits__ = "Alexander Löw"
 __maintainer__ = "Thomas Ramsauer"
 __email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
 
+# Set up temporary directory for PriorEngine in OS-specific location:
+tempfile.tempdir = os.path.join(tempfile.gettempdir(), 'MULTIPLYPriorEngine')
+try:
+    os.mkdir(tempfile.tempdir)
+except FileExistsError:
+    pass
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

@@ -12,7 +12,6 @@ import datetime
 import glob
 import os
 import subprocess
-import re
 import tempfile
 
 import numpy as np
@@ -51,43 +50,48 @@ class SoilMoisturePriorCreator(PriorCreator):
         """
         Initialize prior specific (climatological, ...) calculation.
 
-        :returns: 
+        :returns: filename of prior file
+        :rtype: string
         """
-        self.sm_dir = None  # set None as old sm_dir may be present from loop.
-        try:
-            if self.ptype == 'climatology':
-                # TODO adjust after creating GeoTiffs
-                self.sm_dir = (self.config['Prior']['sm']['climatology']
-                               ['climatology_dir'])
+        # set None as old data_dir/file may be present from loop.
+        self.data_dir = None
+        self.data_file = None
 
-            elif self.ptype == 'coarse':
-                # TODO adjust after creating GeoTiffs
-                self.sm_dir = (self.config['Prior']['sm']['coarse']
-                               ['coarse_dir'])
-
-            elif self.ptype == 'recent':
-                return self._get_recent_sm_proxy()
-
-            # TODO add user defined priors as user1, user2 to config file?
-            # --> check for passed information (dir, files?) and start
-
-            elif 'user' in self.ptype:
-                # TODO use self.user_file instead and call UserPriorCreator
-                self.sm_dir = (self.config['Prior']['sm']['coarse']
-                               ['user_dir'])
+        if self.ptype == 'climatology' or self.ptype == 'coarse':
+            try:
+                data_dir = self.config['Prior']['sm'][self.ptype]['dir']
+                self.data_dir = data_dir
+                assert os.path.isdir(self.data_dir), \
+                    ('Directory does not exist or cannot be found: {}'
+                     .format(self.data_dir))
+            except KeyError as e:
+                assert self.data_dir is not None, \
+                  ('Cannot find directory information for '
+                   '"{}" prior in config file!'.format(self.ptype))
             else:
-                msg = '{} prior for sm not implemented'.format(self.ptype)
-                logger.exception(msg)
-                assert False, msg
+                return self._provide_prior_file()
 
-        except KeyError as e:
-            assert self.sm_dir is not None, \
-                ('Cannot find directory information for '
-                 '"{}" prior in config file!'.format(self.ptype))
+        elif 'user' in self.ptype:
+            try:
+                data_file = (self.config['Prior']['sm'][self.ptype]['file'])
+                self.data_file = data_file
+            except KeyError as e:
+                assert self.data_file is not None, \
+                  ('Cannot find file name for '
+                   '"{ptype}" prior in config file (under'
+                   ' \'Prior/sm/{ptype}/file:\')!'.format(ptype=self.ptype))
+            else:
+                return self._provide_prior_file()
+
+        # TODO recent only place holder
+        elif self.ptype == 'recent':
+            self._get_recent_sm_proxy()
+
         else:
-            assert os.path.isdir(self.sm_dir), ('Directory does not exist or'
-                                                ' cannot be found: {}'
-                                                .format(self.sm_dir))
+            msg = '{} prior for sm not implemented'.format(self.ptype)
+            logger.exception(msg)
+            assert False, msg
+
         return self._provide_prior_file()
 
     def _calc_climatological_prior(self):
@@ -165,11 +169,11 @@ class SoilMoisturePriorCreator(PriorCreator):
                                  ['climatology_file'])
 
     def _provide_prior_file(self):
-        """provide file names, bands .. for inference engine
+        """Provide variable and prior type specific prior file name to Prior Engine.
 
         :returns: absolute path to prior file for requested prior.
         The file is gdal-compatible to be used in inference engine - either
-        GeoTiff or VRT format. 
+        GeoTiff or VRT format.
         It includes 2 bands:
          1. mean value raster
          2. uncertainty raster
@@ -177,111 +181,169 @@ class SoilMoisturePriorCreator(PriorCreator):
 
         """
         # self.date
-        def _get_file(dir, return_vrt=True):
-            """get filenames of climatological prior files from directory.
 
-            :param dir: directory conataining the files (mentioned in config)
-            :param desc: descriptor of information ('mean'/'unc')
-            :returns: returns list of filenames
-            :rtype: list
+        if self.data_dir is not None:
+            self.data_file = self._get_prior_file_from_dir(self.data_dir)
+        else:
+            assert self.data_file is not None
 
-            """
-            fn = None
-            # TODO read pattern from config file to allow user defined input
-            # (has to be written to the config-file in a 'config step' first)
-            if self.ptype == 'climatology':
-                # TODO pattern from config file > make engine more accessible?
-                pattern = (r"ESA_CCI_SM_clim_{:02d}.tiff"
-                           .format(self.date.month))
-            elif self.ptype == 'coarse':
-                pattern = (r"SMAP_{:8d}.tif"
-                           .format(int(str(self.date.date())
-                                       .replace('-', ''))))
-            elif 'user' in self.ptype:
-                pattern = (r"user_{}.tiff$")
-            elif self.ptype == 'recent':
-                pattern = (r"recent_prior_{}_{}.tiff$"
-                           .format(desc, self.date))
+        ext = os.path.splitext(self.data_file)[-1].lower()
+        if ext == 'vrt':
+            logger.info('Prior file ({}, {}) is already a .vrt-file, no need '
+                        'to convert.'.format(self.variable, self.ptype))
+        else:
+            try:
+                logger.info('Trying to convert prior file to .vrt-format.')
+                self.data_file = self._create_global_vrt(self.data_file)
+            except:
+                assert False, ("Could not create .vrt-file for {} {} prior"
+                               " ({})".format(self.variable, self.ptype,
+                                              self.data_file))
+        return self.data_file
+
+    def _get_prior_file_from_dir(self, directory, return_vrt=True):
+        """Get filename(s) of prior file(s) from directory.
+        If multiple files are found self._merge_multiple_prior_files is called.
+
+        Currently, the following prior types are supported:
+        - climatology (calculated from ESA CCI data, standard)
+        - coarse (daily aggregated SMAP L4 data, standard)
+        - user prior, provided through user_prior_creator
+
+        :param directory: directory containing the files (from config)
+        :returns: filename
+        :rtype: string
+
+        """
+        fn = None
+        if self.ptype == 'climatology':
+            pattern = (r"ESA_CCI_SM_clim_{:02d}.tiff"
+                       .format(self.date.month))
+        elif self.ptype == 'coarse':
+            pattern = (r"SMAP_daily_{:8d}.tif"
+                       .format(self.date8))
+        # TODO read user pattern from config file to allow defined input
+        # (has to be written to the config-file in a 'config step' first)
+        elif 'user' in self.ptype:
+            pattern = (r"user_{}.tiff$")
+        elif self.ptype == 'recent':
+            pattern = (r"recent_prior_{}.tiff$"
+                       .format(self.date8))
+        else:
+            pattern = (r"*")
+
+        fn_list = sorted(glob.glob('{}'.format(os.path.join(
+            os.path.abspath(directory), pattern), recursive=True)))
+
+        # AssertionError is caught by the prior engine:
+        assert fn_list is not None and len(fn_list) > 0, \
+            ('Did not find {} {} '
+                'prior files in {} (pattern: \'{}\')!'
+                .format(self.variable, self.ptype,
+                        os.path.abspath(directory), pattern))
+        if len(fn_list) > 1:
+            fn = self._merge_multiple_prior_files(fn_list)
+        else:
+            fn = fn_list[0]
+
+        self._check_gdal_compliance(fn)
+        return '{}'.format(fn)
+
+    def _merge_multiple_prior_files(self, fn_list):
+        """Merge files if more than one is available for current time step.
+        should be obsolete.
+
+        :param fn_list: file list to process
+        :returns: file name of merged file
+        :rtype: string
+
+        """
+        # create list of alphabet for gdal funciton call
+        abc = [chr(i) for i in range(ord('A'), ord('Z')+1)]
+        mean_instr, unc_instr, calc_instr = '', '', ''
+        # create input strings for gdal calculate call
+        for i, f in enumerate(fn_list):
+            self._check_gdal_compliance(f)
+            mean_instr += ('-{abc} {fn} --{abc}=1'
+                           .format(abc=abc[i], fn=f))
+            unc_instr += ('-{abc} {fn} --{abc}=2'
+                          .format(abc=abc[i], fn=f))
+        calc_instr = '+'.join(map(str, abc[:i+1]))
+        # create temporary files to write mean mean&unc to
+        mean_tf = tempfile.NamedTemporaryFile(suffix='_mean.vrt')
+        unc_tf = tempfile.NamedTemporaryFile(suffix='_unc.vrt')
+        # create means of input file mean and uncertainty files
+        # TODO replace subprocess call.. rasterio?
+        subprocess.run('gdal_calc.py {} --outfile={} --overwrite '
+                       '--calc="({})/{}"'
+                       .format(mean_instr, mean_tf.name, calc_instr,
+                               str(len(fn_list))),
+                       shell=True, check=True)
+        subprocess.run('gdal_calc.py {} --outfile={} --overwrite '
+                       '--calc="({})/{}"'
+                       .format(unc_instr, unc_tf.name, calc_instr,
+                               str(len(fn_list))),
+                       shell=True, check=True)
+        # write combined/averaged mean&uncertainty info to generic file
+        directory = os.path.abspath(os.path.dirname(f))
+        out_fn = os.path.join(directory, self.ptype+self.date8)
+        out_vrt = gdal.BuildVRT(out_fn+'.vrt', [mean_tf.name, unc_tf.name],
+                                separate=True)
+        out_ds = gdal.Translate(out_fn+'.tif', out_vrt)
+        logger.info('Created {} from following files: {}.'
+                    .format(out_fn+'.vrt', fn_list))
+        # close/delete temporary files
+        mean_tf.close()
+        unc_tf.close()
+        return out_ds
+
+    def _create_global_vrt(self, fn, local=True):
+        """Create VRT file for file.
+
+        By default, the .vrt-file will be written to a local temporary
+        directory. If `local` is set to False, the file is written to the
+        directory the input file (fn) currently lives in.
+
+        :param fn: file name
+        :param local: create temporary local vrt.
+        :returns: file name of created vrt, or initial file name if no success.
+        :rtype: string
+
+        """
+        # TODO should it be an option in config if vrt is created and where?
+        logger.info('Creating vrt file from {}.'.format(fn))
+        self._check_gdal_compliance(fn)
+        try:
+            if local:
+                directory = tempfile.tempdir
             else:
-                # TODO specify other name patterns
-                pattern = (r"*")
+                directory = os.path.abspath(os.path.dirname(fn))
 
-            fn_list = sorted(glob.glob('{}{}'.format(dir, pattern),
-                             recursive=True))
+            temp_fn = ('{}_prior_{}_{}.vrt'
+                       .format(self.variable,
+                               self.ptype,
+                               self.date8))
+            out_fn = os.path.join(directory, temp_fn)
+            gdal.BuildVRT(out_fn, fn)
+            # TODO VRT is not necessary global.
+            res = '{}'.format(out_fn)
+            assert os.path.isfile(res), "{} is not a file.".format(res)
+            self._check_gdal_compliance(res)
+            return res
+        except Exception as e:
+            logger.warning('Cannot create .vrt file'
+                           ' {} - returning {}.'.format(res, fn))
+            return '{}'.format(fn)
 
-            # AssertionError is caught by the prior engine:
-            assert fn_list is not None and len(fn_list) > 0, \
-                ('Did not find {} {} '
-                 'prior files in {} (pattern: \'{}\')!'
-                 .format(self.variable, self.ptype, self.sm_dir, pattern))
-
-            # merge files if more than one for current timestep
-            if len(fn_list) > 1:
-                # create list of alphabet for gdal funciton call
-                abc = [chr(i) for i in range(ord('A'), ord('Z')+1)]
-                mean_instr, unc_instr, calc_instr = '', '', ''
-                # create input strings for gdal calculate call
-                for i, f in enumerate(fn_list):
-                    mean_instr += ('-{abc} {fn} --{abc} 1'
-                                   .format(abc=abc[i], fn=f))
-                    unc_instr += ('-{abc} {fn} --{abc} 2'
-                                  .format(abc=abc[i], fn=f))
-                calc_instr = '+'.join(map(str, abc[:i+1]))
-                # create temporary files to write mean mean&unc to
-                mean_tf = tempfile.NamedTemporaryFile(suffix='.vrt')
-                unc_tf = tempfile.NamedTemporaryFile(suffix='.vrt')
-                # create means of input file mean and uncertainty files
-                subprocess.call('gdal_calc.py {} --outfile={} --calc="{}/{}"'
-                                .format(mean_instr, mean_tf.name, calc_instr,
-                                        str(len(fn_list))),
-                                shell=True, check=True)
-                subprocess.call('gdal_calc.py {} --outfile={} --calc="{}/{}"'
-                                .format(unc_instr, unc_tf.name, calc_instr,
-                                        str(len(fn_list))),
-                                shell=True, check=True)
-                # write combined/averaged mean&uncertainty info to generic file
-                out_fn = self.ptype+self.date.date+'.vrt'
-                # TODO write to temporary file as well or create tiff.
-                gdal.BuildVRT(out_fn, [mean_tf, unc_tf], separate=True)
-                # close/delete temporary files
-                mean_tf.close()
-                unc_tf.close()
-                fn = os.path.join(dir, out_fn)
-
-            else:
-                fn = fn_list[0]
-
-            # TODO should be an option in config?!
-            if return_vrt:
-                try:
-                    # TODO Gdal error not caught.
-                     test = gdal.Open(fn)
-                except:
-                    raise AssertionError('Cannot open .vrt prior file ({})'
-                                         .format(fn))
-                try:
-                    temp_fn = ('{}_prior_{}_{:02d}.vrt'
-                               .format(self.variable,
-                                       self.ptype,
-                                       self.date.month))
-                    os.system('gdalbuildvrt -te -180 -90 180 90 {} {}'
-                              .format(os.path.join(self.sm_dir, temp_fn), fn))
-                    # os.system('gdalwarp {} {} -te -180 -90 180 90'
-                    #           '-t_srs EPSG:4326 -of VRT'
-                    #           .format(self.sm_dir+fn,
-                    #                   self.sm_dir+temp_fn))
-                    res = '{}{}'.format(dir, temp_fn)
-                    # TODO does not catch gdal error:
-                    if os.path.isfile(res):
-                        return res
-                    else:
-                        raise AssertionError('Cannot create .vrt prior file.')
-                except AssertionError as e:
-                    return '{}'.format(fn)
-            else:
-                return '{}'.format(fn)
-
-        return (_get_file(self.sm_dir))
+    def _check_gdal_compliance(self, fn):
+        try:
+            ds = gdal.Open(fn)
+            assert ds is not None, \
+                ('GDAL: Check: Cannot open file ({})'.format(fn))
+            ds = None
+        except AssertionError as e:
+            logger.error(e)
+            raise
 
     def _extract_climatology(self):
         """
@@ -408,4 +470,3 @@ class RoughnessPriorCreator(MapPriorCreator):
 
     def compute_prior_file(self):
         assert False, 'roughness prior not implemented'
-

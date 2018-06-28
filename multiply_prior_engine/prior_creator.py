@@ -34,10 +34,11 @@ class PriorCreator(metaclass=ABCMeta):
         self._check()
         self.time_vector, self.time_vector_months = self._create_time_vector()
         self.date = self._create_datetime()
+        self.date8 = int(str(self.date.date()).replace('-', ''))
 
     def _check(self):
         assert self.ptype is not None, 'Invalid prior type'
-        #TODO make use of config optional
+        # TODO make use of config optional
         assert self.config is not None, 'No config available.'
         assert self.datestr is not None, 'No datestr available.'
         assert self.variable is not None, 'No variable available.'

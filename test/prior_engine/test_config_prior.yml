@@ -30,10 +30,13 @@ Prior:
     directory_data: /home/joris/Data/Prior_Engine/
   sm:
     climatology:
-      climatology_dir: ./aux_data/Climatology/SoilMoisture/
+      dir: ./aux_data/Climatology/SoilMoisture/
     coarse:
-      coarse_dir: ./aux_data/Coarse/SoilMoisture/
-
+      dir: ./aux_data/Coarse/SoilMoisture/
+#    recent:
+#      dir: ""
+#    user1:
+#      dir: "."
     # dynamic:
     #     type: dynamic
     #     model:

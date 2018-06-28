@@ -30,16 +30,19 @@ Prior:
     directory_data: ./aux_data/Static/Vegetation/
   sm:
     climatology:
-      climatology_dir: ./aux_data/Climatology/SoilMoisture/
+      dir: ./aux_data/Climatology/SoilMoisture/
     coarse:
-      coarse_dir: ./aux_data/Coarse/SoilMoisture/
+      dir: ./aux_data/Coarse/SoilMoisture/
+    
     # dynamic:
     #     type: dynamic
     #     model:
     #         - API
     #         - other
-    # recent:
-    #   aux_data = ...
+#    recent:
+#      dir: ""
+#    user1:
+##      dir: "."
     # static:
     #       type: static
   lai:

@@ -46,7 +46,7 @@ install:
   # - conda uninstall -c conda-forge rt1
   #
   # now install the MULTIPLY components (could be replaced at a later stage with alternative installation methods)
-  - pip install https://github.com/multiply-org/prior-engine/zipball/master
+  - pip setup.py install
 
 script:
 - pytest -vs

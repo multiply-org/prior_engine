@@ -1,6 +1,6 @@
 *.vrt
 *.tgz
-aux_data/
+# aux_data/
 prior_engine_runner*
 
 # General Exceptions

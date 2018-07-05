@@ -927,6 +927,8 @@ class VegetationPrior(Prior):
 
         #import pdb
         #pdb.set_trace()
+        if len(list_of_files2) == 0:
+            raise UserWarning('No input files found for variable {}'.format(variable))
         files = " ".join(list_of_files2)
         os.system('gdalbuildvrt -te -180 -90 180 90 ' + outputdir + file_name
                   + ' ' + files)

@@ -260,7 +260,7 @@ class VegetationPrior(Prior):
         """
 
         # define variables
-        varnames = ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N', 'ala',
+        varnames = ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'n', 'ala',
                     'h', 'bsoil', 'psoil']
         descriptions = ['Effective Leaf Area Index',
                         'Leaf Chlorophyll Content', 'Leaf Senescent material',
@@ -1033,7 +1033,7 @@ class VegetationPrior(Prior):
         """
         # Define variables
         if self.variable is None:
-            self.variables = ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N',
+            self.variables = ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'n',
                               'ala', 'h', 'bsoil', 'psoil']
 
         # time = parse(self.datestr)

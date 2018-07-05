@@ -64,7 +64,12 @@ class PriorEngine(object):
         'car': VegetationPrior,
         'cdm': VegetationPrior,
         'cw': VegetationPrior,
-        'n': VegetationPrior
+        'n': VegetationPrior,
+        'cbrown': VegetationPrior,
+        'cm': VegetationPrior,
+        'ala': VegetationPrior,
+        'bsoil': VegetationPrior,
+        'psoil': VegetationPrior
     }
 
     def __init__(self, **kwargs):

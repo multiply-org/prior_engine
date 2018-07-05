@@ -140,10 +140,9 @@ class PriorEngine(object):
         """
         var_res = {}
         assert var in self.config['Prior'].keys(), \
-            'Variable to be inferred not in config.'
+            'Variable to be inferred ({}) not in config.'.format(var)
         assert var in self.subengine,\
-            ('No sub-enginge defined for variable to be inferred ({}).'
-             .format(var))
+            ('No sub-enginge defined for variable to be inferred ({}).'.format(var))
         logger.info('for variable *{}* getting'.format(var))
 
         # test if prior type is specified (else return empty dict):

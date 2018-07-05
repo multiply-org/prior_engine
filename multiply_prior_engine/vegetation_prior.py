@@ -20,7 +20,7 @@ from matplotlib import pyplot as plt
 from scipy import interpolate as RegularGridInterpolator
 from netCDF4 import Dataset
 
-from prior import Prior
+from .prior import Prior
 
 plt.ion()
 
@@ -117,7 +117,6 @@ def processespercore(varname, PFT, PFT_ids, VegetationPrior):
 
 
 class VegetationPrior(Prior):
-# class VegetationPrior():
     """
     Description
     """
@@ -132,19 +131,12 @@ class VegetationPrior(Prior):
         self.lat_study = [50, 60]
 
         # 1.2 Define paths
-        self.directory_data = '/data/auxiliary/priors/Static/Vegetation/'
-        #self.directory_data = self.config['Prior']['General']['directory_data']
-        self.path2LCC_file = '/data/auxiliary/priors/Static/LCC/'  + 'ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7_updated.nc'
-        #self.path2LCC_file = (self.directory_data + 'LCC/' + 'ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7_updated.nc')
-        self.path2Climate_file = '/data/auxiliary/priors/Static/Climate/' + 'sdat_10012_1_20171030_081458445.tif'
-        #self.path2Climate_file = (self.directory_data + 'Climate/' + 'sdat_10012_1_20171030_081458445.tif')
-        self.path2Meteo_file = '/data/auxiliary/priors/Static/Meteorological/' + 'Meteo_.nc'
-        #self.path2Meteo_file = (self.directory_data + 'Meteorological/' + 'Meteo_.nc')
-        self.path2Trait_file = '/data/auxiliary/priors/Static/Trait_Database/' + 'Traits.nc'
-        #self.path2Trait_file = (self.directory_data + 'Trait_Database/' + 'Traits.nc')
-
-        self.path2Traitmap_file = '/data/auxiliary/priors/Static/Vegetation/' + 'Priors.nc'
-        #self.path2Traitmap_file = self.directory_data + 'Priors/' + 'Priors.nc'
+        self.directory_data = self.config['Prior']['General']['directory_data']
+        self.path2LCC_file = (self.directory_data + 'LCC/' + 'ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7_updated.nc')
+        self.path2Climate_file = (self.directory_data + 'Climate/' + 'sdat_10012_1_20171030_081458445.tif')
+        self.path2Meteo_file = (self.directory_data + 'Meteorological/' + 'Meteo_.nc')
+        self.path2Trait_file = (self.directory_data + 'Trait_Database/' + 'Traits.nc')
+        self.path2Traitmap_file = self.directory_data + 'Priors/' + 'Priors.nc'
 
         self.plotoption = 0  # [0,1,2,3,4,5,6,..]
 
@@ -923,7 +915,7 @@ class VegetationPrior(Prior):
 
         """
         dir = self.directory_data + 'Priors/'
-        outputdir = '/data/auxiliary/'
+        # outputdir = '/data/auxiliary/'
         outputdir = './'
         file_name = 'Priors_' + variable + '_' + doystr + '_global.vrt'
         # todo exchange 125 in upcoming versions with doy

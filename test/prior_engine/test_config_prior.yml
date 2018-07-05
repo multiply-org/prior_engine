@@ -44,6 +44,8 @@ Prior:
     database: 
   cab:
     database:
+  n:
+    database:
     #climatology:
     #  database: ../aux_data/new_geotiff
     # model:

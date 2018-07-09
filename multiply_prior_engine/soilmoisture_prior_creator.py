@@ -13,6 +13,7 @@ import glob
 import os
 import subprocess
 import tempfile
+import logging
 
 import numpy as np
 import shapely
@@ -23,8 +24,6 @@ from scipy import spatial
 
 from .prior_creator import PriorCreator
 
-import logging
-logger = logging.getLogger(__name__)
 
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]
 __copyright__ = "Copyright 2018, Thomas Ramsauer"
@@ -89,7 +88,7 @@ class SoilMoisturePriorCreator(PriorCreator):
 
         else:
             msg = '{} prior for sm not implemented'.format(self.ptype)
-            logger.exception(msg)
+            logging.exception(msg)
             assert False, msg
 
         return self._provide_prior_file()
@@ -180,7 +179,6 @@ class SoilMoisturePriorCreator(PriorCreator):
         :rtype: string
 
         """
-        # self.date
 
         if self.data_dir is not None:
             self.data_file = self._get_prior_file_from_dir(self.data_dir)
@@ -189,11 +187,11 @@ class SoilMoisturePriorCreator(PriorCreator):
 
         ext = os.path.splitext(self.data_file)[-1].lower()
         if ext == 'vrt':
-            logger.info('Prior file ({}, {}) is already a .vrt-file, no need '
-                        'to convert.'.format(self.variable, self.ptype))
+            logging.info('Prior file ({}, {}) is already a .vrt-file, no need '
+                         'to convert.'.format(self.variable, self.ptype))
         else:
             try:
-                logger.info('Trying to convert prior file to .vrt-format.')
+                logging.info('Trying to convert prior file to .vrt-format.')
                 self.data_file = self._create_global_vrt(self.data_file)
             except:
                 assert False, ("Could not create .vrt-file for {} {} prior"
@@ -290,8 +288,8 @@ class SoilMoisturePriorCreator(PriorCreator):
         out_vrt = gdal.BuildVRT(out_fn+'.vrt', [mean_tf.name, unc_tf.name],
                                 separate=True)
         out_ds = gdal.Translate(out_fn+'.tif', out_vrt)
-        logger.info('Created {} from following files: {}.'
-                    .format(out_fn+'.vrt', fn_list))
+        logging.info('Created {} from following files: {}.'
+                     .format(out_fn+'.vrt', fn_list))
         # close/delete temporary files
         mean_tf.close()
         unc_tf.close()
@@ -311,7 +309,7 @@ class SoilMoisturePriorCreator(PriorCreator):
 
         """
         # TODO should it be an option in config if vrt is created and where?
-        logger.info('Creating vrt file from {}.'.format(fn))
+        logging.info('Creating vrt file from {}.'.format(fn))
         self._check_gdal_compliance(fn)
         try:
             if local:
@@ -331,7 +329,7 @@ class SoilMoisturePriorCreator(PriorCreator):
             self._check_gdal_compliance(res)
             return res
         except Exception as e:
-            logger.warning('Cannot create .vrt file'
+            logging.warning('Cannot create .vrt file'
                            ' {} - returning {}.'.format(res, fn))
             return '{}'.format(fn)
 
@@ -342,7 +340,7 @@ class SoilMoisturePriorCreator(PriorCreator):
                 ('GDAL: Check: Cannot open file ({})'.format(fn))
             ds = None
         except AssertionError as e:
-            logger.error(e)
+            logging.error(e)
             raise
 
     def _extract_climatology(self):

@@ -14,8 +14,6 @@ from dateutil.parser import parse
 from typing import List
 import numpy as np
 
-import logging
-logger = logging.getLogger(__name__)
 
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]
 __copyright__ = "Copyright 2018, Thomas Ramsauer"

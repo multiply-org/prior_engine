@@ -22,8 +22,6 @@ import yaml
 
 from .prior import PriorCreator
 from .prior_engine import _get_config, PriorEngine
-from .prior_logger import PriorLogger
-logger = PriorLogger().logger()
 
 __author__ = "Thomas Ramsauer"
 __copyright__ = "Copyright 2018 Thomas Ramsauer"
@@ -138,9 +136,9 @@ class UserPriorInput(object):
         self.config = _get_config(configfile)
         # TODO add possibility for other names. these must be stored somewhere.
         existing_userprior = 0
-        logger.debug('Existing ptypes:')
+        logging.debug('Existing ptypes:')
         for ptype in self.config['Prior'][self.variable].keys():
-            logger.debug(ptype)
+            logging.debug(ptype)
             if 'user' in ptype:
                 existing_userprior += 1
         return existing_userprior
@@ -198,11 +196,11 @@ class UserPriorInput(object):
                 src = os.path.abspath(PriorEngine.default_config)
             a, b = os.path.splitext(src)
             dest = a + '_backup' + b
-            logger.info('Creating {}.'.format(dest))
+            logging.info('Creating {}.'.format(dest))
             print('Creating {}.'.format(dest))
             shutil.copyfile(src, dest)
             self.configfile_bakup = dest
-        logger.info('User config file: {}'.format(self.configfile))
+        logging.info('User config file: {}'.format(self.configfile))
 
         with open(self.configfile, 'w') as cfg:
             cfg.write(yaml.dump(configuration, default_flow_style=False))
@@ -358,7 +356,7 @@ class UserPriorInput(object):
             assert any([x is not None for x in nc.values()]), \
               "No information passed to \'add_prior\' method."
         except AssertionError as e:
-            # logger.error(e)
+            # logging.error(e)
             try:
                 parser.error(e)
             except:
@@ -419,9 +417,9 @@ class UserPriorInput(object):
         # Load Data:
         try:
             dtype_method[dtype](data=self.user_file)
-            logger.info('Imported user file {}.'.format(user_file))
+            logging.info('Imported user file {}.'.format(user_file))
         except Exception as e:
-            logger.error('Could not import user file {}.'
+            logging.error('Could not import user file {}.'
                          ' Data type {} not (yet) supported.'
                          .format(user_file))
             raise e
@@ -461,7 +459,6 @@ class UserPriorInput(object):
         def _read_netcdf(data):
             # geoval? netCDF4? other? hdf5?
             assert False, 'Reading NetCDF files not implemented yet.'
-
 
     def user_prior_cli(self):
         """CLI to include configuration for user defined prior.
@@ -613,7 +610,7 @@ class UserPriorInput(object):
         # required_together = ('-A', '-u')
         # if args.Add and args.user_file is None:
         #     msg = "User prior file was not specified!"
-        #     logger.error(msg)
+        #     logging.error(msg)
         #     parser.error(msg)
 
         # if all(arg is False for arg in actions):

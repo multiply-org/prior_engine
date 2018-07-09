@@ -10,9 +10,6 @@
 import logging
 import pkg_resources
 import os
-import pdb
-import sys
-import tempfile
 
 import yaml
 
@@ -26,32 +23,6 @@ __credits__ = "Alexander Löw"
 __maintainer__ = "Thomas Ramsauer"
 __email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
 
-# Set up temporary directory for PriorEngine in OS-specific location:
-tempfile.tempdir = os.path.join(tempfile.gettempdir(), 'MULTIPLYPriorEngine')
-try:
-    os.mkdir(tempfile.tempdir)
-except FileExistsError:
-    pass
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-formatter = logging.Formatter('%(asctime)s:%(levelname)s:%(name)s:%(message)s',
-                              datefmt='%m/%d/%Y %I:%M:%S %p')
-
-file_handler = logging.FileHandler(__name__ + '.log')
-file_handler.setLevel(logging.INFO)
-file_handler.setFormatter(formatter)
-
-stream_handler = logging.StreamHandler()
-stream_handler.setFormatter(formatter)
-# to show output in console. set to higher level to omit.
-# Levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
-stream_handler.setLevel(logging.ERROR)
-
-logger.addHandler(file_handler)
-logger.addHandler(stream_handler)
-
 
 def _get_config(configfile):
     """
@@ -64,8 +35,8 @@ def _get_config(configfile):
         with open(configfile, 'r') as cfg:
             config = yaml.load(cfg)
     except FileNotFoundError as e:
-        logger.info('Info: current directory: {}'.format(os.getcwd()))
-        logger.error('{}'.format(e.args[0]))
+        logging.info('Info: current directory: {}'.format(os.getcwd()))
+        logging.error('{}'.format(e.args[0]))
         raise
     try:
         assert 'Prior' in config.keys(),\
@@ -75,28 +46,9 @@ def _get_config(configfile):
             ('There is no prior configuration in the config file ({}).'
              .format(configfile))
     except AssertionError as e:
-        logger.error('{}'.format(e.args[0]))
+        logging.error('{}'.format(e.args[0]))
         raise
     return config
-
-
-default_variables = ['Cab',
-                     'Car',
-                     'Cdm',
-                     'Cb',
-                     'Cw',
-                     'N',
-                     'Albedo',
-                     'LAI',
-                     'Fapar',
-                     'VWC',
-                     'LIDFa',
-                     'H',
-                     'Bsoil',
-                     'Psoil',
-                     'SM',
-                     'SR']
-default_variables_lower = [x.lower() for x in default_variables]
 
 
 class PriorEngine(object):
@@ -115,38 +67,38 @@ class PriorEngine(object):
         if self.configfile is None:
             self.configfile = kwargs.get('configfile', None)
         if self.configfile is None:
-            # have a backup/default config:
-            logger.warning('Using default config file {}. No keyword argument '
-                           'found while initializing SoilMoisturePriorCreator.'
-                           .format(self.default_config))
             self.configfile = self.default_config
-        print('Using config file: {}'.format(self.configfile))
+            logging.warning('Using default config file ({}). No keyword '
+                            'argument found (\'config\' or \'configfile\') '
+                            'while initializing SoilMoisturePriorCreator.'
+                            .format(self.configfile))
+        else:
+            logging.info('Using config file: {}'.format(self.configfile))
         assert os.path.exists(self.configfile)
+
         self.datestr = kwargs.get('datestr', None)
         self.variables = kwargs.get('variables', None)
         # self.priors = self.config['Prior']['priors']
 
-        # TODO ad correct sub routines from Joris
-
         self.subengine = {}
-        logger.info('Loading sub-engines for variables.')
+        logging.info('Loading sub-engines for variables.')
         prior_creator_registrations = list(pkg_resources.iter_entry_points(
                                            'prior_creators'))
-        logger.info('Got following prior_creator_registrations from entry '
-                    'points: {}'.format(prior_creator_registrations))
+        logging.info('Got following prior_creator_registrations from entry '
+                     'points: {}'.format(prior_creator_registrations))
         for prior_creator_registration in prior_creator_registrations:
             prior_creator = prior_creator_registration.load()
             variable_names = prior_creator.get_variable_names()
             for variable_name in variable_names:
                 self.subengine[variable_name] = prior_creator
-                logger.info('Sub-engine for {}: {}.'
-                            .format(variable_name, prior_creator))
-        logger.info('Got sub-engines for {}.'
-                    .format([k for k in self.subengine.keys()]))
+                logging.info('Sub-engine for {}: {}.'
+                             .format(variable_name, prior_creator))
+        logging.info('Got sub-engines for {}.'
+                     .format([k for k in self.subengine.keys()]))
 
         self.config = _get_config(self.configfile)
         self._check()
-        logger.info('Loaded {}.'.format(self.configfile))
+        logging.info('Loaded {}.'.format(self.configfile))
 
     def _check(self):
         """initial check for passed values of
@@ -170,9 +122,9 @@ class PriorEngine(object):
             assert self.variables is not None, \
                 'There are no variables for prior retrieval specified on.'
             # TODO Should previous state be integrated here?
-            logger.debug('Loaded config:\n{}.'.format(self.config))
+            logging.debug('Loaded config:\n{}.'.format(self.config))
         except AssertionError as e:
-            logger.error('{}'.format(e.args[0]))
+            logging.error('{}'.format(e.args[0]))
             raise
 
     def get_priors(self):
@@ -211,16 +163,16 @@ class PriorEngine(object):
                  'Current sub-engines:\n{}'
                  .format(var, self.subengine))
         except AssertionError as e:
-            logger.error('{}'.format(e.args[0]))
+            logging.error('{}'.format(e.args[0]))
             raise
-        logger.info('Getting prior for variable *{}*.'.format(var))
+        logging.info('Getting prior for variable *{}*.'.format(var))
 
         # test if prior type is specified (else return empty dict):
         try:
             self.config['Prior'][var].keys() is not None
         except AttributeError:
-            logger.warning('[WARNING] No prior type for {} prior specified!'
-                           .format(var))
+            logging.warning('[WARNING] No prior type for {} prior specified!'
+                            .format(var))
             return
         # fill variable specific dictionary with all priors (clim, recent, ..)
         # TODO concatenation of prior files
@@ -229,8 +181,8 @@ class PriorEngine(object):
 
             # pass config and prior type to subclass/engine
             try:
-                logger.info('Initializing {} for {} {} prior:'
-                            .format(self.subengine[var], var, ptype))
+                logging.info('Initializing {} for {} {} prior:'
+                             .format(self.subengine[var], var, ptype))
                 # initialize specific prior *Class Object*
                 # e.g. VegetationPrior as 'prior':
                 prior = self.subengine[var](ptype=ptype, config=self.config,
@@ -240,11 +192,11 @@ class PriorEngine(object):
             # Assertions in subengine are passed on here:
             # e.g. If no file is found: module should throw AssertionError
             except AssertionError as e:
-                logger.error('{}: {}'.format(self.subengine[var], e.args[0]))
+                logging.error('{}: {}'.format(self.subengine[var], e.args[0]))
                 raise
             # for now catch all built-in exceptions
             except Exception as e:
-                logger.error('{}: {}'.format(self.subengine[var], e.args[0]))
+                logging.error('{}: {}'.format(self.subengine[var], e.args[0]))
                 raise
 
         return var_res

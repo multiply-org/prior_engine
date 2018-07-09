@@ -22,8 +22,6 @@ from .prior_creator import PriorCreator
 
 SUPPORTED_VARIABLES = ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N', 'ala', 'h', 'bsoil', 'psoil']
 
-import logging
-logger = logging.getLogger(__name__)
 
 plt.ion()
 

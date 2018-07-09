@@ -35,7 +35,7 @@ class PriorCreator(metaclass=ABCMeta):
         self.date8 = int(str(self.date.date()).replace('-', ''))
 
     def _check(self):
-        assert self.ptype is not None, 'Invalid prior type'
+        assert self.ptype is not None, 'No prior type specified.'
         # TODO make use of config optional
         assert self.config is not None, 'No config available.'
         assert self.datestr is not None, 'No datestr available.'

@@ -1,11 +1,12 @@
 from .soilmoisture_prior_creator import SoilMoisturePriorCreator, RoughnessPriorCreator
 from .vegetation_prior_creator import VegetationPriorCreator
 from .prior_engine import PriorEngine
+from .prior_creator import PriorCreator
+from .prior_logger import PriorLogger
 from .version import *
 import logging
 import tempfile
 import os
-from .prior_logger import PriorLogger
 
 # Setup of temporary directory
 # ----------------------------------

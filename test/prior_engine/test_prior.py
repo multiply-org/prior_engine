@@ -19,10 +19,24 @@ def test_priorengine_init():
     # assert type(P.priors) is dict
 
 
-def test_priorengine_get_priors():
+def test_priorengine_get_priors_sm():
     P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
                     datestr='2017-03-01',
                     variables=['sm'])
+    assert type(P.get_priors()) is dict
+
+
+def test_priorengine_get_priors_lai():
+    P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
+                    datestr='2017-01-01',
+                    variables=['lai'])
+    assert type(P.get_priors()) is dict
+
+
+def test_priorengine_get_priors_n():
+    P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
+                    datestr='2017-01-01',
+                    variables=['n'])
     assert type(P.get_priors()) is dict
 
 

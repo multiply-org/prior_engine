@@ -20,7 +20,8 @@ from netCDF4 import Dataset
 
 from .prior_creator import PriorCreator
 
-SUPPORTED_VARIABLES = ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N', 'ala', 'h', 'bsoil', 'psoil']
+SUPPORTED_VARIABLES = ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'n',
+                       'ala', 'h', 'bsoil', 'psoil']
 
 
 plt.ion()
@@ -99,8 +100,9 @@ def processespercore(varname, PFT, PFT_ids, VegetationPrior):
             ierror = ~np.isnan(trait_tf_)
             trait_tf_avg = np.mean(trait_tf_[ierror])
             trait_tf_unc = np.std(trait_tf_[ierror])
+            trait_tf_unc = np.max([trait_tf_unc,1e-9])
 
-            # assinge avg/unc values to individual pft_id (using PFT weights)
+            # assign PFT weights of individual pft_id to avg/unc values
             TRAIT_wtf_avg = PFT_id / 100. * trait_tf_avg
             TRAIT_wtf_unc = PFT_id / 100. * trait_tf_unc
 
@@ -131,16 +133,20 @@ class VegetationPriorCreator(PriorCreator):
         self.lat_study = [50, 60]
 
         # 1.2 Define paths
-        self.directory_data = self.config['Prior']['General']['directory_data']
-        self.path2LCC_file = (self.directory_data + 'LCC/' + 'ESACCI-LC-'
-                              'L4-LCCS-Map-300m-P1Y-2015-v2.0.7_updated.nc')
-        self.path2Climate_file = (self.directory_data + 'Climate/' +
-                                  'sdat_10012_1_20171030_081458445.tif')
-        self.path2Meteo_file = (self.directory_data + 'Meteorological/' +
-                                'Meteo_.nc')
-        self.path2Trait_file = (self.directory_data + 'Trait_Database/' +
-                                'Traits.nc')
-        self.path2Traitmap_file = self.directory_data + 'Priors/' + 'Priors.nc'
+
+        self.directory_data = '/data/auxiliary/priors/Static/Vegetation/'
+        #self.directory_data = self.config['Prior']['General']['directory_data']
+        self.path2LCC_file = '/data/auxiliary/priors/Static/LCC/' + 'ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7_updated.nc'
+        #self.path2LCC_file = (self.directory_data + 'LCC/' + 'ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7_updated.nc')
+        self.path2Climate_file = '/data/auxiliary/priors/Static/Climate/' + 'sdat_10012_1_20171030_081458445.tif'
+        #self.path2Climate_file = (self.directory_data + 'Climate/' + 'sdat_10012_1_20171030_081458445.tif')
+        self.path2Meteo_file = '/data/auxiliary/priors/Static/Meteorological/' + 'Meteo_.nc'
+        #self.path2Meteo_file = (self.directory_data + 'Meteorological/' + 'Meteo_.nc')
+        self.path2Trait_file = '/data/auxiliary/priors/Static/Trait_Database/' + 'Traits.nc'
+        #self.path2Trait_file = (self.directory_data + 'Trait_Database/' + 'Traits.nc')
+
+        self.path2Traitmap_file = '/data/auxiliary/priors/Static/Vegetation/' + 'Priors.nc'
+        #self.path2Traitmap_file = self.directory_data + 'Priors/' + 'Priors.nc'
 
         self.plotoption = 0  # [0,1,2,3,4,5,6,..]
 
@@ -159,6 +165,12 @@ class VegetationPriorCreator(PriorCreator):
             'cw': lambda x: (-1 / 50.) * np.log(x),
             'cm': lambda x: (-1 / 100.) * np.log(x),
             'ala': lambda x: 90. * x}
+        # define Prior values that are not found in online databases.
+        self.mu = dict()
+        self.mu['cbrown'] = 0.2
+        self.mu['ala'] = 0.5
+        self.mu['bsoil'] = 1
+        self.mu['psoil'] = 0.5
 
     @classmethod
     def get_variable_names(cls):
@@ -194,6 +206,7 @@ class VegetationPriorCreator(PriorCreator):
         # Read Data (2.5s)
         LCC_map, LCC_lon, LCC_lat, LCC_classes = self.ReadLCC()
         CLM_map, CLM_lon, CLM_lat, CLM_classes = self.ReadClimate()
+
 
         if np.all(LCC_map['Water']):
 
@@ -426,14 +439,21 @@ class VegetationPriorCreator(PriorCreator):
 
         """
 
+        vars_in_database = ['lai','cab','car','cdm','cw','n']
+
         Var = dict()
+
         for varname in varnames:
-            Data = Dataset(self.path2Trait_file, 'r')
-            V = Data[varname][:, pft_id, :]
+            if varname in  vars_in_database:
+                Data = Dataset(self.path2Trait_file, 'r')
+                V = Data[varname][:, pft_id, :]
+                Data.close()
+            else:
+                # import pdb
+                # pdb.set_trace()
+                V = self.mu[varname]*np.array([1.,1.-1e-5])
+
             Var[varname] = V
-
-        Data.close()
-
         return Var
 
     def ReadMeteorologicalData(self, doystr):
@@ -489,7 +509,9 @@ class VegetationPriorCreator(PriorCreator):
         ilat = np.where((lat >= lat_min) * (lat <= lat_max))[0]
 
         # read data
-        data = ds.ReadAsArray(ilon[0], ilat[0], len(ilon), len(ilat))
+        #data = ds.ReadAsArray(ilon[0], ilat[0], len(ilon), len(ilat))
+        data = ds.ReadAsArray()[ilat,:][:,ilon]#(ilon[0], ilat[0], len(ilon), len(ilat))
+
         lon_s = lon[ilon]
         lat_s = lat[ilat]
 
@@ -682,18 +704,22 @@ class VegetationPriorCreator(PriorCreator):
         TRAITS_ttf_unc = dict()
 
         # Process in parallel
-        pr = partial(processespercore, PFT=PFT, PFT_ids=PFT_ids, VegetationPrior=self)
-        ret = parmap(pr, varnames, nprocs=3)
-        for ivar, varname in enumerate(varnames):
-            TRAITS_ttf_avg[varname] = ret[ivar][0][:, :]
-            TRAITS_ttf_unc[varname] = ret[ivar][1][:, :]
+        option_parallel = 0
+        if option_parallel == 1:
+            pr = partial(processespercore, PFT=PFT, PFT_ids=PFT_ids, VegetationPrior=self)
+            ret = parmap(pr, varnames, nprocs=3)
+            for ivar, varname in enumerate(varnames):
+                TRAITS_ttf_avg[varname] = ret[ivar][0][:, :]
+                TRAITS_ttf_unc[varname] = ret[ivar][1][:, :]
+        else:
+            # import pdb
+            # pdb.set_trace()
+            for varname in varnames:
+                TRAIT_ttf_avg, TRAIT_ttf_unc            =   processespercore(varname, PFT, PFT_ids, self)
 
-        # for varname in varnames:
-        #     TRAIT_ttf_avg, TRAIT_ttf_unc            =   processespercore(varname, PFT, PFT_ids, self)
-        #
-        #     # write back to output
-        #     TRAITS_ttf_avg[varname]                 =   TRAIT_ttf_avg
-        #     TRAITS_ttf_unc[varname]                 =   TRAIT_ttf_unc
+                # write back to output
+                TRAITS_ttf_avg[varname]                 =   TRAIT_ttf_avg
+                TRAITS_ttf_unc[varname]                 =   TRAIT_ttf_unc
 
         if self.plotoption == 6:
             Nc = 4.
@@ -750,7 +776,8 @@ class VegetationPriorCreator(PriorCreator):
 
         """
 
-        varnames = [name for name in Prior_avg.iterkeys()]
+        # varnames = [name for name in Prior_avg.iterkeys()]
+        varnames = [name for name in Prior_avg]
         latstr = ('[%02.0f' % self.lat_study[0]
                   + ' %02.0fN]' % self.lat_study[1])
         lonstr = ('[%03.0f' % self.lon_study[0]
@@ -861,7 +888,9 @@ class VegetationPriorCreator(PriorCreator):
         lonstr = ('[%03.0f' % self.lon_study[0]
                   + '_%03.0fE]' % self.lon_study[1])
 
-        varnames = [name for name in Prior_avg.iterkeys()]
+
+        #varnames = [name for name in Prior_avg.iterkeys()]
+        varnames = [name for name in Prior_avg]
         drv = gdal.GetDriverByName("GTIFF")
         for i, varname in enumerate(varnames):
             filename = (self.path2Traitmap_file[:-3] + '_' + varname + '_'
@@ -898,6 +927,8 @@ class VegetationPriorCreator(PriorCreator):
 
         """
         dir = self.directory_data + 'Priors/'
+        # outputdir = '/data/auxiliary/'
+        outputdir = './'
         file_name = 'Priors_' + variable + '_' + doystr + '_global.vrt'
         # todo exchange 125 in upcoming versions with doy
         list_of_files = glob.glob(dir + 'Priors*' + variable + '*125*.tiff')
@@ -906,9 +937,12 @@ class VegetationPriorCreator(PriorCreator):
         for filename in list_of_files:
             list_of_files2.append('"' + filename + '"')
 
-    
+        #import pdb
+        #pdb.set_trace()
+        if len(list_of_files2) == 0:
+            raise UserWarning('No input files found for variable {}'.format(variable))
         files = " ".join(list_of_files2)
-        os.system('gdalbuildvrt -te -180 -90 180 90 ' + dir + file_name
+        os.system('gdalbuildvrt -te -180 -90 180 90 ' + outputdir + file_name
                   + ' ' + files)
         return '{}{}'.format(dir, file_name)
 
@@ -1032,15 +1066,28 @@ class VegetationPriorCreator(PriorCreator):
 
 
 if __name__ == "__main__":
+    from multiply_prior_engine import PriorEngine
+    import datetime
 
-    vegetation_prior = VegetationPriorCreator(var='lai', datestr='2007-12-31 04:23', ptype='database')
+    option_recreate_priors = 1
 
+    ####################################################################
+    if option_recreate_priors:
+        # create Initial data-files to be retrieved from prior-engine
+        VegPrior = VegetationPriorCreator()
+        VegPrior.ProcessData(variables=['psoil','bsoil','ala','cbrown'])
+        # VegPrior.RetrievePrior(variables=['lai','cab'],datestr='2007-12-31 04:23', ptype='database')
+    else:
+        print('using earlier calculations')
+
+    ####################################################################
+    VegPrior = VegetationPriorCreator(variables=['ala', 'bsoil',
+                                                 'psoil', 'cbrown'],
+                                      datestr='2007-12-31 04:23',
+                                      ptype='database')
     # VegPrior.ProcessData()
-    filename = vegetation_prior.compute_prior_file()
-
+    filename = VegPrior.compute_prior_file()
     print('%s' % filename)
     # this should give as output:
-    #
-
-    
+    #    
     # end of file

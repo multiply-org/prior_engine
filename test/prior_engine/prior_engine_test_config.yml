@@ -25,7 +25,7 @@ Prior:
 #   and for which prior information is provided.
 # - 2. sub-level contains prior type (ptype). These can be commented out
 #   to be omitted.
-
+  output_directory: ./test/output_dir/
   General:
     directory_data: ./aux_data/Static/Vegetation/
   sm:

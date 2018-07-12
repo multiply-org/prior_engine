@@ -26,6 +26,7 @@ Inference: # inference config
 #   to be omitted. 
 
 Prior:
+  output_directory: ./test/output_dir/
   General:
     directory_data: ./aux_data/Static/Vegetation/
   sm:

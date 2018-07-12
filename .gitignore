@@ -1,7 +1,9 @@
 *.vrt
 *.tgz
-aux_data/
+# aux_data/
 prior_engine_runner*
+
+# General Exceptions
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -30,8 +32,10 @@ wheels/
 
 *.pyc
 .cache/
-# emacs temp files
+
+# Emacs temp files
 .#*
+*~
 
 .installed.cfg
 *.egg

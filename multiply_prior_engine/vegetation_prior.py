@@ -915,23 +915,22 @@ class VegetationPrior(Prior):
 
         """
         dir = self.directory_data + 'Priors/'
-        # outputdir = '/data/auxiliary/'
         outputdir = './'
         file_name = 'Priors_' + variable + '_' + doystr + '_global.vrt'
         # todo exchange 125 in upcoming versions with doy
         list_of_files = glob.glob(dir + 'Priors*' + variable + '*125*.tiff')
+        if len(list_of_files) == 0:
+            raise UserWarning('No input files found for variable {}'.format(variable))
 
-        list_of_files2 = []
+        list_of_files_as_strings = []
         for filename in list_of_files:
-            list_of_files2.append('"' + filename + '"')
+            list_of_files_as_strings.append('"' + filename + '"')
 
         #import pdb
         #pdb.set_trace()
-        if len(list_of_files2) == 0:
-            raise UserWarning('No input files found for variable {}'.format(variable))
-        files = " ".join(list_of_files2)
-        os.system('gdalbuildvrt -te -180 -90 180 90 ' + outputdir + file_name
-                  + ' ' + files)
+        files = " ".join(list_of_files_as_strings)
+        output_file_name = '{}{}'.format(outputdir, file_name)
+        os.system('gdalbuildvrt -te -180 -90 180 90 ' + output_file_name + ' ' + files)
         return '{}{}'.format(dir, file_name)
 
     def ProcessData(self, variables=None, state_mask=None,

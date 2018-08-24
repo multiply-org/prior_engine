@@ -17,6 +17,7 @@ import tempfile
 import warnings
 import pandas as pd
 import shutil
+import pkg_resources
 
 import yaml
 
@@ -27,6 +28,14 @@ __author__ = "Thomas Ramsauer"
 __copyright__ = "Copyright 2018 Thomas Ramsauer"
 __maintainer__ = "Thomas Ramsauer"
 __email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
+
+dv = []
+default_variables_lower = list(sorted(set([str(item).lower() for sublist in
+                               [l for l in [reg.load().get_variable_names()
+                                for reg in list(pkg_resources
+                                .iter_entry_points('prior_creators'))]
+                                if l is not None]
+                               for item in sublist])))
 
 
 class UserPriorCreator(PriorCreator):
@@ -179,34 +188,26 @@ class UserPriorInput(object):
         :rtype: string
 
         """
-        path_to_config = kwargs.get('path_to_config', None)
-        new_config_filename = kwargs.get('new_config_filename', None)
-
-        if new_config_filename is not None and path_to_config is None:
-            warnings.warn('Entered config file name ({}) will be omitted '
-                          '--> no path specified!'
-                          .format(new_config_filename), Warning)
-
-        self.check_path_to_config_or_create(path_to_config)
-
-        assert os.path.isfile(self.configfile)
-        if self.configfile == PriorEngine.default_config:
-            # create backup file
-            if os.path.exists(PriorEngine.default_config):
-                src = os.path.abspath(PriorEngine.default_config)
-            a, b = os.path.splitext(src)
-            dest = a + '_backup' + b
-            logging.info('Creating {}.'.format(dest))
-            print('Creating {}.'.format(dest))
-            shutil.copyfile(src, dest)
-            self.configfile_bakup = dest
-        logging.info('User config file: {}'.format(self.configfile))
+        self._get_path_to_config_kwarg(**kwargs)
 
         with open(self.configfile, 'w') as cfg:
             cfg.write(yaml.dump(configuration, default_flow_style=False))
+        logging.info('User config file: {}'.format(self.configfile))
         return self.configfile
 
-    def check_path_to_config_or_create(self, path_to_config):
+    def _get_path_to_config_kwarg(self, **kwargs):
+        self.path_to_config = kwargs.get('path_to_config', None)
+        self.new_config_filename = kwargs.get('new_config_filename', None)
+
+        if (self.new_config_filename is not None) and (self.path_to_config is None):
+            warnings.warn('Entered config file name ({}) will be omitted '
+                          '--> no path specified!'
+                          .format(self.new_config_filename), Warning)
+
+        self.check_path_to_config_or_create()
+        assert os.path.isfile(self.configfile)
+
+    def check_path_to_config_or_create(self):
         """Create self.configfile variable with path to config file
 
         :param path_to_config:
@@ -214,27 +215,30 @@ class UserPriorInput(object):
         :rtype:
 
         """
-        # check config directory
-        if path_to_config is not None:
-            path_to_config = self._path_exists(path_to_config)
-        else:
+        def _create_temp_conf_file():
             # create temporary files to write config to:
             temp_conf = tempfile.NamedTemporaryFile(
                 prefix='PriorEngine_config_{}_'.format(self.now()),
                 suffix='.yml',
                 delete=False)
-            path_to_config = temp_conf.name
+            self.path_to_config = temp_conf.name
 
+        # check config directory
+        if self.path_to_config is not None:
+            self.path_to_config = self._path_exists(self.path_to_config)
+
+        else:
+            _create_temp_conf_file()
         # if valid path entered but is dir
-        if not os.path.isfile(path_to_config):
+        if not os.path.isfile(self.path_to_config):
             # and entered new config file name
-            if new_config_filename is not None:
-                self.configfile = os.path.join(path_to_config,
-                                               new_config_filename)
+            if self.new_config_filename is not None:
+                self.configfile = os.path.join(self.path_to_config,
+                                               self.new_config_filename)
             # but missing new config file name (create generic based on date):
             else:
                 self.configfile = os.path.join(
-                    path_to_config,
+                    self.path_to_config,
                     'PriorEngine_config_{}.yml'.format(self.now()))
             try:
                 # 'x': open for exclusive creation, failing if file exists
@@ -242,13 +246,26 @@ class UserPriorInput(object):
                     pass
             except FileExistsError as e:
                 self.configfile = os.path.join(
-                    path_to_config,
+                    self.path_to_config,
                     "PriorEngine_config_{}.yml".format(self.now()))
                 with open(self.configfile, "x") as f:
                     warnings.warn(e, Warning)
         # if path is file:
         else:
-            self.configfile = path_to_config
+            if self.configfile == PriorEngine.default_config:
+                # create backup file
+                # if os.path.exists(PriorEngine.default_config):
+                #     src = os.path.abspath(PriorEngine.default_config)
+                # a, b = os.path.splitext(src)
+                # dest = a + '_backup' + b
+                # logging.info('Creating {}.'.format(dest))
+                # print('Creating {}.'.format(dest))
+                # shutil.copyfile(src, dest)
+                # self.configfile_backup = dest
+                _create_temp_conf_file()
+                self.configfile = self.path_to_config
+            else:
+                self.configfile = self.path_to_config
 
     def show_config(self, only_prior=False):
         """Display current prior configuration. Print to stdout and return.
@@ -277,7 +294,7 @@ class UserPriorInput(object):
                   ' Please specify \'configfile=\' when initializing class.')
             # sys.exit()
 
-    def remove_prior(self, variable, ptype, write=True):
+    def remove_prior(self, prior_variable, ptype, write=True, **kwargs):
         """Remove prior from configuration file.
 
         :param variable:
@@ -287,15 +304,20 @@ class UserPriorInput(object):
         :rtype:
 
         """
+        self._get_path_to_config_kwarg(**kwargs)
+
         try:
             # removes entry from dictionary and returns it:
-            removed = self.config['Prior'][variable].pop(ptype)
-            print('Removed {} prior configuration.'.format(removed))
+            removed = self.config['Prior'][prior_variable].pop(ptype)
+            print(f'\nRemoved {removed} {ptype} prior configuration for'
+                  f' variable \'{prior_variable}\'.')
+            if write:
+                self.write_config(self.config)
         except KeyError as e:
-            warnings.warn('{}/{} not in configuration'
-                          .format(variable, ptype), Warning)
-        if write:
-            self.write_config(self.config)
+            warnings.warn('Variable \'{}\', prior type: \'{}\' not in'
+                          ' configuration!'
+                          .format(prior_variable, ptype), Warning)
+        self.show_config()
 
     def add_prior(self, prior_variable, **kwargs):
         """Adds directory, which holds user prior data, to config file.
@@ -320,11 +342,7 @@ class UserPriorInput(object):
         :rtype:
 
         """
-        # config file specific info (default ones used if not present):
-        path_to_config = kwargs.get('path_to_config', None)
-        if path_to_config is None:
-            path_to_config = PriorEngine.default_config
-        new_config_filename = kwargs.get('new_config_filename', None)
+        self._get_path_to_config_kwarg(**kwargs)
 
         # so far only directory as user defined configuration implemented
         # TODO needs more flexibility:
@@ -354,11 +372,12 @@ class UserPriorInput(object):
                 nc.update({arg: kwargs[arg]})
         try:
             assert any([x is not None for x in nc.values()]), \
-              "No information passed to \'add_prior\' method."
+              (f"No further information passed to \'add_prior\' method for "
+               f"variable '{self.variable}'.")
         except AssertionError as e:
             # logging.error(e)
             try:
-                parser.error(e)
+                parser_Add.error(e)
             except:
                 raise e
         # generate new config dictionary with user info included
@@ -384,8 +403,7 @@ class UserPriorInput(object):
         # internal directory to store the converted data if not specified
 
         # config file specific info (default ones used if not present):
-        path_to_config = kwargs.get('path_to_config', None)
-        new_config_filename = kwargs.get('new_config_filename', None)
+        self._get_path_to_config_kwarg(**kwargs)
 
         # used in _generate_userconf for location in config file
         self.variable = prior_variable
@@ -420,8 +438,8 @@ class UserPriorInput(object):
             logging.info('Imported user file {}.'.format(user_file))
         except Exception as e:
             logging.error('Could not import user file {}.'
-                         ' Data type {} not (yet) supported.'
-                         .format(user_file))
+                          ' Data type {} not (yet) supported.'
+                          .format(user_file))
             raise e
 
         # Convert to gdal compliant file (Inference Engine requirement):
@@ -434,8 +452,8 @@ class UserPriorInput(object):
         # add prior to config
         try:
             self.add_prior(prior_variable=self.variable,
-                           path_to_config=path_to_config,
-                           new_config_filename=new_config_filename)
+                           path_to_config=self.path_to_config,
+                           new_config_filename=self.new_config_filename)
             # return 0
         except Exception as e:
             raise e
@@ -505,7 +523,7 @@ class UserPriorInput(object):
         # - Show - #
 
         parser_Show.set_defaults(func=self.show_config)
-        parser_Show.add_argument('-p', '--only-prior', default=False,
+        parser_Show.add_argument('-p', '--only-prior',
                                  action='store_true', dest='only_prior',
                                  help=('Only show prior relevant'
                                        ' configuration.'))
@@ -555,13 +573,31 @@ class UserPriorInput(object):
                                          'from configuration.'
                                          '\nChoices are: {}'.format(
                                              self.default_variables_lower)))
-        parser_Add.add_argument('-pt', '--prior_type', type=str,
-                                metavar='',
-                                action='store', dest='ptype',
-                                help=('Prior type. E.g. \'climatological\','
-                                      '\'user1\', ... specified in config'
-                                      ' file.'))
+        parser_Remove.add_argument('-pt', '--prior_type', type=str,
+                                   metavar='',
+                                   action='store', dest='ptype',
+                                   required=True,
+                                   help=('Prior type. E.g. \'climatological\','
+                                         '\'user1\', ... specified in config'
+                                         ' file.'))
+        parser_Remove.add_argument('-c', '--path_to_config', type=str,
+                                   metavar='', required=False,
+                                   action='store', dest='path_to_config',
+                                   help=('Directory of new user '
+                                         'config.\nIf None, a temporary file'
+                                         ' location will be used.'))
+        parser_Remove.add_argument('-fn', '--new_config_filename', type=str,
+                                   metavar='', required=False,
+                                   action='store', dest='new_config_filename',
+                                   help=('Filename of new user config. '
+                                         'Only has effect if path_to_config '
+                                         'is specified.\nIf None, a temporary '
+                                         'filename will be used.'))
 
+        parser_Remove.add_argument('-w', '--write',
+                                   action='store_true', dest='write',
+                                   help=('Write new configuration to temporary'
+                                         ' file? (default: True)'))
         # - Import - #
         parser_Import.set_defaults(func=self.import_prior)
         parser_Import.add_argument('-u', '--user_file', type=str,
@@ -598,11 +634,16 @@ class UserPriorInput(object):
 
         try:
             args = vars(args)
+            # get default function (e.g. add_prior) and remove from arguments:
             func = args.pop('func')
+            # get action (e.g. 'add') from func name (all separated by '_'):
+            f = func.__name__.split('_')[0]
+            # execute function:
             func(**args)
         except Exception as e:
-            print(e)
-            parser.print_usage()
+            # print error and tool specific help:
+            print(f'\n{e}\n')
+            print(subparsers.choices[f].format_help())
 
         # actions = [args.Add, args.Remove, args.Import]
 
@@ -633,7 +674,9 @@ class UserPriorInput(object):
 
 def main():
     try:
-        U = UserPriorInput(configfile="./sample_config_prior.yml")
+        # TODO make config file an argument for cli
+        # programmatically this below can be used but not as stand alone.
+        U = UserPriorInput(configfile=PriorEngine.default_config)
         U.user_prior_cli()
     except ModuleNotFoundError as e:
         print(e)

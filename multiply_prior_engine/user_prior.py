@@ -20,7 +20,7 @@ import shutil
 
 import yaml
 
-from .prior import PriorCreator
+from .prior_creator import PriorCreator
 from .prior_engine import _get_config, PriorEngine
 
 __author__ = "Thomas Ramsauer"
@@ -209,9 +209,9 @@ class UserPriorInput(object):
     def check_path_to_config_or_create(self, path_to_config):
         """Create self.configfile variable with path to config file
 
-        :param path_to_config: 
-        :returns: 
-        :rtype: 
+        :param path_to_config:
+        :returns:
+        :rtype:
 
         """
         # check config directory
@@ -425,7 +425,7 @@ class UserPriorInput(object):
             raise e
 
         # Convert to gdal compliant file (Inference Engine requirement):
-        
+
         # TODO write to temporary file (geotiff)?!
         # temp_user_file = tempfile.NamedTemporaryFile(
         #                      prefix='User_{}_'.format(self.now()),

@@ -429,6 +429,10 @@ class MapPriorCreator(PriorCreator):
         assert os.path.exists(self.lc_file)
         assert os.path.exists(self.lut_file)
 
+    @classmethod
+    def get_variable_names(cls):
+        return
+
 
 class RoughnessPriorCreator(MapPriorCreator):
 
@@ -462,9 +466,6 @@ class RoughnessPriorCreator(MapPriorCreator):
         """
         return tempfile.mktemp(suffix='.nc')
 
-    @classmethod
-    def get_variable_names(cls):
-        return ['roughness']
 
     def compute_prior_file(self):
         assert False, 'roughness prior not implemented'

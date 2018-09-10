@@ -55,6 +55,9 @@ class SoilMoisturePriorCreator(PriorCreator):
         # set None as old data_dir/file may be present from loop.
         self.data_dir = None
         self.data_file = None
+        self.output_directory = self.config['Prior']['output_directory']
+        if not os.path.exists(self.output_directory):
+            os.mkdir(self.output_directory)
 
         if self.ptype == 'climatology' or self.ptype == 'coarse':
             try:
@@ -90,7 +93,6 @@ class SoilMoisturePriorCreator(PriorCreator):
             msg = '{} prior for sm not implemented'.format(self.ptype)
             logging.exception(msg)
             assert False, msg
-
         return self._provide_prior_file()
 
     def _calc_climatological_prior(self):
@@ -312,16 +314,11 @@ class SoilMoisturePriorCreator(PriorCreator):
         logging.info('Creating vrt file from {}.'.format(fn))
         self._check_gdal_compliance(fn)
         try:
-            if local:
-                directory = tempfile.tempdir
-            else:
-                directory = os.path.abspath(os.path.dirname(fn))
-
             temp_fn = ('{}_prior_{}_{}.vrt'
                        .format(self.variable,
                                self.ptype,
                                self.date8))
-            out_fn = os.path.join(directory, temp_fn)
+            out_fn = os.path.join(self.output_directory, temp_fn)
             gdal.BuildVRT(out_fn, fn)
             # TODO VRT is not necessary global.
             res = '{}'.format(out_fn)

@@ -1,3 +1,6 @@
-__version__='0.4.dev1'
-__status__='prototype'
-__license__='GPLv3'
+# separation for sphinx use
+num = '0.4.1'  # 0.0.1, ...
+tag = '.dev'  # dev, ..
+__version__ = num + tag
+__status__ = 'prototype'
+__license__ = 'GPLv3'

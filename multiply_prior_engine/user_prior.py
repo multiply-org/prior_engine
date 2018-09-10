@@ -46,13 +46,12 @@ class UserPriorCreator(PriorCreator):
     def __init__(self, **kwargs):
         super(UserPriorCreator, self).__init__(**kwargs)
 
-    def RetrievePrior(self):
+    def compute_prior_file(self) -> str:
         """
         Initialize prior specific (climatological, ...) calculation.
 
-        :returns:
-
         """
+        assert False, "Should be in variable specific prior creator."
 
     def userprior_conversion(self):
         """Convert user defined data for compatibility?
@@ -217,10 +216,14 @@ class UserPriorInput(object):
         """
         def _create_temp_conf_file():
             # create temporary files to write config to:
+            home = os.path.expanduser('~/.multiply/')
+            os.makedirs(path, exist_ok=True)
+
             temp_conf = tempfile.NamedTemporaryFile(
                 prefix='PriorEngine_config_{}_'.format(self.now()),
                 suffix='.yml',
-                delete=False)
+                delete=False,
+                dir=home)
             self.path_to_config = temp_conf.name
 
         # check config directory

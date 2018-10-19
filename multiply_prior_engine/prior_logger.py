@@ -34,6 +34,7 @@ class PriorLogger(object):
     """
 
     configfile = pkg_resources.resource_filename(__name__, 'prior_engine_logging.yml')
+    logging.info('The config file can be found at {}'.format(configfile))
 
     def __init__(self,
                  level: str='warning',

@@ -18,6 +18,9 @@ setup(name='multiply-prior-engine',
       description='MULTIPLY Prior Engine',
       author='MULTIPLY Team',
       packages=['multiply_prior_engine'],
+      package_data={
+          'multiply_prior_engine': ['*.yml']
+      },
       entry_points={
           'prior_creators': [
               'vegetation_prior_creator = multiply_prior_engine:vegetation_prior_creator.VegetationPriorCreator',

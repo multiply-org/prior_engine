@@ -11,6 +11,7 @@ import os
 import yaml
 import logging
 import logging.config
+import pkg_resources
 import tempfile
 
 
@@ -32,12 +33,13 @@ class PriorLogger(object):
 
     """
 
-    configfile = os.path.join(os.path.dirname(__file__),
-                              'prior_engine_logging.yml')
+    configfile = pkg_resources.resource_filename(__name__, 'prior_engine_logging.yml')
 
     def __init__(self,
                  level: str='warning',
                  handlers: list=['console', 'file']):
+
+        logging.info('The config file can be found at {}'.format(self.configfile))
 
         # get logging config
         with open(self.configfile, 'r') as cfg:

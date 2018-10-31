@@ -11,21 +11,21 @@ prior\_engine module
 
 prior module
 -------------
-.. automodule:: multiply_prior_engine.prior
+.. automodule:: multiply_prior_engine.prior_creator
     :members:
     :undoc-members:
     :show-inheritance:
 
 soilmoisture\_prior module
 ---------------------------------------------------
-.. automodule:: multiply_prior_engine.soilmoisture_prior
+.. automodule:: multiply_prior_engine.soilmoisture_prior_creator
     :members:
     :undoc-members:
     :show-inheritance:
 
 vegetation\_prior module
 -------------------------------------------------
-.. automodule:: multiply_prior_engine.vegetation_prior
+.. automodule:: multiply_prior_engine.vegetation_prior_creator
     :members:
     :undoc-members:
     :show-inheritance:

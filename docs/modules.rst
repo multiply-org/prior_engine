@@ -1,4 +1,4 @@
-multiply_prior_engine
+Module documentation
 =====================
 
 .. toctree::

@@ -1,5 +1,5 @@
-multiply\_prior\_engine package
-===============================
+Module documentation
+====================
 
 prior\_engine module
 ---------------------------------------------
@@ -29,13 +29,3 @@ vegetation\_prior module
     :members:
     :undoc-members:
     :show-inheritance:
-
-
-..
-   Module contents
-   ---------------
-
-   .. automodule:: multiply_prior_engine
-       :members:
-       :undoc-members:
-       :show-inheritance:

@@ -1,24 +1,45 @@
-.. MULTIPLY Prior Engine documentation master file, created by
-   sphinx-quickstart on Fri Jan 19 11:52:23 2018.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+prior-engine
+====================
 
-Welcome to MULTIPLY Prior Engine's documentation!
-=================================================
+First Steps
+-----------
+Getting started with python, bayes theorem, ..
 
-Contents
----------
+
+Content
+----------
+
 .. toctree::
    :maxdepth: 2
 
-   readme
-   multiply_prior_engine
-   
-.. mdinclude:: ../README.md
+   Introduction
+   Installation
+   Theory
+   Usage
+
+
+Developer Documentation
+------------------------
+
+.. toctree::
+   :maxdepth: 2
+
+   :ref:`modindex`
+   Changelog
+   Contribution
+   Testing
+   License
+
 
 Indices and tables
-==================
+-------------------
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
+
+
+
+
+
+.. |logo| image:: https://raw.githubusercontent.com/multiply-org/multiply-core/master/doc/source/_static/logo/Multiply_multicolour.png
+   :width: 10%

@@ -3,6 +3,17 @@ All notable changes to this project will be documented in this file.
 
 [Unreleased changes]
 
+## Version [0.4.1] - 2018-11-02
+#### Added
+- In code documentation Vegetation Prior
+
+#### Changed
+- big update on general documentation
+- config file is read from `package_ressources`
+- prior .vrt files are now always global
+
+
+
 ## Version [0.4] - 2018-09-01
 #### Added
 - command line interface to allow user to add prior data
@@ -36,6 +47,7 @@ All notable changes to this project will be documented in this file.
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).*
 
 
-[Unreleased changes]: https://github.com/multiply-org/prior-engine/compare/v0.4...HEAD
+[Unreleased changes]: https://github.com/multiply-org/prior-engine/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/multiply-org/prior-engine/compare/v0.4...v0.4.1
 [0.4]: https://github.com/multiply-org/prior-engine/compare/v0.3...v0.4
 [0.3]: https://github.com/multiply-org/prior-engine/compare/c76e059...v0.3

@@ -1,5 +1,7 @@
+.. _installation:
+
 Installation
-===============
+============
 
 Download
 --------
@@ -15,8 +17,8 @@ If not already done so, the first step is to clone the latest code and change di
     The MULTIPLY platform has been developed against Python 3.6.
     It cannot be guaranteed to work with previous Python versions.
 
-Installation
--------------
+Installation procedure
+--------------------------
 The MULTIPLY prior engine can be run from sources directly.
 To install the MULTIPLY prior engine into an existing Python environment just for the current user, use
 
@@ -29,6 +31,12 @@ To install the MULTIPLY Core for development and for the current user, use
 .. code-block:: bash
 
     python setup.py develop --user
+
+Using Conda
+^^^^^^^^^^^
+.. note::
+   TBD
+
 
 Module requirements
 -------------------

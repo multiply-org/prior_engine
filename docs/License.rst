@@ -1,4 +1,4 @@
 License
 =========
 
-.. literalinclude:: ../LICENSE.md
+.. mdinclude:: ../LICENSE.md

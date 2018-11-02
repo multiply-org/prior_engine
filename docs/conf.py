@@ -19,10 +19,23 @@
 #
 import os
 import sys
+import recommonmark
+from recommonmark.parser import CommonMarkParser
+from recommonmark.transform import AutoStructify
+
+
 sys.path.insert(0, os.path.abspath('.'))
 myPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(myPath + '/../multiply_prior_engine')
 sys.path.append(myPath + '/../')
+
+# At the bottom of conf.py
+def setup(app):
+    app.add_config_value('recommonmark_config', {
+            'url_resolver': lambda url: github_doc_root + url,
+            'auto_toc_tree_section': 'Contents',
+            }, True)
+    app.add_transform(AutoStructify)
 
 # -- General configuration ------------------------------------------------
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -32,8 +45,7 @@ sys.path.append(myPath + '/../')
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc',
-              'm2r']
+extensions = ['sphinx.ext.autodoc', 'm2r']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

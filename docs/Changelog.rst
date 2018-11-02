@@ -1,4 +1,1 @@
-Changelog
-===========
-
-.. literalinclude:: ../CHANGES.md
+.. mdinclude:: ../CHANGES.md

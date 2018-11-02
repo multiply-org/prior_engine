@@ -319,8 +319,8 @@ class SoilMoisturePriorCreator(PriorCreator):
                                self.ptype,
                                self.date8))
             out_fn = os.path.join(self.output_directory, temp_fn)
-            gdal.BuildVRT(out_fn, fn)
-            # TODO VRT is not necessary global.
+            vrt_options = gdal.BuildVRTOptions(outputBounds=(-180, -90, 180, 90))
+            gdal.BuildVRT(out_fn, fn, options=vrt_options)
             res = '{}'.format(out_fn)
             assert os.path.isfile(res), "{} is not a file.".format(res)
             self._check_gdal_compliance(res)

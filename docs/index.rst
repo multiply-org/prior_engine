@@ -3,7 +3,9 @@ MULTIPLY prior-engine
 
 |buildstatus| |docstatus|
 
-`View on GitHub <https://github.com/multiply-org/prior-engine>`_
+.. htmlonly::
+
+    `View on GitHub <https://github.com/multiply-org/prior-engine>`_
 
 
 Scope of MULTIPLY
@@ -58,8 +60,8 @@ Developer Documentation
    Changelog
    Contribution
    Testing
-   License
    multiply_prior_engine
+   License
 
 
 Indices and tables

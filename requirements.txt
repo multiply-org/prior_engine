@@ -9,7 +9,7 @@ h5py==2.7.1
 pandas==0.22.0
 scipy==0.19.1
 numpy==1.14.2
-setuptools==36.5.0.post20170921
+setuptools==36.5.0
 matplotlib==2.1.2
 python_dateutil==2.7.5
 geoval==0.1.5

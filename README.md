@@ -3,19 +3,20 @@
 # MULTIPLY Prior Engine
 
 [![Build Status](https://travis-ci.org/multiply-org/prior-engine.svg?branch=master)](https://travis-ci.org/multiply-org/prior-engine)
-[![Documentation Status](https://readthedocs.org/projects/multiply/badge/?version=latest)](http://multiply.readthedocs.io/en/latest/?badge=latest)
-                
-<!-- [![Documentation Status](https://readthedocs.org/projects/prior-engine/badge/?version=latest)](http://prior-engine.readthedocs.io/en/latest/?badge=latest) -->
+[![Documentation Status](https://readthedocs.org/projects/multiply-prior-engine/badge/?version=latest)](https://multiply-prior-engine.readthedocs.io/en/latest/?badge=latest)
+
+
 
 This repository contains the prior engine for the MULTIPLY main platform.
 It provides *a priori* information to the [Inference Engine](https://github.com/multiply-org/KaFKA-InferenceEngine) to support land surface parameter retrieval.
-The documentation is part of the MULTIPLY core documentation on [ReadTheDocs](http://multiply.readthedocs.io/en/latest/). 
-<!-- Add plans and current status? -->
+The [prior engine specific documentation](https://multiply-prior-engine.readthedocs.io/en/latest/) is hosted on ReadTheDocs. It is part of the [MULTIPLY core documentation](http://multiply.readthedocs.io/en/latest/).
+Please find the latest pdf version of this documentation [here](https://readthedocs.org/projects/multiply-prior-engine/downloads/pdf/latest/).
+
 
 ## Contents
 
 * `aux_data/` Auxiliary data for prior generation.
-* `doc` - The auto generated documentation of all prior engine classes and function definitions. 
+* `docs` - The auto generated documentation of all prior engine classes and function definitions.
 * `multiply_prior-engine/` - The main prior engine software package.
 as source of information and orientation.
 * `recipe` Conda installation recipe.
@@ -26,19 +27,19 @@ as source of information and orientation.
 
 ## How to install
 
-The first step is to clone the latest code and step into the check out directory: 
+The first step is to clone the latest code and step into the check out directory:
 
     $ git clone https://github.com/multiply-org/prior-engine.git
     $ cd prior-engine
-    
-The MULTIPLY platform has been developed against Python 3.6. 
+
+The MULTIPLY platform has been developed against Python 3.6.
 It cannot be guaranteed to work with previous Python versions.
 
 The MULTIPLY prior engine can be run from sources directly.
 To install the MULTIPLY prior engine into an existing Python environment just for the current user, use
 
     $ python setup.py install --user
-    
+
 To install the MULTIPLY Core for development and for the current user, use
 
     $ python setup.py develop --user
@@ -51,13 +52,13 @@ To install the MULTIPLY Core for development and for the current user, use
 - `numpy`
 - `pyyaml`
 - `shapely`
- 
+
 
 ## Usage
 
 ### Python Package
 
-MULTIPLY prior engine is available as Python Package. 
+MULTIPLY prior engine is available as Python Package.
 To import it into your python application, use
 
 ```python
@@ -75,13 +76,13 @@ There is a Command Line Interface (CLI) integrated to allow for the following ac
 
 The CLI's help can be accessed via `-h` flag:
 
-``` bash 
+``` bash
 user_prior -h
 ```
 
 The help and description of the above mentioned sub-commands can be accessed via, e.g.:
 
-``` bash 
+``` bash
 user_prior add -h
 ```
 
@@ -104,7 +105,7 @@ lai, 10.5564, 48.3124
 
 ## Generating the Documentation
 
-We use [Sphinx](http://www.sphinx-doc.org/en/stable/rest.html) to generate the documentation of the MULTIPLY platform on [ReadTheDocs](http://multiply.readthedocs.io/en/latest/). 
+We use [Sphinx](http://www.sphinx-doc.org/en/stable/rest.html) to generate the documentation of the MULTIPLY platform on [ReadTheDocs](http://multiply.readthedocs.io/en/latest/).
 
 The source files of the main documentation of the MULTIPLY platform is to be found in the [MULTIPLY core repository](https://github.com/multiply-org/multiply-core).
 
@@ -114,8 +115,8 @@ If there is a need to build the *prior engine specific* docs locally, these addi
     $ conda install -c conda-forge sphinx-argparse
     $ pip install sphinx_autodoc_annotation
 
-To regenerate the HTML docs, type    
-    
+To regenerate the HTML docs, type
+
     $ cd doc
     $ make html
 
@@ -133,8 +134,8 @@ If you encounter any bugs with the tool, please file a [new issue](https://githu
 
 ## Authors
 
-* **Joris Timmermans** - *Work on vegetation priors* 
-* **Thomas Ramsauer** - *Work on soil priors* 
+* **Joris Timmermans** - *Work on vegetation priors*
+* **Thomas Ramsauer** - *Work on soil priors*
 
 <!-- See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project. -->
 
@@ -148,4 +149,4 @@ This project is licensed under the GPLv3 License - see the [LICENSE.md](https://
 
 ## Versioning
 
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/multiply-org/prior-engine/tags). 
+We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/multiply-org/prior-engine/tags).

@@ -3,7 +3,9 @@ MULTIPLY prior-engine
 
 |buildstatus| |docstatus|
 
-`View on GitHub <https://github.com/multiply-org/prior-engine>`_
+.. htmlonly::
+
+    `View on GitHub <https://github.com/multiply-org/prior-engine>`_
 
 
 Scope of MULTIPLY
@@ -14,7 +16,9 @@ SENTINEL data and beyond”.
 
 This documentation covers the prior engine for the MULTIPLY main platform.
 This module provides *a priori* information to the `Inference Engine <https://github.com/multiply-org/KaFKA-InferenceEngine>`_ to support land surface parameter retrieval.
-The documentation is part of the MULTIPLY core documentation on `ReadTheDocs <http://multiply.readthedocs.io/en/latest/>`_.
+
+The `prior engine specific documentation <https://multiply-prior-engine.readthedocs.io/en/latest/>`_ is hosted on ReadTheDocs. It is part of the `MULTIPLY core documentation <http://multiply.readthedocs.io/en/latest/>`_.
+Please find the latest pdf version of this documentation `here <https://readthedocs.org/projects/multiply-prior-engine/downloads/pdf/latest/>`_.
 
 First Steps
 -----------
@@ -58,8 +62,8 @@ Developer Documentation
    Changelog
    Contribution
    Testing
-   License
    multiply_prior_engine
+   License
 
 
 Indices and tables
@@ -76,4 +80,8 @@ Indices and tables
    :width: 10%
 
 .. |buildstatus| image:: https://travis-ci.org/multiply-org/prior-engine.svg?branch=master
-.. |docstatus| image:: https://readthedocs.org/projects/multiply/badge/?version=latest
+    :target: https://travis-ci.org/multiply-org/prior-engine
+
+.. |docstatus| image:: https://readthedocs.org/projects/multiply-prior-engine/badge/?version=latest
+    :target: https://multiply-prior-engine.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status

@@ -18,6 +18,7 @@ This documentation covers the prior engine for the MULTIPLY main platform.
 This module provides *a priori* information to the `Inference Engine <https://github.com/multiply-org/KaFKA-InferenceEngine>`_ to support land surface parameter retrieval.
 
 The `prior engine specific documentation <https://multiply-prior-engine.readthedocs.io/en/latest/>`_ is hosted on ReadTheDocs. It is part of the `MULTIPLY core documentation <http://multiply.readthedocs.io/en/latest/>`_.
+Please find the latest pdf version of this documentation `here <https://readthedocs.org/projects/multiply-prior-engine/downloads/pdf/latest/>`_.
 
 First Steps
 -----------

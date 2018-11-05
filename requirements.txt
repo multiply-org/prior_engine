@@ -1,5 +1,5 @@
 typing==3.6.2
-GDAL==2.2.2
+GDAL==2.2.4
 Shapely==1.6.2
 m2r==0.1.12
 sphinx_rtd_theme==0.2.4

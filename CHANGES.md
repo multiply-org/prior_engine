@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 
 [Unreleased changes]
 
+## Version [0.4.3] - ????-??-??
+#### Changed
+- documentation requirements integrated in module requirements.txt file (necessary for building on RTD)
+
+
 ## Version [0.4.2] - 2018-11-05
 
 #### Changed
@@ -55,7 +60,8 @@ All notable changes to this project will be documented in this file.
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).*
 
 
-[Unreleased changes]: https://github.com/multiply-org/prior-engine/compare/v0.4.2...HEAD
+[Unreleased changes]: https://github.com/multiply-org/prior-engine/compare/v0.4.3...HEAD
+[0.4.3]: https://github.com/multiply-org/prior-engine/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/multiply-org/prior-engine/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/multiply-org/prior-engine/compare/v0.4...v0.4.1
 [0.4]: https://github.com/multiply-org/prior-engine/compare/v0.3...v0.4

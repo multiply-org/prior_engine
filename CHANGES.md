@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 
 [Unreleased changes]
 
+## Version [0.4.2] - 2018-11-05
+
+#### Changed
+- minor fixes in README and documentation
+
 ## Version [0.4.1] - 2018-11-02
 #### Added
 - In code documentation Vegetation Prior
@@ -29,6 +34,7 @@ All notable changes to this project will be documented in this file.
 - fixed travis installation
 
 #### Removed
+- -
 
 ## Version [0.3] - 2018-03-07
 #### Added
@@ -39,15 +45,18 @@ All notable changes to this project will be documented in this file.
   - basic implementation of ESA CCI soil moisture climatology based prior
 
 #### Changed
+- -
 
 #### Removed
+- -
 
 ---
 *The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).*
 
 
-[Unreleased changes]: https://github.com/multiply-org/prior-engine/compare/v0.4.1...HEAD
+[Unreleased changes]: https://github.com/multiply-org/prior-engine/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/multiply-org/prior-engine/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/multiply-org/prior-engine/compare/v0.4...v0.4.1
 [0.4]: https://github.com/multiply-org/prior-engine/compare/v0.3...v0.4
 [0.3]: https://github.com/multiply-org/prior-engine/compare/c76e059...v0.3

@@ -45,12 +45,8 @@ To install the MULTIPLY Core for development and for the current user, use
 
 ## Module requirements
 
-- `python-dateutil`
-- `gdal`
-- `matplotlib`
-- `numpy`
-- `pyyaml`
-- `shapely`
+Please see the [requirements file](https://github.com/multiply-org/prior-engine/blob/master/requirements.txt) for a list of dependencies.
+
 
 
 ## Usage

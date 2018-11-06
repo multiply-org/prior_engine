@@ -9,9 +9,8 @@
 
 This repository contains the prior engine for the MULTIPLY main platform.
 It provides *a priori* information to the [Inference Engine](https://github.com/multiply-org/KaFKA-InferenceEngine) to support land surface parameter retrieval.
-The [prior engine specific documentation](https://multiply-prior-engine.readthedocs.io/en/latest/) is hosted on ReadTheDocs. It is part of the [MULTIPLY core documentation](http://multiply.readthedocs.io/en/latest/).
+The [prior engine specific documentation](https://multiply-prior-engine.readthedocs.io/en/latest/) is hosted on ReadTheDocs. It is part of the [MULTIPLY core documentation](https://multiply.readthedocs.io/).
 Please find the latest pdf version of this documentation [here](https://readthedocs.org/projects/multiply-prior-engine/downloads/pdf/latest/).
-
 
 ## Contents
 
@@ -105,7 +104,7 @@ lai, 10.5564, 48.3124
 
 ## Generating the Documentation
 
-We use [Sphinx](http://www.sphinx-doc.org/en/stable/rest.html) to generate the documentation of the MULTIPLY platform on [ReadTheDocs](http://multiply.readthedocs.io/en/latest/).
+We use [Sphinx](http://www.sphinx-doc.org/en/stable/rest.html) to generate the documentation of the MULTIPLY platform on [ReadTheDocs](https://multiply.readthedocs.io/).
 
 The source files of the main documentation of the MULTIPLY platform is to be found in the [MULTIPLY core repository](https://github.com/multiply-org/multiply-core).
 

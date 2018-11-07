@@ -1,6 +1,7 @@
 about:
   summary: "MULTIPLY prior engine package"
   home: https://github.com/multiply-org/prior-engine
+  license: GPLv3
 
 package:
   name: multiply_prior_engine

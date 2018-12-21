@@ -47,6 +47,7 @@ Content
    :maxdepth: 2
 
    Introduction
+   Priors
    Installation
    Usage
    Processing

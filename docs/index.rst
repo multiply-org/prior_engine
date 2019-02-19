@@ -1,4 +1,4 @@
-MULTIPLY prior-engine
+MULTIPLY - Prior Engine
 =======================
 
 |buildstatus| |docstatus|

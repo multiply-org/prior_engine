@@ -41,7 +41,7 @@ class PriorLogger(object):
 
         # get logging config
         with open(self.configfile, 'r') as cfg:
-            config_dict = yaml.load(cfg)
+            config_dict = yaml.load(cfg, Loader=yaml.FullLoader)
 
         # add temporary log file name to configuration
         filename = os.path.join(tempfile.tempdir, 'prior_engine.log')

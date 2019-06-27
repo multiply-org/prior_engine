@@ -33,7 +33,7 @@ def _get_config(configfile):
     """
     try:
         with open(configfile, 'r') as cfg:
-            config = yaml.load(cfg)
+            config = yaml.load(cfg, Loader=yaml.FullLoader)
     except FileNotFoundError as e:
         logging.info('Info: current directory: {}'.format(os.getcwd()))
         logging.error('{}'.format(e.args[0]))

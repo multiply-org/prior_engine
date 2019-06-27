@@ -17,7 +17,7 @@ from dateutil.parser import parse
 from matplotlib import pyplot as plt
 from scipy import interpolate as RegularGridInterpolator
 from netCDF4 import Dataset
-
+import datetime
 from .prior_creator import PriorCreator
 
 SUPPORTED_VARIABLES = ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'n',
@@ -36,12 +36,14 @@ def fun(f, q_in, q_out):
 
 
 def parmap(f, X, nprocs=multiprocessing.cpu_count()):
-    """FIXME! briefly describe function
+    """
+    Enable Parallel processing
+    This code is created to enable parallel processing with python
 
-    :param f: 
-    :param X: 
-    :param nprocs: 
-    :returns: 
+    :param f: function to be called
+    :param X: input to the function
+    :param nprocs: number of cores to be used
+    :returns: output of function
     :rtype: 
 
     """
@@ -63,14 +65,21 @@ def parmap(f, X, nprocs=multiprocessing.cpu_count()):
     return [x for i, x in sorted(res)]
 
 
-def processespercore(varname, PFT, PFT_ids, VegetationPrior):
-    """FIXME! briefly describe function
+def processespercore(varname, PFT, PFT_ids, VegetationPriorCreator):
+    """
+    Create Prior values from PFT distributions and Vegetation traits
+    For each PFT the specific trait (according to varname) are read from the Trait-Database. These traits are
+    then statistically analysed to produce the mean and standard deviations. These trait values are then evaluated
+    against the PFT distribution (occurrence) map and joint together to create a single Prior (mean&uncertainty)
+    estimate for each spatial location
 
-    :param varname: 
-    :param PFT: 
-    :param PFT_ids: 
-    :param VegetationPrior: 
-    :returns: 
+    Please note that: This function is encapsulated within the parmap method to run in parallel on different cores
+
+    :param varname: variable to be processed
+    :param PFT: arrays containing global Maps of PFT distributions
+    :param PFT_ids: a list containing PFT ids
+    :param VegetationPriorCreator: class containing all the functionality to be run (per core)
+    :returns: Vegetation Prior average values, Vegetation Prior uncertainty values
     :rtype: 
 
     """
@@ -85,7 +94,7 @@ def processespercore(varname, PFT, PFT_ids, VegetationPrior):
         b = time.time()
 
         if np.any(PFT_id):
-            trait_id = VegetationPrior.ReadTraitDatabase([varname], pft_id)
+            trait_id = VegetationPriorCreator.ReadTraitDatabase([varname], pft_id)
 
             # filtering variables for erroneous values
             trait_f_ = trait_id[varname] * 1.
@@ -134,19 +143,16 @@ class VegetationPriorCreator(PriorCreator):
 
         # 1.2 Define paths
 
-        self.directory_data = '/data/auxiliary/priors/Static/Vegetation/'
-        #self.directory_data = self.config['Prior']['General']['directory_data']
-        self.path2LCC_file = '/data/auxiliary/priors/Static/LCC/' + 'ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7_updated.nc'
-        #self.path2LCC_file = (self.directory_data + 'LCC/' + 'ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7_updated.nc')
-        self.path2Climate_file = '/data/auxiliary/priors/Static/Climate/' + 'sdat_10012_1_20171030_081458445.tif'
-        #self.path2Climate_file = (self.directory_data + 'Climate/' + 'sdat_10012_1_20171030_081458445.tif')
-        self.path2Meteo_file = '/data/auxiliary/priors/Static/Meteorological/' + 'Meteo_.nc'
-        #self.path2Meteo_file = (self.directory_data + 'Meteorological/' + 'Meteo_.nc')
-        self.path2Trait_file = '/data/auxiliary/priors/Static/Trait_Database/' + 'Traits.nc'
-        #self.path2Trait_file = (self.directory_data + 'Trait_Database/' + 'Traits.nc')
+        self.directory_data = self.config['Prior']['General']['directory_data']
+        self.path2LCC_file = (self.directory_data + 'LCC/' + 'ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7_updated.nc')
+        self.path2Climate_file = (self.directory_data + 'Climate/' + 'sdat_10012_1_20171030_081458445.tif')
+        self.path2Meteo_file = (self.directory_data + 'Meteorological/' + 'Meteo_.nc')
+        self.path2Trait_file = (self.directory_data + 'Trait_Database/' + 'Traits.nc')
+        self.path2Traitmap_file = self.directory_data + 'Priors/' + 'Priors.nc'
 
-        self.path2Traitmap_file = '/data/auxiliary/priors/Static/Vegetation/' + 'Priors.nc'
-        #self.path2Traitmap_file = self.directory_data + 'Priors/' + 'Priors.nc'
+        self.output_directory = self.config['Prior']['output_directory']
+        if not os.path.exists(self.output_directory):
+            os.mkdir(self.output_directory)
 
         self.plotoption = 0  # [0,1,2,3,4,5,6,..]
 
@@ -176,11 +182,97 @@ class VegetationPriorCreator(PriorCreator):
     def get_variable_names(cls):
         return SUPPORTED_VARIABLES
 
-    def OfflineProcessing(self):
-        """FIXME! briefly describe function
+    # General structure of processing chains
+    def ProcessData(self, variables=None, state_mask=None,
+                    timestr='2007-12-31 04:23', logger=None, file_prior=None,
+                    file_lcc=None, file_biome=None, file_meteo=None):
+        """
+        Process Data
+        Apriori Calculation of prior using Databases of Vegetation Traits.
+        This function is split into two parts (which are run for all Tiles over the study are)
+        - OfflineProcessing: This only has to be performed once (to make sure all the input data is available)
+        - StaticProcessing:  Creating Peak Biomass (PBM) Priors
+        - DynamicProcessing: Extending PBM traits to seasonal priors (a placeholder for the later implementations)
 
-        :returns: 
-        :rtype: 
+        :param variables: list of variables to be converted into global file
+        :param state_mask: place holder for spatial mask (not implemented)
+        :param timestr: string containing date&time '2007-12-31 04:23' for which global file needs to be created
+        :param logger: log-file for capturing message from the scripts
+        :param file_prior: place-holder for prior (TRY) database - filename (at the moment hardcoded)
+        :param file_lcc: place-holder for landcover data - filename (at the moment hardcoded)
+        :param file_biome: place-holder for biome data - filename (at the moment hardcoded)
+        :param file_meteo: place-holder for meteorological data - filename (at the moment hardcoded)
+
+        :returns: filenames to global VRT prior files
+        :rtype:
+
+        """
+
+        # offline processing (to be run only once)
+        # self.OfflineProcessing()
+
+
+        timea = datetime.datetime.now()
+        plt.ion()
+
+        # # Define variables
+        # if variables==None:
+        #     variables = ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N', 'ala',
+        #                  'h', 'bsoil', 'psoil']
+        #
+        # # 1.1 Define paths
+        # directory_data = '/home/joris/Data/Prior_Engine/'
+        # if file_prior is None:
+        #     file_prior = directory_data + 'Trait_Database/' + 'Traits.nc'
+        # if file_lcc is None:
+        #     file_lcc = (directory_data +'/LCC/'
+        #                 + 'ESACCI-LC-L4-LCCS-Map-300m-P1Y'
+        #                 + '-2015-v2.0.7_updated.nc')
+        # if file_biome==None:
+        #     file_biome = (directory_data +'Climate/'
+        #                   + 'sdat_10012_1_20171030_081458445.tif')
+        # if file_meteo==None:
+        #     file_meteo = directory_data +'Meteorological/' + 'Meteo_.nc'
+        # file_output = directory_data +'Priors/' + 'Priors.nc'
+        #
+        # 0. Setup Processing
+        # VegPrior = VegetationPrior()
+
+        # VegPrior.path2Trait_file = file_prior
+        # VegPrior.path2LCC_file = file_lcc
+        # VegPrior.path2Climate_file = file_biome
+        # VegPrior.path2Meteo_file = file_meteo
+        # VegPrior.path2Traitmap_file = file_output
+
+        #############
+        time = parse(timestr)
+        doystr = time.strftime('%j')
+        lon_study_ = np.arange(-180, 180, 10)
+        lat_study_ = np.arange(-90, 90, 10)
+
+        for lon_study in lon_study_:
+            for lat_study in lat_study_:
+                print('%3.2f %3.2f' % (lon_study, lat_study))
+                self.lon_study = [lon_study, lon_study + 10]
+                self.lat_study = [lat_study, lat_study + 10]
+
+                # 3. Perform Static processing
+                lon, lat, Prior_pbm_avg, Prior_pbm_unc = \
+                  self.StaticProcessing(variables)
+
+                # 4. Perform Static processing
+                self.DynamicProcessing(variables, lon, lat, Prior_pbm_avg,
+                                                   Prior_pbm_unc, doystr=doystr)
+
+        filenames = self.CombineTiles2Virtualfile(variables)
+
+    def OfflineProcessing(self):
+        """
+
+        Creation of LCC landcover map
+        This
+        :returns:
+        :rtype:
 
         """
         # handle offline
@@ -195,12 +287,23 @@ class VegetationPriorCreator(PriorCreator):
         self.CreateDummyDatabase()
 
     def StaticProcessing(self, varnames, write_output=False):
-        """FIXME! briefly describe function
+        """
+        Creating Peak Biomass (PBM) Priors
+        Priors are created by upscaling vegetation traits obtained through the TRY database. Within the TRY database
+        vegetation traits are provided per PFT group. In order to upscale these values, a global PFT map is required.
+        This is created by merging a global Landcover map (from Climate Change Initiative, CCI) with a climate zone
+        map (using the Koppen classification). This is accomplished by
+        -ReadLCC: Reading the CCI Landcover map
+        -ReadClimate: Reading the Koppen Climate zone map
+        -RescaleCLM: Rescaling Climate zone map to collocate with Landcover CCI.
+        -Combine2PFT: Combining Climate zone + Landcover maps into PFTs
+        Using this global PFT map, the values from the TRY database are afterwards spatially distributed by
+        -AssignPFTTraits2Map: assigning and aggregating traits to PFT maps.
 
-        :param varnames: 
-        :param write_output: 
-        :returns: 
-        :rtype: 
+        :param varnames: list of variables to be converted into global file
+        :param write_output: Binary value (TRUE/FALSE) controlling the writing of outputfiles
+        :returns: longitude, latitude, Prior_avg, Prior_unc
+        :rtype:
 
         """
         # Read Data (2.5s)
@@ -236,16 +339,21 @@ class VegetationPriorCreator(PriorCreator):
 
     def DynamicProcessing(self, varnames, LCC_lon, LCC_lat, Prior_pbm_avg,
                           Prior_pbm_unc, doystr, write_output=True):
-        """FIXME! briefly describe function
+        """
+        Extending Peak Biomass (PBM) traits to seasonal Priors
+        At this moment, this function is only a placeholder for the later
+        implementations. The final implementation will be modelled using
+        - covariances between traits and (seasonal) meteorological variables
+        - phenological evolution (trained using plant growth models)
 
-        :param varnames: 
-        :param LCC_lon: 
-        :param LCC_lat: 
-        :param Prior_pbm_avg: 
-        :param Prior_pbm_unc: 
-        :param doystr: 
-        :param write_output: 
-        :returns: 
+        :param varnames: list of variables to be converted into global file
+        :param LCC_lon:  array with longitude values of (subsetted tile of) study area
+        :param LCC_lat: array with latitude values of (subsetted tile of) study area
+        :param Prior_pbm_avg: Vegetation Traits mean value at PBM
+        :param doystr: string containing date&time '2007-12-31 04:23' for processing needs to be performed
+        :param Prior_pbm_unc: Vegetation Traits uncertainty value at PBM
+        :param write_output: Binary Value (TRUE/FALSE) controlling the writing of outputfiles
+        :returns: -
         :rtype: 
 
         """
@@ -264,119 +372,15 @@ class VegetationPriorCreator(PriorCreator):
             self.WriteGeoTiff(LCC_lon, LCC_lat, Prior_avg, Prior_unc, doystr)
             # self.WriteOutput(LCC_lon, LCC_lat, Prior_avg, Prior_unc, doystr)
 
-    def CreateDummyDatabase(self):
-        """FIXME! briefly describe function
 
-        :returns: 
-        :rtype: 
-
-        """
-
-        # define variables
-        varnames = SUPPORTED_VARIABLES
-        descriptions = ['Effective Leaf Area Index',
-                        'Leaf Chlorophyll Content', 'Leaf Senescent material',
-                        'Leaf Carotonoid Content', 'Leaf Water Content',
-                        'Leaf Dry Mass', 'Structural Parameter',
-                        'Average Leaf Angle', 'hotspot parameter',
-                        'Soil Brightness parameter', 'Soil Wetness parameter']
-        units = ['m2/m2', 'ug/cm2', '-', 'ug/cm2', 'cm', 'g/cm2', '-',
-                 'degrees', '-', '-', '-']
-
-        # create netcdf file to hold database values
-        dataset = Dataset(self.path2Trait_file, 'w', format='NETCDF4')
-
-        # setup Netcdf file
-        dataset.description = 'Database for Prior-Engine'
-        dataset.history = 'Created' + time.ctime(time.time())
-        dataset.source = 'Data obtained from TRY-database'
-
-        # Define dimensions
-        Npft = 16
-        Nspecies = 100
-        pftdim = dataset.createDimension('pft', Npft)
-        speciesdim = dataset.createDimension('type', Nspecies)
-        occurrencedim = dataset.createDimension('occ', None)
-
-        # create variables in dataset
-        occurrence = dataset.createVariable('Occurrences', np.float32, ('occ'))
-        occurrence.description = 'Unique PFT/Species entry into database'
-
-        pft = dataset.createVariable('PFTs', np.float32, ('pft'))
-        pft.description = 'PFT classification according to ORCHIDEE'
-
-        species = dataset.createVariable('Species', np.float32, ('type'))
-        species.description = 'Species name according to ??'
-
-        for ivar, varname in enumerate(varnames):
-            var = dataset.createVariable(varname, np.float32,
-                                         ('occ', 'pft', 'type'), zlib=True)
-            var.units = units[ivar]
-            var.description = descriptions[ivar]
-
-            # Fill file with random variables
-            Nvar = 10  # np.random.randint(1,10)
-            var[0:Nvar, :, :] = np.random.uniform(size=(Nvar, Npft, Nspecies))
-
-        dataset.close()
-        os.system('chmod 755 "' + self.path2Trait_file + '"')
-
-    def DownloadCrossWalkingTable(self):
-        """FIXME! briefly describe function
-
-        :returns: 
-        :rtype: 
-
-        """
-        # According to Pulter et al, Plant Functional classification for
-        # earth system models: resuls from the European Space
-        # Agency's land Cover Climate Change Initiative, 2015,
-        # Geosci Model Dev., 8, 2315-2328, 2015.
-
-        link2LCC_map = ('https://storage.googleapis.com/cci-lc-v207/ESACCI-LC-'
-                        'L4-LCCS-Map-300m-P1Y-2015-v2.0.7.nc.zip')
-        link2CrossWalkingtable = ('http://maps.elie.ucl.ac.be/CCI/viewer/'
-                                  'download/lc-user-tools-3.14.zip')
-
-    def RunCrossWalkingTable(self, Path2CWT_tool=None, Path2LC=None):
-        """FIXME! briefly describe function
-
-        :param Path2CWT_tool: 
-        :param Path2LC: 
-        :returns: 
-        :rtype: 
-
-        """
-        # to run the crosswalking tool, the specific requirements for BEAM need
-        # to be met (java64bit + ...)
-        if Path2CWT_tool is None:
-            Tooldir = '~/Data/Prior_Engine/Tool/lc-user-tools-3.14/'
-            Path2CWT_tool = Tooldir + 'bin/remap.sh'
-            Path2CWT_file = Tooldir + 'resources/Default_LCCS2PFT_LUT.csv'
-        if Path2LC is None:
-            Path2LC = ('~/Data/Prior_engine/Data/LCC/'
-                       'ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7.nc')
-
-        string2execute = (Path2CWT_tool + ' -PuserPFTConversionTable=' +
-                          Path2CWT_file + ' ' + Path2LC)
-        os.system(string2execute)
-
-        # Please note that we use the default crosswalking table over here.
-        # This does not distinguish between C3/C4 crops/grasses, or identify
-        # non-vascular plants. For this we need to acquire the
-        # most recent cross-walking table used Druel. A et al, Towards a more
-        # detailed representation of high-latitutde vegetation
-        # in the global land surface model ORCHIDEE (ORC-HL-VEGv1.0).
-
-        # Altneratively we can use the Synmap c3/c4 fraction map. to
-        # distinguish make this distinction for grasses.
-        return
-
+    # Reading data functions
     def ReadLCC(self):
-        """FIXME! briefly describe function
+        """
+        Read Landcover information
+        The Landcover map from the Climate Change Initiaive (CCI) is read.
 
-        :returns: 
-        :rtype: 
+        :returns: landcover map, longitude, latitude, landcover class names
+        :rtype:
 
         """
         lon_min = self.lon_study[0]
@@ -429,57 +433,13 @@ class VegetationPriorCreator(PriorCreator):
 
         return Data, lon_s, lat_s, class_names
 
-    def ReadTraitDatabase(self, varnames, pft_id=1):
-        """FIXME! briefly describe function
-
-        :param varnames: 
-        :param pft_id: 
-        :returns: 
-        :rtype: 
-
-        """
-
-        vars_in_database = ['lai','cab','car','cdm','cw','n']
-
-        Var = dict()
-
-        for varname in varnames:
-            if varname in  vars_in_database:
-                Data = Dataset(self.path2Trait_file, 'r')
-                V = Data[varname][:, pft_id, :]
-                Data.close()
-            else:
-                # import pdb
-                # pdb.set_trace()
-                V = self.mu[varname]*np.array([1.,1.-1e-5])
-
-            Var[varname] = V
-        return Var
-
-    def ReadMeteorologicalData(self, doystr):
-        """FIXME! briefly describe function
-
-        :param doystr: 
-        :returns: 
-        :rtype: 
-
-        """
-        MeteoData = None
-        Meteo_lon = None
-        Meteo_lat = None
-
-        if self.plotoption == 2:
-            plt.figure(figsize=[20, 20])
-            plt.imshow(MeteoData)
-            plt.title('Meteorological Data (missing at this moment)')
-
-        return MeteoData, Meteo_lon, Meteo_lat
-
     def ReadClimate(self):
-        """FIXME! briefly describe function
+        """
+        Read Climate Zone information
+        A Climate Zone map (created on basis of the Koppen Climatic Zone classification)is read.
 
-        :returns: 
-        :rtype: 
+        :returns: climate zone map, longitude, latitude, climate zone classes
+        :rtype:
 
         """
         ds = gdal.Open(self.path2Climate_file)
@@ -557,15 +517,187 @@ class VegetationPriorCreator(PriorCreator):
 
         return data, lon_s, lat_s, classes
 
-    def RescaleCLM(self, CLM_lon, CLM_lat, CLM_map, LCC_lon, LCC_lat):
-        """FIXME! briefly describe function
+    def ReadTraitDatabase(self, varnames, pft_id=1):
+        """
+        Read Traits from Database
+        A local (modified) version of the Try Database (containing vegetation traits) is read.
 
-        :param CLM_lon: 
-        :param CLM_lat: 
-        :param CLM_map: 
-        :param LCC_lon: 
-        :param LCC_lat: 
-        :returns: 
+        :param varnames: list of variables to be converted into global file
+        :param pft_id: list of pft id numbers for which the traits needs to be read.
+        :returns: an array of Traits per PFT group
+        :returns: an array of Traits per PFT group
+        :rtype:
+
+        """
+
+        vars_in_database = ['lai','cab','car','cdm','cw','n']
+
+        Var = dict()
+
+        for varname in varnames:
+            if varname in  vars_in_database:
+                Data = Dataset(self.path2Trait_file, 'r')
+                V = Data[varname][:, pft_id, :]
+                Data.close()
+            else:
+                # import pdb
+                # pdb.set_trace()
+                V = self.mu[varname]*np.array([1.,1.-1e-5])
+
+            Var[varname] = V
+        return Var
+
+    def ReadMeteorologicalData(self, doystr):
+        """
+        Read Meteorological Variables
+        This function is a placeholder to be used when the dynamic functionality is created.
+
+        :param doystr: string containing date&time '2007-12-31 04:23' for processing needs to be performed
+        :returns: Meteorological data (to be used for upscaling Peak Biomass traits to seasonal priors)
+        :rtype: 
+
+        """
+        MeteoData = None
+        Meteo_lon = None
+        Meteo_lat = None
+
+        if self.plotoption == 2:
+            plt.figure(figsize=[20, 20])
+            plt.imshow(MeteoData)
+            plt.title('Meteorological Data (missing at this moment)')
+
+        return MeteoData, Meteo_lon, Meteo_lat
+
+    # Offline processing
+    def DownloadCrossWalkingTable(self):
+        """
+        Download Crosswalking table
+        Here the Cross walking table is downloaded to create the CCI landcover map. At the moment this is simply
+        a placeholder for future functionality.
+
+        :returns: -
+        :rtype:
+
+        """
+        # According to Pulter et al, Plant Functional classification for
+        # earth system models: resuls from the European Space
+        # Agency's land Cover Climate Change Initiative, 2015,
+        # Geosci Model Dev., 8, 2315-2328, 2015.
+
+        link2LCC_map = ('https://storage.googleapis.com/cci-lc-v207/ESACCI-LC-'
+                        'L4-LCCS-Map-300m-P1Y-2015-v2.0.7.nc.zip')
+        link2CrossWalkingtable = ('http://maps.elie.ucl.ac.be/CCI/viewer/'
+                                  'download/lc-user-tools-3.14.zip')
+
+    def RunCrossWalkingTable(self, Path2CWT_tool=None, Path2LC=None):
+        """
+        Creating CCI landcover maps (using crosswalking table).
+
+        please note that to run the crosswalking tool, the specific requirements for BEAM need
+        to be met (java64bit + ...)
+
+        :param Path2CWT_tool:
+        :param Path2LC:
+        :returns: -
+        :rtype:
+
+        """
+
+        if Path2CWT_tool is None:
+            Tooldir = '~/Data/Prior_Engine/Tool/lc-user-tools-3.14/'
+            Path2CWT_tool = Tooldir + 'bin/remap.sh'
+            Path2CWT_file = Tooldir + 'resources/Default_LCCS2PFT_LUT.csv'
+        if Path2LC is None:
+            Path2LC = ('~/Data/Prior_engine/Data/LCC/'
+                       'ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7.nc')
+
+        string2execute = (Path2CWT_tool + ' -PuserPFTConversionTable=' +
+                          Path2CWT_file + ' ' + Path2LC)
+        os.system(string2execute)
+
+        # Please note that we use the default crosswalking table over here.
+        # This does not distinguish between C3/C4 crops/grasses, or identify
+        # non-vascular plants. For this we need to acquire the
+        # most recent cross-walking table used Druel. A et al, Towards a more
+        # detailed representation of high-latitutde vegetation
+        # in the global land surface model ORCHIDEE (ORC-HL-VEGv1.0).
+
+        # Altneratively we can use the Synmap c3/c4 fraction map. to
+        # distinguish make this distinction for grasses.
+        return
+
+    def CreateDummyDatabase(self):
+        """
+        create netcdf Database files to hold database values
+
+        :returns: -
+        :rtype:
+
+        """
+
+        # define variables
+        varnames = SUPPORTED_VARIABLES
+        descriptions = ['Effective Leaf Area Index',
+                        'Leaf Chlorophyll Content', 'Leaf Senescent material',
+                        'Leaf Carotonoid Content', 'Leaf Water Content',
+                        'Leaf Dry Mass', 'Structural Parameter',
+                        'Average Leaf Angle', 'hotspot parameter',
+                        'Soil Brightness parameter', 'Soil Wetness parameter']
+        units = ['m2/m2', 'ug/cm2', '-', 'ug/cm2', 'cm', 'g/cm2', '-',
+                 'degrees', '-', '-', '-']
+
+        # create netcdf file to hold database values
+        dataset = Dataset(self.path2Trait_file, 'w', format='NETCDF4')
+
+        # setup Netcdf file
+        dataset.description = 'Database for Prior-Engine'
+        dataset.history = 'Created' + time.ctime(time.time())
+        dataset.source = 'Data obtained from TRY-database'
+
+        # Define dimensions
+        Npft = 16
+        Nspecies = 100
+        pftdim = dataset.createDimension('pft', Npft)
+        speciesdim = dataset.createDimension('type', Nspecies)
+        occurrencedim = dataset.createDimension('occ', None)
+
+        # create variables in dataset
+        occurrence = dataset.createVariable('Occurrences', np.float32, ('occ'))
+        occurrence.description = 'Unique PFT/Species entry into database'
+
+        pft = dataset.createVariable('PFTs', np.float32, ('pft'))
+        pft.description = 'PFT classification according to ORCHIDEE'
+
+        species = dataset.createVariable('Species', np.float32, ('type'))
+        species.description = 'Species name according to ??'
+
+        for ivar, varname in enumerate(varnames):
+            var = dataset.createVariable(varname, np.float32,
+                                         ('occ', 'pft', 'type'), zlib=True)
+            var.units = units[ivar]
+            var.description = descriptions[ivar]
+
+            # Fill file with random variables
+            Nvar = 10  # np.random.randint(1,10)
+            var[0:Nvar, :, :] = np.random.uniform(size=(Nvar, Npft, Nspecies))
+
+        dataset.close()
+        os.system('chmod 755 "' + self.path2Trait_file + '"')
+
+
+    # Static Processing data functions
+    def RescaleCLM(self, CLM_lon, CLM_lat, CLM_map, LCC_lon, LCC_lat):
+        """
+        Collocate Climate Zone map with landcover coordinates
+        The Climate Zone map has a different resolution/grid than the Landcover map. This preprocessing is performed
+        to collocate both (in order to facilitate the merging downstream.)
+
+        :param CLM_lon: array containing the longitude values of the Climate Zone map
+        :param CLM_lat: array containing the latitude values of the Climate Zone map
+        :param CLM_map: array containing the Climate Zone map
+        :param LCC_lon: array containing the longitude values of the CCI Landcover map
+        :param LCC_lat: array containing the latitude values of the CCI Landcover map
+        :returns: array containing the Regridded Climate Zone map
         :rtype: 
 
         """
@@ -588,11 +720,11 @@ class VegetationPriorCreator(PriorCreator):
         return CLM_map_i
 
     def Combine2PFT(self, LCC_map, CLM_map_i):
-        """FIXME! briefly describe function
-
-        :param LCC_map: 
-        :param CLM_map_i: 
-        :returns: 
+        """
+        Create PFT maps using CCI Landcover and Koppen Climate zone information
+        :param LCC_map: CCI Landcover map
+        :param CLM_map_i: Regridded Koppen Climate Zone map
+        :returns: PFT occurrence map, PFT classes, Number of PFTs, PFT ids
         :rtype: 
 
         """
@@ -687,13 +819,16 @@ class VegetationPriorCreator(PriorCreator):
         return PFT, PFT_classes, Npft, PFT_ids
 
     def AssignPFTTraits2Map(self, PFT, PFT_ids, varnames):
-        """FIXME! briefly describe function
+        """
+        Create Vegetation trait Prior map, using the Trait-database and PFT distribution maps
+        This function sets up a parallel processing chain around
+        - processespercore: here the actual assignment of traits to PFT distributions is performed
 
-        :param PFT: 
-        :param PFT_ids: 
-        :param varnames: 
-        :returns: 
-        :rtype: 
+        :param PFT: arrays containing global Maps of PFT distributions
+        :param PFT_ids: a list containing PFT ids
+        :param varnames: list of variables to be converted into global file
+        :returns: map of vegetation trait-averages per PFT id, map of vegetation trait-uncertainties per PFT id
+        :rtype:
 
         """
         # from multiprocessing import Pool
@@ -741,15 +876,18 @@ class VegetationPriorCreator(PriorCreator):
 
         return TRAITS_ttf_avg, TRAITS_ttf_unc
 
+    # Dynamical Processing data functions
     def PhenologicalEvolution(self, Prior_pbm_avg, Prior_pbm_unc,
                               doystr, Meteo_map_i=None):
-        """FIXME! briefly describe function
+        """
+        Model the Phenological Evolution of Vegetation traits
+        This function is a placeholder to be used when the dynamic functionality is created.
 
-        :param Prior_pbm_avg: 
-        :param Prior_pbm_unc: 
-        :param doystr: 
-        :param Meteo_map_i: 
-        :returns: 
+        :param Prior_pbm_avg: Vegetation trait-averages at Peak Biomass
+        :param Prior_pbm_unc: Vegetation trait-uncertainty (@PBM)
+        :param doystr: string containing date&time '2007-12-31 04:23' for processing needs to be performed
+        :param Meteo_map_i: Place_holder for meteorological data-files
+        :returns: Temporal Prior-averages, Temporal Prior-uncertainties
         :rtype: 
 
         """
@@ -762,21 +900,23 @@ class VegetationPriorCreator(PriorCreator):
 
         return Prior_avg, Prior_unc
 
+
+    # Writing data functions
     def WriteOutput(self, LCC_lon, LCC_lat, Prior_avg, Prior_unc,
                     doystr='static'):
-        """FIXME! briefly describe function
+        """
+        Write Vegetation Prior data (mean/unc) to NETCDF outputfiles. This functionality is obsolete as all outputs
+        are written to GeoTiff files
 
-        :param LCC_lon: 
-        :param LCC_lat: 
-        :param Prior_avg: 
-        :param Prior_unc: 
-        :param doystr: 
-        :returns: 
+        :param LCC_lon: longitude of the Prior data (same as used Landcover map)
+        :param LCC_lat: latitude of the Prior data (same as used Landcover map)
+        :param Prior_avg: Vegetation prior average values
+        :param Prior_unc: Vegetation prior uncertainty values
+        :param doystr: string containing date&time '2007-12-31 04:23' for data to be written
+        :returns: -
         :rtype: 
 
         """
-
-        # varnames = [name for name in Prior_avg.iterkeys()]
         varnames = [name for name in Prior_avg]
         latstr = ('[%02.0f' % self.lat_study[0]
                   + ' %02.0fN]' % self.lat_study[1])
@@ -871,15 +1011,15 @@ class VegetationPriorCreator(PriorCreator):
 
     def WriteGeoTiff(self, LCC_lon, LCC_lat, Prior_avg,
                      Prior_unc, doystr='static'):
-        """FIXME! briefly describe function
+        """
+        Write Vegetation Prior data (mean/unc) to GEOTIFF outputfiles.
+        :param LCC_lon: longitude of the Prior data (same as used Landcover map)
+        :param LCC_lat: latitude of the Prior data (same as used Landcover map)
+        :param Prior_avg: Vegetation prior average values
+        :param Prior_unc: Vegetation prior uncertainty values
+        :param doystr: string containing date&time '2007-12-31 04:23' for data to be written
+        :returns: -
 
-        :param LCC_lon: 
-        :param LCC_lat: 
-        :param Prior_avg: 
-        :param Prior_unc: 
-        :param doystr: 
-        :returns: 
-        :rtype: 
 
         """
         Nlayers = 2
@@ -889,7 +1029,6 @@ class VegetationPriorCreator(PriorCreator):
                   + '_%03.0fE]' % self.lon_study[1])
 
 
-        #varnames = [name for name in Prior_avg.iterkeys()]
         varnames = [name for name in Prior_avg]
         drv = gdal.GetDriverByName("GTIFF")
         for i, varname in enumerate(varnames):
@@ -918,16 +1057,16 @@ class VegetationPriorCreator(PriorCreator):
             dst_ds = None
 
     def CombineTiles2Virtualfile(self, variable, doystr):
-        """FIXME! briefly describe function
+        """
+        Combine all geotiff files into a virtual global file
 
-        :param variable: 
-        :param doystr: 
-        :returns: 
+        :param variable: variable to be converted into global file
+        :param doystr: string containing date&time '2007-12-31 04:23' for which global file needs to be created
+        :returns: the filename of the global VRT file
         :rtype: 
 
         """
         dir = self.directory_data + 'Priors/'
-        outputdir = './'
         file_name = 'Priors_' + variable + '_' + doystr + '_global.vrt'
         # todo exchange 125 in upcoming versions with doy
         list_of_files = glob.glob(dir + 'Priors*' + variable + '*125*.tiff')
@@ -941,107 +1080,17 @@ class VegetationPriorCreator(PriorCreator):
         #import pdb
         #pdb.set_trace()
         files = " ".join(list_of_files_as_strings)
-        output_file_name = '{}{}'.format(outputdir, file_name)
+        output_file_name = '{}{}'.format(self.output_directory, file_name)
         os.system('gdalbuildvrt -te -180 -90 180 90 ' + output_file_name + ' ' + files)
-        return '{}{}'.format(dir, file_name)
+        return output_file_name
 
-    def ProcessData(self, variables=None, state_mask=None,
-                    timestr='2007-12-31 04:23', logger=None, file_prior=None,
-                    file_lcc=None, file_biome=None, file_meteo=None):
-        """FIXME! briefly describe function
-
-        :param variables: 
-        :param state_mask:
-        :param timestr:
-        :param logger:
-        :param file_prior:
-        :param file_lcc:
-        :param file_biome:
-        :param file_meteo:
-
-        :returns: 
-        :rtype: 
-
-        """
-        import datetime
-        timea = datetime.datetime.now()
-        # Retrieves a state vector and an inverse covariance matrix
-        #   param variables: A list of variables for which priors need to be
-        #                    available those will be inferred).  check
-        #   param state_mask: A georeferenced array that represents the space
-        #                     where solutions will be calculated. Spatial
-        #                     resolution should be set equal to highest
-        #                     observation.
-        #                     True values in this array represents pixels where
-        #                     the inference will be carried out
-        #                     False values represent pixels for which no priors
-        #                     need to be defined (as those will not be used in
-        #                     the inference)
-        #   param time: The string representing the time for which the prior
-        #               needs to be derived
-        #   param logger: A logger or "traceability database"
-        #   param file_lcc_biome:
-        #   param file_prior_database:
-        #   param file_meteo
-
-        plt.ion()
-
-        # # Define variables
-        # if variables==None:
-        #     variables = ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'N', 'ala',
-        #                  'h', 'bsoil', 'psoil']
-        #
-        # # 1.1 Define paths
-        # directory_data = '/home/joris/Data/Prior_Engine/'
-        # if file_prior is None:
-        #     file_prior = directory_data + 'Trait_Database/' + 'Traits.nc'
-        # if file_lcc is None:
-        #     file_lcc = (directory_data +'/LCC/'
-        #                 + 'ESACCI-LC-L4-LCCS-Map-300m-P1Y'
-        #                 + '-2015-v2.0.7_updated.nc')
-        # if file_biome==None:
-        #     file_biome = (directory_data +'Climate/'
-        #                   + 'sdat_10012_1_20171030_081458445.tif')
-        # if file_meteo==None:
-        #     file_meteo = directory_data +'Meteorological/' + 'Meteo_.nc'
-        # file_output = directory_data +'Priors/' + 'Priors.nc'
-        #
-        # 0. Setup Processing
-        # VegPrior = VegetationPrior()
-
-        # VegPrior.path2Trait_file = file_prior
-        # VegPrior.path2LCC_file = file_lcc
-        # VegPrior.path2Climate_file = file_biome
-        # VegPrior.path2Meteo_file = file_meteo
-        # VegPrior.path2Traitmap_file = file_output
-
-        #############
-        time = parse(timestr)
-        doystr = time.strftime('%j')
-        lon_study_ = np.arange(-180, 180, 10)
-        lat_study_ = np.arange(-90, 90, 10)
-
-        for lon_study in lon_study_:
-            for lat_study in lat_study_:
-                print('%3.2f %3.2f' % (lon_study, lat_study))
-                vegetation_prior.lon_study = [lon_study, lon_study + 10]
-                vegetation_prior.lat_study = [lat_study, lat_study + 10]
-
-                # 3. Perform Static processing
-                lon, lat, Prior_pbm_avg, Prior_pbm_unc = \
-                  vegetation_prior.StaticProcessing(variables)
-
-                # 4. Perform Static processing
-                vegetation_prior.DynamicProcessing(variables, lon, lat, Prior_pbm_avg,
-                                                   Prior_pbm_unc, doystr=doystr)
-
-        filenames = self.CombineTiles2Virtualfile(variables)
 
     def compute_prior_file(self):
-        """FIXME! briefly describe function
+        """
+        Combine Tiles into single Prior VRT file
 
-        :returns: 
-        :rtype: 
+        :returns: filename of specific VRT file
+        :rtype:
 
         """
         # Define variables
@@ -1062,7 +1111,6 @@ class VegetationPriorCreator(PriorCreator):
             print('not implemented yet')
 
         return filenames
-
 
 if __name__ == "__main__":
     from multiply_prior_engine import PriorEngine

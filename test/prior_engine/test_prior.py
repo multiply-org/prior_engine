@@ -2,6 +2,7 @@
 import os
 import pytest
 import sys
+
 myPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(myPath + '/../../multiply_prior_engine/')
 from multiply_prior_engine.prior_creator import PriorCreator
@@ -13,10 +14,8 @@ def test_priorengine_init():
     P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
                     datestr='2017-01-01',
                     variables=['sm'])
-
     assert P.configfile is not None
     assert type(P.configfile) is str
-    # assert type(P.priors) is dict
 
 
 def test_priorengine_get_priors_sm():
@@ -127,7 +126,6 @@ def test_user_prior_initialization():
 
 
 def test_calc_config():
-
     P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
                     datestr='2017-03-01',
                     variables=['sm'])
@@ -147,8 +145,6 @@ def test_sm_prior_missing_datestr():
                                 --> no datestr & variable specified")):
         SoilMoisturePriorCreator(config=P.config,
                                  ptype='climatology')
-
-
 
 # def test_roughness():
 #     lut_file = tempfile.mktemp(suffix='.lut')

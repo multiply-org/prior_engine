@@ -3,19 +3,20 @@
 # MULTIPLY Prior Engine
 
 [![Build Status](https://travis-ci.org/multiply-org/prior-engine.svg?branch=master)](https://travis-ci.org/multiply-org/prior-engine)
-[![Documentation Status](https://readthedocs.org/projects/multiply/badge/?version=latest)](http://multiply.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/multiply-prior-engine/badge/?version=latest)](https://multiply-prior-engine.readthedocs.io/en/latest/?badge=latest)
 
-<!-- [![Documentation Status](https://readthedocs.org/projects/prior-engine/badge/?version=latest)](http://prior-engine.readthedocs.io/en/latest/?badge=latest) -->
+
 
 This repository contains the prior engine for the MULTIPLY main platform.
 It provides *a priori* information to the [Inference Engine](https://github.com/multiply-org/KaFKA-InferenceEngine) to support land surface parameter retrieval.
-The documentation is part of the MULTIPLY core documentation on [ReadTheDocs](http://multiply.readthedocs.io/en/latest/).
-<!-- Add plans and current status? -->
+The [prior engine specific documentation](https://multiply-prior-engine.readthedocs.io/en/latest/) is hosted on ReadTheDocs. It is part of the [MULTIPLY core documentation](http://multiply.readthedocs.io/).
+Please find the latest pdf version of the prior engine documentation [here](https://readthedocs.org/projects/multiply-prior-engine/downloads/pdf/latest/) and for the MULTIPLY platform [here](https://readthedocs.org/projects/multiply/downloads/pdf/latest/).
+
 
 ## Contents
 
 * `aux_data/` Auxiliary data for prior generation.
-* `doc` - The auto generated documentation of all prior engine classes and function definitions.
+* `docs` - The auto generated documentation of all prior engine classes and function definitions.
 * `multiply_prior-engine/` - The main prior engine software package.
 as source of information and orientation.
 * `recipe` Conda installation recipe.

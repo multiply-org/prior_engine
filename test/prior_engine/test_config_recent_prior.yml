@@ -26,6 +26,7 @@ Inference: # inference config
 #   to be omitted. 
 
 Prior:
+  output_directory: ./test/output_dir/
   General:
     directory_data: /home/joris/Data/Prior_Engine/
   sm:

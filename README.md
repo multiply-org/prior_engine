@@ -1,4 +1,4 @@
-<img alt="MULTIPLY" align="right" src="https://raw.githubusercontent.com/multiply-org/multiply-core/master/docs/source/_static/logo/Multiply_multicolour.png" />
+<img alt="MULTIPLY" align="right" src="https://raw.githubusercontent.com/multiply-org/prior-engine/master/docs/img/multiply_multi_colour.png" />
 
 # MULTIPLY Prior Engine
 

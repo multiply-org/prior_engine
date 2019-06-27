@@ -18,6 +18,8 @@ from matplotlib import pyplot as plt
 from scipy import interpolate as RegularGridInterpolator
 from netCDF4 import Dataset
 import datetime
+import tempfile
+import logging
 from .prior_creator import PriorCreator
 
 SUPPORTED_VARIABLES = ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'n',
@@ -44,7 +46,7 @@ def parmap(f, X, nprocs=multiprocessing.cpu_count()):
     :param X: input to the function
     :param nprocs: number of cores to be used
     :returns: output of function
-    :rtype: 
+    :rtype:
 
     """
     q_in = multiprocessing.Queue(1)
@@ -80,7 +82,7 @@ def processespercore(varname, PFT, PFT_ids, VegetationPriorCreator):
     :param PFT_ids: a list containing PFT ids
     :param VegetationPriorCreator: class containing all the functionality to be run (per core)
     :returns: Vegetation Prior average values, Vegetation Prior uncertainty values
-    :rtype: 
+    :rtype:
 
     """
     TRAIT_ttf_avg = PFT[:, :, 0].astype('float') * 0.
@@ -150,7 +152,14 @@ class VegetationPriorCreator(PriorCreator):
         self.path2Trait_file = (self.directory_data + 'Trait_Database/' + 'Traits.nc')
         self.path2Traitmap_file = self.directory_data + 'Priors/' + 'Priors.nc'
 
-        self.output_directory = self.config['Prior']['output_directory']
+        try:
+            self.output_directory = self.config['Prior']['output_directory']
+        except KeyError as e:
+            logging.info(e)
+            self.output_directory = tempfile.mkdtemp(
+                prefix='multiply_priorengine_')
+            logging.info(f"No output directory in config file. "
+                         f"Created and using {self.output_directory}.")
         if not os.path.exists(self.output_directory):
             os.mkdir(self.output_directory)
 
@@ -354,7 +363,7 @@ class VegetationPriorCreator(PriorCreator):
         :param Prior_pbm_unc: Vegetation Traits uncertainty value at PBM
         :param write_output: Binary Value (TRUE/FALSE) controlling the writing of outputfiles
         :returns: -
-        :rtype: 
+        :rtype:
 
         """
 
@@ -554,7 +563,7 @@ class VegetationPriorCreator(PriorCreator):
 
         :param doystr: string containing date&time '2007-12-31 04:23' for processing needs to be performed
         :returns: Meteorological data (to be used for upscaling Peak Biomass traits to seasonal priors)
-        :rtype: 
+        :rtype:
 
         """
         MeteoData = None
@@ -698,7 +707,7 @@ class VegetationPriorCreator(PriorCreator):
         :param LCC_lon: array containing the longitude values of the CCI Landcover map
         :param LCC_lat: array containing the latitude values of the CCI Landcover map
         :returns: array containing the Regridded Climate Zone map
-        :rtype: 
+        :rtype:
 
         """
         x, y = np.meshgrid(CLM_lon, CLM_lat)
@@ -725,7 +734,7 @@ class VegetationPriorCreator(PriorCreator):
         :param LCC_map: CCI Landcover map
         :param CLM_map_i: Regridded Koppen Climate Zone map
         :returns: PFT occurrence map, PFT classes, Number of PFTs, PFT ids
-        :rtype: 
+        :rtype:
 
         """
         iwater = (CLM_map_i == 0)
@@ -888,7 +897,7 @@ class VegetationPriorCreator(PriorCreator):
         :param doystr: string containing date&time '2007-12-31 04:23' for processing needs to be performed
         :param Meteo_map_i: Place_holder for meteorological data-files
         :returns: Temporal Prior-averages, Temporal Prior-uncertainties
-        :rtype: 
+        :rtype:
 
         """
         if Meteo_map_i is None:
@@ -914,7 +923,7 @@ class VegetationPriorCreator(PriorCreator):
         :param Prior_unc: Vegetation prior uncertainty values
         :param doystr: string containing date&time '2007-12-31 04:23' for data to be written
         :returns: -
-        :rtype: 
+        :rtype:
 
         """
         varnames = [name for name in Prior_avg]
@@ -1063,7 +1072,7 @@ class VegetationPriorCreator(PriorCreator):
         :param variable: variable to be converted into global file
         :param doystr: string containing date&time '2007-12-31 04:23' for which global file needs to be created
         :returns: the filename of the global VRT file
-        :rtype: 
+        :rtype:
 
         """
         dir = self.directory_data + 'Priors/'
@@ -1136,5 +1145,5 @@ if __name__ == "__main__":
     filename = VegPrior.compute_prior_file()
     print('%s' % filename)
     # this should give as output:
-    #    
+    #
     # end of file

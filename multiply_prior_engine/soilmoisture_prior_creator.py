@@ -55,7 +55,15 @@ class SoilMoisturePriorCreator(PriorCreator):
         # set None as old data_dir/file may be present from loop.
         self.data_dir = None
         self.data_file = None
-        self.output_directory = self.config['Prior']['output_directory']
+        try:
+            self.output_directory = self.config['Prior']['output_directory']
+        except KeyError as e:
+            logging.info(e)
+            self.output_directory = tempfile.mkdtemp(
+                prefix='multiply_priorengine_')
+            logging.info(f"No output directory in config file. "
+                         f"Created and using {self.output_directory}.")
+
         if not os.path.exists(self.output_directory):
             os.mkdir(self.output_directory)
 
@@ -428,7 +436,7 @@ class MapPriorCreator(PriorCreator):
 
     @classmethod
     def get_variable_names(cls):
-        return
+        return ['lcc']
 
 
 class RoughnessPriorCreator(MapPriorCreator):
@@ -466,3 +474,7 @@ class RoughnessPriorCreator(MapPriorCreator):
 
     def compute_prior_file(self):
         assert False, 'roughness prior not implemented'
+
+    @classmethod
+    def get_variable_names(cls):
+        return ['roughness']

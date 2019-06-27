@@ -639,10 +639,15 @@ class UserPriorInput(object):
             args = vars(args)
             # get default function (e.g. add_prior) and remove from arguments:
             func = args.pop('func')
-            # get action (e.g. 'add') from func name (all separated by '_'):
             f = func.__name__.split('_')[0]
+            # get action (e.g. 'add') from func name (all separated by '_'):
             # execute function:
             func(**args)
+
+        except KeyError as e:
+            parser.error(f'Missing argument subparser '
+                         f'(out of {list(subparsers.choices.keys())}).')
+
         except Exception as e:
             # print error and tool specific help:
             print(f'\n{e}\n')

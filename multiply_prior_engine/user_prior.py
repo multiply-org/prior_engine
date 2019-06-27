@@ -4,7 +4,7 @@
 """
     Integrate user defined priors to MULTIPLY engine.
 
-    Copyright (C) 2018  Thomas Ramsauer
+    Copyright (C) 2019  Thomas Ramsauer
 """
 
 import argparse
@@ -25,7 +25,7 @@ from .prior_creator import PriorCreator
 from .prior_engine import _get_config, PriorEngine
 
 __author__ = "Thomas Ramsauer"
-__copyright__ = "Copyright 2018 Thomas Ramsauer"
+__copyright__ = "Copyright 2019 Thomas Ramsauer"
 __maintainer__ = "Thomas Ramsauer"
 __email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
 

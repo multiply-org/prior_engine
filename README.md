@@ -1,4 +1,4 @@
-<img alt="MULTIPLY" align="right" src="https://raw.githubusercontent.com/multiply-org/multiply-core/master/doc/source/_static/logo/Multiply_multicolour.png" />
+<img alt="MULTIPLY" align="right" src="https://raw.githubusercontent.com/multiply-org/multiply-core/master/docs/source/_static/logo/Multiply_multicolour.png" />
 
 # MULTIPLY Prior Engine
 
@@ -16,10 +16,11 @@ Please find the latest pdf version of the prior engine documentation [here](http
 ## Contents
 
 * `aux_data/` Auxiliary data for prior generation.
-* `docs` - The auto generated documentation of all prior engine classes and function definitions.
+* `docs/` - The auto generated documentation of all prior engine classes and function definitions.
+* `helpers/` - Functions concerning creation of climatology and writing geotiffs.
 * `multiply_prior-engine/` - The main prior engine software package.
 as source of information and orientation.
-* `recipe` Conda installation recipe.
+* `recipe/` Conda installation recipe.
 * `test/` - The test package.
 * `setup.py` - main build script, to be run with Python 3.6
 * `LICENSE.md` - License of software in repository.

@@ -1,4 +1,4 @@
-python==3.6*
+
 numpy==1.16
 shapely==1.5.9
 h5py==2.8

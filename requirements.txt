@@ -13,5 +13,4 @@ PyYAML==3.12
 typing
 python_dateutil
 recommonmark
-m2r
-sphinx_rtd_theme
+

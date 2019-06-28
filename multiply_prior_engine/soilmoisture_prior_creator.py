@@ -67,9 +67,12 @@ class SoilMoisturePriorCreator(PriorCreator):
         if not os.path.exists(self.output_directory):
             os.mkdir(self.output_directory)
 
-        if self.ptype.lower() == 'climatology' or self.ptype.lower() == 'coarse':
+        prior_file_type = \
+            list(self.config['Prior'][self.variable][self.ptype].keys())
+        if 'dir' in prior_file_type:
             try:
-                data_dir = self.config['Prior']['sm'][self.ptype]['dir']
+                data_dir = \
+                    self.config['Prior'][self.variable][self.ptype]['dir']
                 self.data_dir = data_dir
                 assert os.path.isdir(self.data_dir), \
                     ('Directory does not exist or cannot be found: {}'
@@ -80,10 +83,10 @@ class SoilMoisturePriorCreator(PriorCreator):
                    '"{}" prior in config file!'.format(self.ptype))
             else:
                 return self._provide_prior_file()
-
-        elif 'user' in self.ptype.lower():
+        elif 'file' in prior_file_type:
             try:
-                data_file = (self.config['Prior']['sm'][self.ptype]['file'])
+                data_file = \
+                    (self.config['Prior'][self.variable][self.ptype]['file'])
                 self.data_file = data_file
             except KeyError as e:
                 assert self.data_file is not None, \
@@ -92,13 +95,14 @@ class SoilMoisturePriorCreator(PriorCreator):
                    ' \'Prior/sm/{ptype}/file:\')!'.format(ptype=self.ptype))
             else:
                 return self._provide_prior_file()
-
-        # TODO recent only place holder
-        elif self.ptype.lower() == 'recent':
-            self._get_recent_sm_proxy()
+        elif 'mean' and 'unc' in prior_file_type:
+            raise NotImplementedError(
+                f'Cannot create static prior from mean and unc for now '
+                f'(var: {self.variable}).')
 
         else:
-            msg = '{} prior for sm not implemented'.format(self.ptype)
+            msg = '{} prior for {} not implemented'.format(self.ptype,
+                                                           self.variable)
             logging.exception(msg)
             assert False, msg
         return self._provide_prior_file()

@@ -89,12 +89,12 @@ Prior:
         user:
             mu: 0.5
             unc: 0.02
-        CWC:
-            user:
-                file: ‘path to geotiff-file’
-        ALA:
-            user:
-                dir: ‘path to directory with geotiff-files (sorted on date)’
+    CWC:
+        user:
+            file: ‘path to geotiff-file’
+    ALA:
+        user:
+            dir: ‘path to directory with geotiff-files (sorted on date)’
 ...
     output_directory: ‘path to outputdirectory’
 ```

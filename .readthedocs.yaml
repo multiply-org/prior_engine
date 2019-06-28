@@ -22,6 +22,7 @@ python:
   install:
     - requirements: requirements.txt
     - requirements: docs/doc_requirements.txt
+    - method: pip
 
 # Install packages via conda
 conda:

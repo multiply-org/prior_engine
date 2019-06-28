@@ -79,27 +79,24 @@ The user has three options to add prior data to the retrieval (in addition to ch
 The configuration file then could look like:
 
 ``` yaml
-Prior
-	General:
-		directory_data: ‘path 2 prior engine’
-	LAI:
-		database
-			static_dir: same as general directory_data
-	SM:
-		user:
-			mu: 0.5
-			unc: 0.02
-	CWC:
-		user:
-			file: ‘path to geotiff-file’
-	ALA:
-		user:
-			dir: ‘path to directory with geotiff-files (sorted on date)’
-
-		...
-
-
-	output_directory: ‘path to outputdirectory’
+Prior:
+    General:
+        directory_data: ‘path 2 prior engine’
+    LAI:
+        database:
+            static_dir: same as general directory_data
+    SM:
+        user:
+            mu: 0.5
+            unc: 0.02
+        CWC:
+            user:
+                file: ‘path to geotiff-file’
+        ALA:
+            user:
+                dir: ‘path to directory with geotiff-files (sorted on date)’
+...
+    output_directory: ‘path to outputdirectory’
 ```
 
 

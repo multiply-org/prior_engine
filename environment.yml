@@ -21,7 +21,7 @@ dependencies:
   - netCDF4=1.5
   - PyYAML=3.12
   - typing
-  -pip
+  - pip
   pip:
     - python_dateutil
     - recommonmark

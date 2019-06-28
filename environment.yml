@@ -8,9 +8,8 @@ dependencies:
   - python =3.6*
   #
   # runtime dependencies
-#
-
   - shapely=1.6.4
   - gdal=2.4
   - m2r
+  - netCDF4
 

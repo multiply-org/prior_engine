@@ -5,6 +5,7 @@ __email__ = "j.timmermans@cml.leidenuniv.nl"
 
 import glob
 import os
+import osr
 import subprocess
 import time
 
@@ -1090,7 +1091,18 @@ class VegetationPriorCreator(PriorCreator):
         #pdb.set_trace()
         files = " ".join(list_of_files_as_strings)
         output_file_name = '{}{}'.format(self.output_directory, file_name)
-        os.system('gdalbuildvrt -te -180 -90 180 90 ' + output_file_name + ' ' + files)
+
+        file_projection = gdal.Open(list_of_files[0]).GetProjection()
+        srs = osr.SpatialReference()
+        srs.ImportFromWkt(file_projection)
+
+        wgs84_srs = osr.SpatialReference()
+        wgs84_srs.SetWellKnownGeogCS('EPSG:4326')
+
+        if srs.IsSame(wgs84_srs):
+            os.system('gdalbuildvrt -te -180 -90 180 90 ' + output_file_name + ' ' + files)
+        else:
+            os.system('gdalbuildvrt ' + output_file_name + ' ' + files)
         return output_file_name
 
 

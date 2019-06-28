@@ -3,7 +3,7 @@ numpy==1.16
 shapely==1.5.9
 h5py==2.8
 pandas==0.22
-scipy==0.22
+scipy==1.2.1
 setuptools==40.8
 matplotlib==2.2
 pytest==4.6

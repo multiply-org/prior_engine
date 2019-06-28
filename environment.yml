@@ -10,7 +10,7 @@ dependencies:
   # runtime dependencies
 #
   - numpy=1.16
-  - shapely=1.5.9
+  - shapely=1.6.4
   - h5py=2.8
   - pandas=0.22
   - scipy=1.2.1

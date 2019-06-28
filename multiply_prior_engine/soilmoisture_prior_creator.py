@@ -68,7 +68,8 @@ class SoilMoisturePriorCreator(PriorCreator):
             os.mkdir(self.output_directory)
 
         prior_file_type = \
-            list(self.config['Prior'][self.variable][self.ptype].keys())
+            [p.lower() for p in
+             list(self.config['Prior'][self.variable][self.ptype].keys())]
         if 'dir' in prior_file_type:
             try:
                 data_dir = \

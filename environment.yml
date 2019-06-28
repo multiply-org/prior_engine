@@ -22,6 +22,6 @@ dependencies:
   - PyYAML=3.12
   - typing
   - pip
-  pip:
+  - pip:
     - python_dateutil
     - recommonmark

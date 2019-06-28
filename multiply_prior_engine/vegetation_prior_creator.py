@@ -1110,7 +1110,7 @@ class VegetationPriorCreator(PriorCreator):
         time = self.date
         doystr = time.strftime('%j')
 
-        if self.ptype == 'database':
+        if self.ptype.lower() == 'database':
             # 0. Setup Processing
             # filenames = self.CombineTiles2Virtualfile(variables, doystr)
             filenames = self.CombineTiles2Virtualfile(self.variable, doystr)

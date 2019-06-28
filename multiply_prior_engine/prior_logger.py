@@ -4,7 +4,7 @@
 """
     Logger for the Prior Engine for MULTIPLY.
 
-    Copyright (C) 2018  Thomas Ramsauer
+    Copyright (C) 2019  Thomas Ramsauer
 """
 
 import os

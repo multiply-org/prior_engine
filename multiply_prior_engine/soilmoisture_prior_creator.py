@@ -67,7 +67,7 @@ class SoilMoisturePriorCreator(PriorCreator):
         if not os.path.exists(self.output_directory):
             os.mkdir(self.output_directory)
 
-        if self.ptype == 'climatology' or self.ptype == 'coarse':
+        if self.ptype.lower() == 'climatology' or self.ptype.lower() == 'coarse':
             try:
                 data_dir = self.config['Prior']['sm'][self.ptype]['dir']
                 self.data_dir = data_dir
@@ -81,7 +81,7 @@ class SoilMoisturePriorCreator(PriorCreator):
             else:
                 return self._provide_prior_file()
 
-        elif 'user' in self.ptype:
+        elif 'user' in self.ptype.lower():
             try:
                 data_file = (self.config['Prior']['sm'][self.ptype]['file'])
                 self.data_file = data_file
@@ -94,7 +94,7 @@ class SoilMoisturePriorCreator(PriorCreator):
                 return self._provide_prior_file()
 
         # TODO recent only place holder
-        elif self.ptype == 'recent':
+        elif self.ptype.lower() == 'recent':
             self._get_recent_sm_proxy()
 
         else:
@@ -224,17 +224,17 @@ class SoilMoisturePriorCreator(PriorCreator):
 
         """
         fn = None
-        if self.ptype == 'climatology':
+        if self.ptype.lower() == 'climatology':
             pattern = (r"ESA_CCI_SM_clim_{:02d}.tiff"
                        .format(self.date.month))
-        elif self.ptype == 'coarse':
-            pattern = (r"SMAP_daily_{:8d}.tif"
+        elif self.ptype.lower() == 'coarse':
+            pattern = (r"SMAP_daily_{:8d}.tif*"
                        .format(self.date8))
         # TODO read user pattern from config file to allow defined input
         # (has to be written to the config-file in a 'config step' first)
-        elif 'user' in self.ptype:
-            pattern = (r"user_{}.tiff$")
-        elif self.ptype == 'recent':
+        elif 'user' in self.ptype.lower():
+            pattern = (r"*{:8d}*.tif*")
+        elif self.ptype.lower() == 'recent':
             pattern = (r"recent_prior_{}.tiff$"
                        .format(self.date8))
         else:
@@ -445,7 +445,7 @@ class RoughnessPriorCreator(MapPriorCreator):
         super(RoughnessPriorCreator, self).__init__(**kwargs)
 
     def calc(self):
-        if self.ptype == 'climatology':
+        if self.ptype.lower() == 'climatology':
             self._read_lut()
             self._read_lc()
             self._map_lut()

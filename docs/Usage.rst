@@ -25,6 +25,7 @@ The user has three options to add prior data to the retrieval (in addition to ch
 The configuration file then could look like:
 
 .. code-block:: yaml
+
     Prior
 	    General:
 		    directory_data: ‘path 2 prior engine’

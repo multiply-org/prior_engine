@@ -146,7 +146,7 @@ class UserPriorInput(object):
         existing_userprior = 0
         logging.debug('Existing ptypes:')
         for ptype in self.config['Prior'][self.variable].keys():
-            logging.debug(ptype)
+            logging.debug(f'  - {ptype}')
             if 'user' in ptype:
                 existing_userprior += 1
         return existing_userprior
@@ -217,7 +217,7 @@ class UserPriorInput(object):
         def _create_temp_conf_file():
             # create temporary files to write config to:
             home = os.path.expanduser('~/.multiply/')
-            os.makedirs(path, exist_ok=True)
+            os.makedirs(home, exist_ok=True)
 
             temp_conf = tempfile.NamedTemporaryFile(
                 prefix='PriorEngine_config_{}_'.format(self.now()),
@@ -225,13 +225,26 @@ class UserPriorInput(object):
                 delete=False,
                 dir=home)
             self.path_to_config = temp_conf.name
+            self.configfile = self.path_to_config
+
+            if os.path.exists(PriorEngine.default_config):
+                src = os.path.abspath(PriorEngine.default_config)
+                shutil.copyfile(src, self.path_to_config)
+                logging.info('Creating new config file: {}.'
+                                .format(self.path_to_config))
+            return self.path_to_config
 
         # check config directory
         if self.path_to_config is not None:
             self.path_to_config = self._path_exists(self.path_to_config)
-
+            # TODO add check for config file integrity where predefined files are loaded
+            if os.path.isfile(self.path_to_config):
+                self.configfile = self.path_to_config
+                logging.info(f'Using path_to_config as configfile: '
+                            f'{self.configfile}')
         else:
-            _create_temp_conf_file()
+            self.path_to_config = _create_temp_conf_file()
+
         # if valid path entered but is dir
         if not os.path.isfile(self.path_to_config):
             # and entered new config file name
@@ -240,33 +253,28 @@ class UserPriorInput(object):
                                                self.new_config_filename)
             # but missing new config file name (create generic based on date):
             else:
-                self.configfile = os.path.join(
-                    self.path_to_config,
-                    'PriorEngine_config_{}.yml'.format(self.now()))
-            try:
+                self.path_to_config = _create_temp_conf_file()
+            #     self.configfile = os.path.join(
+            #         self.path_to_config,
+            #         'PriorEngine_config_{}.yml'.format(self.now()))
+            # try:
                 # 'x': open for exclusive creation, failing if file exists
-                with open(self.configfile, "x") as f:
-                    pass
-            except FileExistsError as e:
-                self.configfile = os.path.join(
-                    self.path_to_config,
-                    "PriorEngine_config_{}.yml".format(self.now()))
-                with open(self.configfile, "x") as f:
-                    warnings.warn(e, Warning)
+                # with open(self.configfile, "x") as f:
+                    # pass
+            # except FileExistsError as e:
+                # self.configfile = os.path.join(
+                #     self.path_to_config,
+                #     "PriorEngine_config_{}.yml".format(self.now()))
+                # with open(self.configfile, "x") as f:
+                    # warnings.warn(e, Warning)
         # if path is file:
         else:
             if self.configfile == PriorEngine.default_config:
-                # create backup file
-                # if os.path.exists(PriorEngine.default_config):
-                #     src = os.path.abspath(PriorEngine.default_config)
-                # a, b = os.path.splitext(src)
-                # dest = a + '_backup' + b
-                # logging.info('Creating {}.'.format(dest))
-                # print('Creating {}.'.format(dest))
-                # shutil.copyfile(src, dest)
-                # self.configfile_backup = dest
-                _create_temp_conf_file()
-                self.configfile = self.path_to_config
+                logging.info(f'Current config is the same as PriorEngine.'
+                             f'default_config: {self.configfile}=='
+                             f'{PriorEngine.default_config}')
+                # also sets self.configfile:
+                self.path_to_config = _create_temp_conf_file()
             else:
                 self.configfile = self.path_to_config
 
@@ -370,9 +378,13 @@ class UserPriorInput(object):
         # adding to new config
         nc = {}
         for arg in kwargs:
-            if arg is not 'path_to_config' and\
-               arg is not 'new_config_filename':
-                nc.update({arg: kwargs[arg]})
+            if arg != 'path_to_config' and\
+               arg != 'new_config_filename' and\
+               kwargs[arg] is not None:
+                if arg == 'prior_directory':
+                    nc.update({'dir': kwargs[arg]})
+                else:
+                    nc.update({arg: kwargs[arg]})
         try:
             assert any([x is not None for x in nc.values()]), \
               (f"No further information passed to \'add_prior\' method for "
@@ -384,11 +396,11 @@ class UserPriorInput(object):
             except:
                 raise e
         # generate new config dictionary with user info included
-        self._generate_userconf(configfile=path_to_config,  # to read config
+        self._generate_userconf(configfile=self.path_to_config,  # to read config
                                 new_configuration=nc)  # updates self.config
         # write extended config to file
-        self.write_config(path_to_config=path_to_config,
-                          new_config_filename=new_config_filename,
+        self.write_config(path_to_config=self.path_to_config,
+                          new_config_filename=self.new_config_filename,
                           configuration=self.config)
         self.show_config(only_prior=True)
 

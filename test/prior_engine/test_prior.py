@@ -92,7 +92,7 @@ def test_recent_prior():
                     variables=['sm'])
     with pytest.raises(AssertionError,
                        message=("Expecting AssertionError"),
-                       match=r'.*recent.*'):
+                       match=r'.*Directory does not exist.*'):
         P.get_priors()
 
 

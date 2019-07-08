@@ -416,6 +416,7 @@ class SoilMoisturePriorCreator(PriorCreator):
 
 class MapPriorCreator(PriorCreator):
     """
+    *Not Implemented*
     Prior which is based on a LC map and a LUT
     """
 
@@ -445,6 +446,11 @@ class MapPriorCreator(PriorCreator):
 
 
 class RoughnessPriorCreator(MapPriorCreator):
+    """
+    *Not Implemented*
+    Roughness Prior Creator which is based on a LC map and a LUT
+    """
+
 
     def __init__(self, **kwargs):
         super(RoughnessPriorCreator, self).__init__(**kwargs)

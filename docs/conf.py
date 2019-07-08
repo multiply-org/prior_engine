@@ -108,6 +108,8 @@ html_theme = 'sphinx_rtd_theme'
 # documentation.
 #
 # html_theme_options = {}
+html_favicon = 'img/multiply_multi_colour_icon.png'
+html_logo = 'img/multiply_multi_colour.png'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

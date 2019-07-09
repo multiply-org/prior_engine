@@ -35,6 +35,7 @@ Soil Priors
 +++++++++++++
 
 The included priors for soil moisture are currently twofold:
+
 1) a climatological prior based on `ESA CCI SM <https://esa-soilmoisture-cci.org/>`_ data
 2) a dynamic prior based on `SMAP <https://smap.jpl.nasa.gov/data/>`_ data
 
@@ -44,6 +45,9 @@ Please see the overall flow of this prior creator sub-engine below:
    :alt: flow of 'microwave' prior engine
 
    Figure 3: Flow in 'microwave' prior engine
+
+Climatologic Priors
+********************
 
 The climatological priors were calculated once and come with the prior engine package.
 There is also a interpolation routine included to allow for smooth inter monthly transitions.
@@ -58,10 +62,12 @@ There is also a interpolation routine included to allow for smooth inter monthly
 
    Figure 5: Exemplary climatological soil moisture prior (mean) for April
 
+Dynamic Priors
+**************
 
 For the SMAP data based 'dynamic' prior the engine relies on the `MULTIPLY data-access component <https://github.com/multiply-org/data-access>`_ to download the appropriate data sets. These are then converted to be used by the inference engine.
 
-.. quote::
+
    "SMAP measurements provide direct sensing of soil moisture in the top 5 cm of the soil column. However, several of the key applications targeted by SMAP require knowledge of root zone soil moisture in the top 1 m of the soil column, which is not directly measured by SMAP. As part of its baseline mission, the SMAP project will produce model-derived value-added Level 4 data products to fill this gap and provide estimates of root zone soil moisture that are informed by and consistent with SMAP surface observations. Such estimates are obtained by merging SMAP observations with estimates from a land surface model in a data assimilation system. The land surface model component of the assimilation system is driven with observations-based meteorological forcing data, including precipitation, which is the most important driver for soil moisture. The model also encapsulates knowledge of key land surface processes, including the vertical transfer of soil moisture between the surface and root zone reservoirs. Finally, the model interpolates and extrapolates SMAP observations in time and in space, producing 3-hourly estimates of soil moisture at a 9 km resolution. The SMAP L4_SM product thus provides a comprehensive and consistent picture of land surface hydrological conditions based on SMAP observations and complementary information from a variety of sources." [#]_
 
 

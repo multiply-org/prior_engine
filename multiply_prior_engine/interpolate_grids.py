@@ -9,15 +9,15 @@ import datetime
 # import sys
 from dateutil.parser import parse
 import numpy as np
-import glob
 import multiprocessing
-import tqdm
 from numba import jit
 import pickle
 import gdal
 import re
 import os
 from matplotlib import pyplot as plt
+# import glob
+# import tqdm
 
 __author__ = "Thomas Ramsauer"
 __copyright__ = "Thomas Ramsauer"
@@ -110,9 +110,9 @@ def interpolate_stack(fl, band, fillvalue, **kwargs):
     # write bands into p
     if not single_date:
         # interpolate all x, y along axis 0 (assumed to be time axis)
+        p = np.ndarray(shape=(t_span, idx, idy),
+                       dtype=float) * np.nan
         for f in fl:
-            p = np.ndarray(shape=(t_span, idx, idy),
-                           dtype=float) * np.nan
             date = get_date_from_file_name(f)
             idd = [id for (id, d) in enumerate(dates) if d == date]
             assert len(idd) == 1
@@ -140,12 +140,13 @@ def interpolate_stack(fl, band, fillvalue, **kwargs):
         print("done.\n")
 
         print("Starting multiprocessing:\n")
-        # pool = multiprocessing.Pool(multiprocessing.cpu_count()-1)
-        # outs = pool.map(pad, ins)
-        with multiprocessing.Pool(multiprocessing.cpu_count()-1) as pool:
-            outs = list(tqdm.tqdm(pool.imap(pad, ins), total=len(ins)))
+        pool = multiprocessing.Pool(multiprocessing.cpu_count()-1)
+        outs = pool.map(pad, ins)
+        # with multiprocessing.Pool(multiprocessing.cpu_count()-1) as pool:
+        #     outs = list(tqdm.tqdm(pool.imap(pad, ins), total=len(ins)))
+        print('DONE')
 
-        # TODO needs to be in if __name__ == main??
+        # TODO needs to be in if __name__ == main?? due to tqdm?
         # check out if pickle dump is really empty and full if in if name main
 
         pool.close()
@@ -250,26 +251,29 @@ def main():
 
     # calculate:
     # -------------
-    # path = "../aux_data/Climatology/SoilMoisture/"
-    # pattern = ".*[0-9]{8}.*.tif*"
-    # fl = get_files(path, pattern)
-    # band = 0
-    # fillvalue = -999.
-    # stack = interpolate_stack(fl, band, fillvalue)
+    path = "../aux_data/Climatology/SoilMoisture/"
+    pattern = ".*[0-9]{8}.*.tif*"
+    fl = get_files(path, pattern)
+    for f in fl:
+        print(f)
+
+    band = 0
+    fillvalue = -999.
+    stack = interpolate_stack(fl, band, fillvalue)
 
     # pickle dump the array
     # ---------------------
-    # stacked_fn = f"filled_stack_{datetime.datetime.now()}.pkl"
-    # with open(stacked_fn, 'wb') as f:
-    #     pickle.dump(stack, f)
-    #     print(f"saved stacked_fn to {os.path.join(os.getcwd(), stacked_fn)}")
+    stacked_fn = f"filled_stack_{datetime.datetime.now()}.pkl"
+    with open(stacked_fn, 'wb') as f:
+        pickle.dump(stack, f)
+        print(f"saved stacked_fn to {os.path.join(os.getcwd(), stacked_fn)}")
 
     # load pickled array:
     # ---------------------
-    fn = sorted(glob.glob("*pkl"))[-1]
-    print(f"Opening {fn}")
-    with open(fn, "rb") as f:
-        stack = pickle.load(f)
+    # fn = sorted(glob.glob("*pkl"))[-1]
+    # print(f"Opening {fn}")
+    # with open(fn, "rb") as f:
+    #     stack = pickle.load(f)
 
     plt.pcolormesh(stack[9, ::-1, :])
     plt.colorbar()

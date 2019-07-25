@@ -6,12 +6,12 @@
 interpolate grids between dates
 """
 import datetime
-# import sys
+import sys
 from dateutil.parser import parse
 import numpy as np
-import multiprocessing
+# import multiprocessing
 from numba import jit
-import pickle
+# import pickle
 import gdal
 import re
 import os
@@ -62,6 +62,17 @@ def get_date_from_file_name(fn):
 
 
 def get_timespan(fl, interval=1):
+    """Return length of datelist and actual list with dates as tuple
+
+    :param fl: file list
+    :param interval: interval (days) for creation of date list
+
+    >>> get_timespan(['testfile_20190101.tiff', 'testfile_20190103'])
+    (3,
+     [datetime.date(2019, 1, 1),
+      datetime.date(2019, 1, 2),
+      datetime.date(2019, 1, 3)])
+    """
 
     s = get_date_from_file_name(sorted(fl)[0])
     e = get_date_from_file_name(sorted(fl)[-1])
@@ -70,27 +81,58 @@ def get_timespan(fl, interval=1):
     # create list of day ids for every queried point in time:
     dates = [(s + (datetime.timedelta(int(x))))
              for x in np.arange(0, t_span, interval)]
-    # idt_unique = list(set(idt))
     return t_span, dates
 
 
-@jit
 def get_band_as_array(fn, band=0, fillvalue=-999.):
+    """Get band from GeoTiff with fillvalues replaced by np.nan
+
+    :param fn: file name
+    :param band: band in tiff file
+    :param fillvalue:  fill value to be replaced by 'np.nan'
+
+    """
     ds = gdal.Open(fn)
     dsmatrix = ds.ReadAsArray(
         xoff=0, yoff=0,
         xsize=ds.RasterXSize, ysize=ds.RasterYSize)[band]
 
     # replace fillvalue with numpy nan
-    inds = np.where(dsmatrix == fillvalue)
-    dsmatrix[inds] = np.nan
+    if fillvalue:
+        inds = np.where(dsmatrix == fillvalue)
+        dsmatrix[inds] = np.nan
 
     return dsmatrix
 
 
+def create_filled_stack(fl, band, fillvalue):
+
+    # get dates and timespan (daily) from  filenames in filelist
+    (t_span, dates) = get_timespan(fl)
+
+    # get spatial dimensions from first file in list
+    _, idx, idy = gdal.Open(fl[0]).ReadAsArray().shape
+
+    # create nd-array with final dimensions
+    stack = np.ndarray(shape=(t_span, idx, idy),
+                       dtype=float) * np.nan
+
+    # write bands from files into stack at appropriate index based on date
+    for f in fl:
+        date = get_date_from_file_name(f)
+        idd = [id for (id, d) in enumerate(dates) if d == date]
+        assert len(idd) == 1
+        stack[idd[0], :, :] = get_band_as_array(f, band, fillvalue)
+
+    assert len(stack.shape) == 3
+    print("Created filled stack (with NaNs).")
+
+    return stack
+
+
 def interpolate_stack(fl, band, fillvalue, **kwargs):
     """
-    create a filled stack from a file list for a given band
+    interpolate a filled stack
     OR if keyword argument 'single_date' is given:
     return single grid with distance aware interpolated values from the closest
     grids before and after
@@ -101,67 +143,99 @@ def interpolate_stack(fl, band, fillvalue, **kwargs):
 
     """
     single_date = kwargs.get('single_date', None)
+    p = create_filled_stack(fl, band, fillvalue)
 
-    # create nd array with correct dimensions (time, x, y):
-    (t_span, dates) = get_timespan(fl)
-
-    _, idx, idy = gdal.Open(fl[0]).ReadAsArray().shape
-
-    # write bands into p
     if not single_date:
-        # interpolate all x, y along axis 0 (assumed to be time axis)
-        p = np.ndarray(shape=(t_span, idx, idy),
-                       dtype=float) * np.nan
-        for f in fl:
-            date = get_date_from_file_name(f)
-            idd = [id for (id, d) in enumerate(dates) if d == date]
-            assert len(idd) == 1
-            p[idd[0], :, :] = get_band_as_array(f, band, fillvalue)
-
+        # TEMPORARY CHECK:  # ####
         plt.pcolormesh(p[0, ::-1, :])
         plt.colorbar()
         plt.show()
-        assert len(p.shape) == 3
-        print("Created filled stack (with NaNs).")
+        # ########################
 
         # 1st solution:
         # ----------------
-        # filled_stack = np.apply_along_axis(pad, 0, stack)
+        filled_stack = np.apply_along_axis(pad, 0, p)
+        return filled_stack
 
         # multiprocessing
         # ----------------
 
         # create a list of 1d numpy arrays to use as input to pool.map()
         # There's perhaps a better way but this list comprehension suffices
-        print("Converting stack to list for multiprocessing...", end="")
-        ins = [p[:, idx, idy]
-               for idx in range(p.shape[1])
-               for idy in range(p.shape[2])]
-        print("done.\n")
+        # print("Converting stack to list for multiprocessing...", end="")
+        # ins = [p[:, idx, idy]
+        #        for idx in range(p.shape[1])
+        #        for idy in range(p.shape[2])]
+        # print("done.\n")
 
-        print("Starting multiprocessing:\n")
-        pool = multiprocessing.Pool(multiprocessing.cpu_count()-1)
-        outs = pool.map(pad, ins)
+        # use shared array to write to
+        # res = np.ctypeslib.as_ctypes(p)
+        # shared_array = multiprocessing.sharedctypes.RawArray(res._type_, res)
+
+        # print("Starting multiprocessing:\n")
+        # # pool = multiprocessing.Pool(multiprocessing.cpu_count()-1)
+        # # outs = pool.map(pad, ins)
         # with multiprocessing.Pool(multiprocessing.cpu_count()-1) as pool:
         #     outs = list(tqdm.tqdm(pool.imap(pad, ins), total=len(ins)))
-        print('DONE')
+        # print('DONE')
 
         # TODO needs to be in if __name__ == main?? due to tqdm?
         # check out if pickle dump is really empty and full if in if name main
 
-        pool.close()
-        pool.join()
+        # shared, can be used from multiple processes
+        # mp_arr = mp.Array(c.c_double, n*m)
+        # # then in each new process create a new numpy array using:
+        # mp_arr and arr share the same memory
+        # arr = np.frombuffer(mp_arr.get_obj())
+        # # make it two-dimensional
+        # b = arr.reshape((n,m))
 
-        print(len(outs))
-        print(outs[0])
+        # pool.close()
+        # pool.join()
 
-        # convert back to array and set the correct shape
-        print("Reshaping output...", end="")
-        filled_stack = np.array(outs).reshape(p.shape)
-        print("done.")
-        print(len(outs))
+        # print(len(outs))
+        # print(outs[0])
 
-        return filled_stack
+        # # convert back to array and set the correct shape
+        # print("Reshaping output...", end="")
+        # filled_stack = np.array(outs).reshape(p.shape)
+        # print("done.")
+        # print(len(outs))
+        # return filled_stack
+
+        # 4th solution - ravel
+        # ---------------------
+        # print("starting apply to axis")
+        # print(f"done out of {p.shape[1]*p.shape[2]}:")
+        # import pandas as pd
+        # import dask.dataframe as dd
+        # from dask.diagnostics import ProgressBar
+        # from dask.multiprocessing import get
+        # import swifter
+        # length = p.shape[1]*p.shape[2]
+        # # res = np.apply_along_axis(
+        #             pad, 0,
+        # #           p.reshape(p.shape[0], p.shape[1]*p.shape[2]),
+        # #                     length=length)
+
+        # pdf = pd.DataFrame(p.reshape(
+        #     p.shape[0], p.shape[1]*p.shape[2]))
+        # print(1)
+        # print(type(pdf[0][0]))
+        # pbar = ProgressBar()
+        # pbar.register()
+        # ddf = dd.from_pandas(pdf, npartitions=4*multiprocessing.cpu_count())
+        # print(2)
+        # dddata = ddf.map_partitions(
+        #     lambda df: df.apply(
+        #                    pad,
+        #                    meta=('np.float64'), axis=0)).compute(get=get)
+        # print("start computing")
+        # res = dddata
+
+        # # res = df.swifter.apply(pad, axis=0)  # , length=length)
+
+        # return res.reshape(p.shape)
 
     else:
         # weighted interpolation of nearest doy grids:
@@ -187,14 +261,27 @@ def to_doy(indate):
     return int(indate.date().strftime("%j"))
 
 
+count = 0
+
+
+def counter():
+    global count
+    count += 1
+    yield count
+
+
 @jit
-def pad(data):
+def pad(data, **kwargs):
     """
     interpolate 1-D array with nans
     """
+    length = kwargs.get('length', None)
     assert len(data.shape) == 1
-    # sys.stdout.write("#")
-    # sys.stdout.flush()
+    if length:
+        sys.stdout.write("\r"+str(list(counter())[0]+100/int(length))+"%")
+    else:
+        sys.stdout.write("\r"+str(list(counter())[0]))
+    sys.stdout.flush()
     good = np.isfinite(data)
     if max(good) == 0:
         return np.ones(good.shape) * np.nan
@@ -263,10 +350,11 @@ def main():
 
     # pickle dump the array
     # ---------------------
-    stacked_fn = f"filled_stack_{datetime.datetime.now()}.pkl"
-    with open(stacked_fn, 'wb') as f:
-        pickle.dump(stack, f)
-        print(f"saved stacked_fn to {os.path.join(os.getcwd(), stacked_fn)}")
+    # stacked_fn = f"filled_stack_{datetime.datetime.now()}.pkl"
+    # with open(stacked_fn, 'wb') as f:
+    #     pickle.dump(stack, f)
+    #     print(f"\nsaved stacked_fn to "
+    #           f"{os.path.join(os.getcwd(), stacked_fn)}")
 
     # load pickled array:
     # ---------------------

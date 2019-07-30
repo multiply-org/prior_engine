@@ -138,7 +138,7 @@ def create_filled_stack(fl, band, fillvalue):
     assert len(stack.shape) == 3
     print("Created filled stack (with NaNs).")
 
-    return stack
+    return stack, dates
 
 
 def interpolate_stack(fl, band, fillvalue, **kwargs):
@@ -154,7 +154,7 @@ def interpolate_stack(fl, band, fillvalue, **kwargs):
 
     """
     single_date = kwargs.get('single_date', None)
-    p = create_filled_stack(fl, band, fillvalue)
+    p, dates = create_filled_stack(fl, band, fillvalue)
 
     if not single_date:
         # TEMPORARY CHECK:  # ####
@@ -166,7 +166,7 @@ def interpolate_stack(fl, band, fillvalue, **kwargs):
         # 1st solution:
         # ----------------
         filled_stack = np.apply_along_axis(pad, 0, p)
-        return filled_stack
+        return filled_stack, dates
 
         # multiprocessing
         # ----------------
@@ -348,6 +348,7 @@ def main():
     # calculate:
     # -------------
     path = "../aux_data/Climatology/SoilMoisture/"
+    path = os.path.expanduser("~/Gome/")
     pattern = ".*[0-9]{8}.*.tif*"
     fl = get_files(path, pattern)
     for f in fl:
@@ -357,15 +358,19 @@ def main():
     # (however, will be checked anyways)
     band = 0
     fillvalue = -999.
-    stack = interpolate_stack(fl, band, fillvalue)
+    stack, dates = interpolate_stack(fl, band, fillvalue)
 
     # pickle dump the array
     # ---------------------
-    # out_fn = os.path.join(path,
-    #                       f"filled_stack_{datetime.datetime.now()}.pkl")
+    # out_fn = os.path.join(
+    #     path, (f"filled_stack_"
+    #            f"{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.pkl"))
     # with open(out_fn, 'wb') as f:
     #     pickle.dump(stack, f)
     #     print(f"\nsaved stack to {out_fn}")
+    # with open(out_fn+"_dates.txt", 'w') as df:
+    #     for date in dates:
+    #         df.write(date.strftime("%Y%m%d")+"\n")
 
     # load pickled array:
     # ---------------------

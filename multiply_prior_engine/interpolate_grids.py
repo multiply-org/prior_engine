@@ -9,15 +9,11 @@ import datetime
 import sys
 from dateutil.parser import parse
 import numpy as np
-# import multiprocessing
-from numba import jit
 # import pickle
 import gdal
 import re
 import os
 from matplotlib import pyplot as plt
-# import glob
-# import tqdm
 
 __author__ = "Thomas Ramsauer"
 __copyright__ = "Thomas Ramsauer"
@@ -84,18 +80,28 @@ def get_timespan(fl, interval=1):
     return t_span, dates
 
 
-def get_band_as_array(fn, band=0, fillvalue=-999.):
+def get_band_as_array(fn, band=None, fillvalue=-999.):
     """Get band from GeoTiff with fillvalues replaced by np.nan
 
     :param fn: file name
-    :param band: band in tiff file
+    :param band: band in tiff file (specify if multiple available, else: None)
     :param fillvalue:  fill value to be replaced by 'np.nan'
 
     """
     ds = gdal.Open(fn)
-    dsmatrix = ds.ReadAsArray(
-        xoff=0, yoff=0,
-        xsize=ds.RasterXSize, ysize=ds.RasterYSize)[band]
+    dims = len(ds.ReadAsArray().shape)
+
+    if (dims < 3 and band is not None):
+        print(f"Only found {dims} dimensions in raster {fn}.")
+        band = None
+    if band is not None:
+        dsmatrix = ds.ReadAsArray(
+            xoff=0, yoff=0,
+            xsize=ds.RasterXSize, ysize=ds.RasterYSize)[band]
+    else:
+        dsmatrix = ds.ReadAsArray(
+            xoff=0, yoff=0,
+            xsize=ds.RasterXSize, ysize=ds.RasterYSize)
 
     # replace fillvalue with numpy nan
     if fillvalue:
@@ -111,7 +117,12 @@ def create_filled_stack(fl, band, fillvalue):
     (t_span, dates) = get_timespan(fl)
 
     # get spatial dimensions from first file in list
-    _, idx, idy = gdal.Open(fl[0]).ReadAsArray().shape
+    dims = len(gdal.Open(fl[0]).ReadAsArray().shape)
+    assert dims > 1
+    if dims == 3:
+        _, idx, idy = gdal.Open(fl[0]).ReadAsArray().shape
+    elif dims == 2:
+        idx, idy = gdal.Open(fl[0]).ReadAsArray().shape
 
     # create nd-array with final dimensions
     stack = np.ndarray(shape=(t_span, idx, idy),
@@ -270,7 +281,6 @@ def counter():
     yield count
 
 
-@jit
 def pad(data, **kwargs):
     """
     interpolate 1-D array with nans
@@ -291,7 +301,6 @@ def pad(data, **kwargs):
     return interpolated
 
 
-@jit(nopython=True)
 def _iter_pad(data, idx):
     assert len(data.shape) == 3
     # print(f"iterating over x: {data.shape[1]}, y: {data.shape[2]}.")
@@ -344,17 +353,19 @@ def main():
     for f in fl:
         print(f)
 
+    # only specify if multiple bands are in tiff
+    # (however, will be checked anyways)
     band = 0
     fillvalue = -999.
     stack = interpolate_stack(fl, band, fillvalue)
 
     # pickle dump the array
     # ---------------------
-    # stacked_fn = f"filled_stack_{datetime.datetime.now()}.pkl"
-    # with open(stacked_fn, 'wb') as f:
+    # out_fn = os.path.join(path,
+    #                       f"filled_stack_{datetime.datetime.now()}.pkl")
+    # with open(out_fn, 'wb') as f:
     #     pickle.dump(stack, f)
-    #     print(f"\nsaved stacked_fn to "
-    #           f"{os.path.join(os.getcwd(), stacked_fn)}")
+    #     print(f"\nsaved stack to {out_fn}")
 
     # load pickled array:
     # ---------------------

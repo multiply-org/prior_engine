@@ -4,7 +4,7 @@
 """
     Prior Engine for MULTIPLY.
 
-    Copyright (C) 2018  Thomas Ramsauer
+    Copyright (C) 2019  Thomas Ramsauer
 """
 
 import logging
@@ -18,7 +18,7 @@ from .vegetation_prior_creator import VegetationPriorCreator
 
 
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]
-__copyright__ = "Copyright 2018, Thomas Ramsauer"
+__copyright__ = "Copyright 2019, Thomas Ramsauer"
 __credits__ = "Alexander Löw"
 __maintainer__ = "Thomas Ramsauer"
 __email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
@@ -33,7 +33,7 @@ def _get_config(configfile):
     """
     try:
         with open(configfile, 'r') as cfg:
-            config = yaml.load(cfg)
+            config = yaml.safe_load(cfg)
     except FileNotFoundError as e:
         logging.info('Info: current directory: {}'.format(os.getcwd()))
         logging.error('{}'.format(e.args[0]))

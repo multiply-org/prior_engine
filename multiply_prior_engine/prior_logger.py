@@ -4,7 +4,7 @@
 """
     Logger for the Prior Engine for MULTIPLY.
 
-    Copyright (C) 2018  Thomas Ramsauer
+    Copyright (C) 2019  Thomas Ramsauer
 """
 
 import os
@@ -43,7 +43,7 @@ class PriorLogger(object):
 
         # get logging config
         with open(self.configfile, 'r') as cfg:
-            config_dict = yaml.load(cfg)
+            config_dict = yaml.safe_load(cfg)
 
         # add temporary log file name to configuration
         filename = os.path.join(tempfile.tempdir, 'prior_engine.log')

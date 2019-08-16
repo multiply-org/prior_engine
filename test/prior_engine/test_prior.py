@@ -1,4 +1,3 @@
-# import sys
 import os
 import pytest
 import sys
@@ -91,7 +90,6 @@ def test_recent_prior():
                     datestr='2017-03-01',
                     variables=['sm'])
     with pytest.raises(AssertionError,
-                       message=("Expecting AssertionError"),
                        match=r'.*recent.*'):
         P.get_priors()
 
@@ -101,8 +99,8 @@ def test_recent_prior2():
                     datestr='2017-03-01',
                     variables=['sm'])
     with pytest.raises(AssertionError,
-                       message=("Expecting AssertionError \
-                                --> recent prior not implemented")):
+                       match=("Expecting AssertionError \
+                              --> recent prior not implemented")):
         S = SoilMoisturePriorCreator(config=P.config,
                                      datestr='2017-03-01',
                                      var="sm",
@@ -119,8 +117,8 @@ def test_user_prior_initialization():
                                  var="sm",
                                  ptype='user1')
     with pytest.raises(AssertionError,
-                       message=("Expecting AssertionError \
-                                --> wrong path in config file."),
+                       # Expecting AssertionError
+                       # --> wrong path in config file.
                        match=r'.*path/to/file*'):
         S.compute_prior_file()
 
@@ -140,9 +138,9 @@ def test_sm_prior_missing_datestr():
     P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
                     datestr='2017-03-01',
                     variables=['sm'])
-    with pytest.raises(AssertionError,
-                       message=("Expecting AssertionError \
-                                --> no datestr & variable specified")):
+    with pytest.raises(AssertionError):
+        # Expecting AssertionError \
+        # --> no datestr & variable specified
         SoilMoisturePriorCreator(config=P.config,
                                  ptype='climatology')
 

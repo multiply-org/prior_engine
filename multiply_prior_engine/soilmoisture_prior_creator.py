@@ -428,7 +428,7 @@ class MapPriorCreator(PriorCreator):
 
     @classmethod
     def get_variable_names(cls):
-        return
+        return []
 
 
 class RoughnessPriorCreator(MapPriorCreator):
@@ -463,6 +463,9 @@ class RoughnessPriorCreator(MapPriorCreator):
         """
         return tempfile.mktemp(suffix='.nc')
 
-
     def compute_prior_file(self):
         assert False, 'roughness prior not implemented'
+
+    @classmethod
+    def get_variable_names(cls):
+        return []

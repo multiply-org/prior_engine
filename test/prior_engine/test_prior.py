@@ -47,22 +47,20 @@ def test_sm_prior_init():
 
 def test_sm_prior_no_ptype():
     with pytest.raises(AssertionError,
-                       match=("Expecting AssertionError \
-                                --> no config specified")):
+                       match=r'.*No prior type*'):
         SoilMoisturePriorCreator()
 
 
 def test_sm_prior_invalid_ptype():
-    with pytest.raises(AssertionError,
-                       match=("Expecting AssertionError \
-                                --> no config specified")):
+    with pytest.raises(AssertionError):
+        # match=r'.*No prior type*'):
         SoilMoisturePriorCreator(ptype='climatologi')
 
 
 def test_calc_variable():
-    with pytest.raises(AssertionError,
-                       match=("Expecting AssertionError \
-                                --> no variable specified")):
+    with pytest.raises(AssertionError):
+        # Expecting AssertionError
+        # --> no variable specified
         P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
                         datestr='2017-03-01')
         P.get_priors()

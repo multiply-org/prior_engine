@@ -245,8 +245,9 @@ class SoilMoisturePriorCreator(PriorCreator):
         else:
             pattern = (r"*")
 
-        fn_list = sorted(glob.glob('{}'.format(os.path.join(
-            os.path.abspath(directory), pattern), recursive=True)))
+        srch = os.path.join(os.path.abspath(directory), pattern)
+        fn_list = sorted(glob.glob(f'{srch}', recursive=True))
+        logging.info(f"Searching for files with expression: {srch}")
 
         # AssertionError is caught by the prior engine:
         assert fn_list is not None and len(fn_list) > 0, \

@@ -230,7 +230,7 @@ class SoilMoisturePriorCreator(PriorCreator):
         """
         fn = None
         if self.ptype.lower() == 'climatology':
-            pattern = (r"ESA_CCI_SM_clim_{:02d}.tiff"
+            pattern = (r"ESA_CCI_SM_CLIM_{:02d}.tiff"
                        .format(self.date.month))
         elif self.ptype.lower() == 'coarse':
             pattern = (r"SMAP_daily_{:8d}.tif*"

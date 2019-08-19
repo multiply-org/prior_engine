@@ -7,6 +7,7 @@ prior\_engine module
     :members:
     :undoc-members:
     :show-inheritance:
+    :private-members:
 
 
 prior module
@@ -15,6 +16,7 @@ prior module
     :members:
     :undoc-members:
     :show-inheritance:
+    :private-members:
 
 soilmoisture\_prior module
 ---------------------------------------------------
@@ -22,6 +24,7 @@ soilmoisture\_prior module
     :members:
     :undoc-members:
     :show-inheritance:
+    :private-members:
 
 vegetation\_prior module
 -------------------------------------------------
@@ -29,3 +32,4 @@ vegetation\_prior module
     :members:
     :undoc-members:
     :show-inheritance:
+    :private-members:

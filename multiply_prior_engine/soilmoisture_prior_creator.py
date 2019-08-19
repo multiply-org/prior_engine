@@ -55,13 +55,25 @@ class SoilMoisturePriorCreator(PriorCreator):
         # set None as old data_dir/file may be present from loop.
         self.data_dir = None
         self.data_file = None
-        self.output_directory = self.config['Prior']['output_directory']
+        try:
+            self.output_directory = self.config['Prior']['output_directory']
+        except KeyError as e:
+            logging.info(e)
+            self.output_directory = tempfile.mkdtemp(
+                prefix='multiply_priorengine_')
+            logging.info(f"No output directory in config file. "
+                         f"Created and using {self.output_directory}.")
+
         if not os.path.exists(self.output_directory):
             os.mkdir(self.output_directory)
 
-        if self.ptype == 'climatology' or self.ptype == 'coarse':
+        prior_file_type = \
+            [p.lower() for p in
+             list(self.config['Prior'][self.variable][self.ptype].keys())]
+        if 'dir' in prior_file_type:
             try:
-                data_dir = self.config['Prior']['sm'][self.ptype]['dir']
+                data_dir = \
+                    self.config['Prior'][self.variable][self.ptype]['dir']
                 self.data_dir = data_dir
                 assert os.path.isdir(self.data_dir), \
                     ('Directory does not exist or cannot be found: {}'
@@ -72,10 +84,10 @@ class SoilMoisturePriorCreator(PriorCreator):
                    '"{}" prior in config file!'.format(self.ptype))
             else:
                 return self._provide_prior_file()
-
-        elif 'user' in self.ptype:
+        elif 'file' in prior_file_type:
             try:
-                data_file = (self.config['Prior']['sm'][self.ptype]['file'])
+                data_file = \
+                    (self.config['Prior'][self.variable][self.ptype]['file'])
                 self.data_file = data_file
             except KeyError as e:
                 assert self.data_file is not None, \
@@ -84,13 +96,14 @@ class SoilMoisturePriorCreator(PriorCreator):
                    ' \'Prior/sm/{ptype}/file:\')!'.format(ptype=self.ptype))
             else:
                 return self._provide_prior_file()
-
-        # TODO recent only place holder
-        elif self.ptype == 'recent':
-            self._get_recent_sm_proxy()
+        elif 'mean' and 'unc' in prior_file_type:
+            raise NotImplementedError(
+                f'Cannot create static prior from mean and unc for now '
+                f'(var: {self.variable}).')
 
         else:
-            msg = '{} prior for sm not implemented'.format(self.ptype)
+            msg = '{} prior for {} not implemented'.format(self.ptype,
+                                                           self.variable)
             logging.exception(msg)
             assert False, msg
         return self._provide_prior_file()
@@ -216,17 +229,17 @@ class SoilMoisturePriorCreator(PriorCreator):
 
         """
         fn = None
-        if self.ptype == 'climatology':
+        if self.ptype.lower() == 'climatology':
             pattern = (r"ESA_CCI_SM_CLIM_{:02d}*.tif*"
                        .format(self.date.month))
-        elif self.ptype == 'coarse':
-            pattern = (r"SMAP_daily_{:8d}.tif"
+        elif self.ptype.lower() == 'coarse':
+            pattern = (r"SMAP_daily_{:8d}.tif*"
                        .format(self.date8))
         # TODO read user pattern from config file to allow defined input
         # (has to be written to the config-file in a 'config step' first)
-        elif 'user' in self.ptype:
-            pattern = (r"user_{}.tiff$")
-        elif self.ptype == 'recent':
+        elif 'user' in self.ptype.lower():
+            pattern = (r"*{:8d}*.tif*")
+        elif self.ptype.lower() == 'recent':
             pattern = (r"recent_prior_{}.tiff$"
                        .format(self.date8))
         else:
@@ -403,6 +416,7 @@ class SoilMoisturePriorCreator(PriorCreator):
 
 class MapPriorCreator(PriorCreator):
     """
+    *Not Implemented*
     Prior which is based on a LC map and a LUT
     """
 
@@ -428,16 +442,21 @@ class MapPriorCreator(PriorCreator):
 
     @classmethod
     def get_variable_names(cls):
-        return
+        return ['lcc']
 
 
 class RoughnessPriorCreator(MapPriorCreator):
+    """
+    *Not Implemented*
+    Roughness Prior Creator which is based on a LC map and a LUT
+    """
+
 
     def __init__(self, **kwargs):
         super(RoughnessPriorCreator, self).__init__(**kwargs)
 
     def calc(self):
-        if self.ptype == 'climatology':
+        if self.ptype.lower() == 'climatology':
             self._read_lut()
             self._read_lc()
             self._map_lut()
@@ -466,3 +485,7 @@ class RoughnessPriorCreator(MapPriorCreator):
 
     def compute_prior_file(self):
         assert False, 'roughness prior not implemented'
+
+    @classmethod
+    def get_variable_names(cls):
+        return ['roughness']

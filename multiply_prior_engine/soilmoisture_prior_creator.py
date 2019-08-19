@@ -71,6 +71,10 @@ class SoilMoisturePriorCreator(PriorCreator):
             [p.lower() for p in
              list(self.config['Prior'][self.variable][self.ptype].keys())]
         if 'dir' in prior_file_type:
+            assert len(prior_file_type) == 1, \
+                (f"More than one user prior file type mentioned in config "
+                 f"({prior_file_type}). Please use multiple ptypes (user1, "
+                 f"user2, ..).")
             try:
                 data_dir = \
                     self.config['Prior'][self.variable][self.ptype]['dir']
@@ -85,6 +89,10 @@ class SoilMoisturePriorCreator(PriorCreator):
             else:
                 return self._provide_prior_file()
         elif 'file' in prior_file_type:
+            assert len(prior_file_type) == 1, \
+                (f"More than one user prior file type mentioned in config "
+                 f"({prior_file_type}). Please use multiple ptypes (user1, "
+                 f"user2, ..).")
             try:
                 data_file = \
                     (self.config['Prior'][self.variable][self.ptype]['file'])

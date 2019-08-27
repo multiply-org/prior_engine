@@ -163,19 +163,17 @@ class VegetationPriorCreator(PriorCreator):
         super(VegetationPriorCreator, self).__init__(**kwargs)
         self.config = kwargs.get('config', None)
         self.priors = kwargs.get('priors', None)
+        # config = vegetation_prior_creator._get_config('config2.yaml')
 
         # 1. Parameters
         # 1.1 Define Study Area
-        # self.lon_study = [-180, 180]
-        # self.lat_study = [-90, 90]
-
         self.tileres = 10
         try:
             roi = loads(config['General']['roi'])
-            min_lon = np.floor(roi.bounds[0] / 10) * 10
-            max_lon = np.ceil(roi.bounds[2] / 10) * 10
-            min_lat = np.floor(roi.bounds[1] / 10) * 10
-            max_lat = np.ceil(roi.bounds[3] / 10) * 10
+            min_lon = np.floor(roi.bounds[0] / self.tileres) * self.tileres
+            max_lon = np.ceil(roi.bounds[2] / self.tileres) * self.tileres
+            min_lat = np.floor(roi.bounds[1] / self.tileres) * self.tileres
+            max_lat = np.ceil(roi.bounds[3] / self.tileres) * self.tileres
             self.lat_study = [min_lat, max_lat]
             self.lon_study = [min_lon, max_lon]
         except:
@@ -183,7 +181,6 @@ class VegetationPriorCreator(PriorCreator):
             self.lat_study = [-90, 90]
 
         # 1.2 Define paths
-
         self.directory_data = self.config['Prior']['General']['directory_data']
         self.path2LCC_file = (self.directory_data + 'LCC/' + 'ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7_updated.nc')
         self.path2Climate_file = (self.directory_data + 'Climate/' + 'sdat_10012_1_20171030_081458445.tif')
@@ -211,6 +208,15 @@ class VegetationPriorCreator(PriorCreator):
         # self.mu['ala'] = 77.
         self.mu['bsoil'] = 0.5
         self.mu['psoil'] = 0.5
+
+        # add user defined priors (mu and/or unc)
+        for varname in SUPPORTED_VARIABLES:
+            if 'user' in self.config['Prior'][varname]:
+                user_def = self.config['Prior'][varname]['user']
+                if 'mu' in user_def:
+                    self.mu[varname] = user_def['mu']
+                if 'unc' in user_def:
+                    self.unc[varname] = user_def['unc']
 
         # 0. Define parameter transformations
         self.transformations = {
@@ -593,6 +599,7 @@ class VegetationPriorCreator(PriorCreator):
         :rtype:
 
         """
+
         if type(varnames ) is str:
             varnames = [varnames]
 
@@ -605,11 +612,16 @@ class VegetationPriorCreator(PriorCreator):
 
         Var = dict()
         for varname in varnames:
-            if varname in self.mu:
-                std = 0.01
-                # create random distribution with uncertainty = std
-                V = np.random.normal(loc = self.mu[varname], scale = std, size = 10)
 
+            # create normal distribution around mu[varname]
+            if (varname in self.mu):
+                if (varname in self.unc):
+                    std = self.unc[varname]
+                else:
+                    std = 0.01
+                V = np.random.normal(loc=self.mu[varname], scale=std, size=10)
+
+            # use try database values
             elif varname in  vars_in_database:
                 Data = Dataset(self.path2Trait_file, 'r')
                 V = Data[varname][:, pft_id, :]
@@ -617,19 +629,18 @@ class VegetationPriorCreator(PriorCreator):
                 # if too few entries were available for TRY for a specific PFT, we define the Prior for this PFT to be equivalent to average of all values of this variable
                 if np.sum(~ np.isnan(V)) < 10:
                     V = Data[varname][:, :, :]
-
-                # print(pft_id)
-                # print(np.nanmin(V))
-                # print(np.nanmean(V))
-                # print(np.nanmax(V))
                 Data.close()
 
+                # use mean value from database, but with user-specified uncertainty
+                if (varname in self.unc):
+                    mu = np.nanmean(V)
+                    std = self.unc[varname]
+                    V = np.random.normal(loc = mu, scale = std, size = 10)
             else:
-                # import pdb
-                # pdb.set_trace()
-                V = self.mu[varname]*np.array([1.,1.-1e-5])
+                V = np.array([1.,1.-1e-5])
 
             Var[varname] = V
+
         return Var
 
     def ExtractPFT4TryDatabaseEntries(self, Lat_, Lon_, Plantgroup_, Crop_, LeafType_, C3C4_, LeafPhen_):

@@ -5,22 +5,19 @@ __email__ = "j.timmermans@cml.leidenuniv.nl"
 
 import glob
 import os
-import osr
 import subprocess
 import time
+import datetime
 
 import multiprocessing
-# import datetime
-import gdal
 import numpy as np
-
+import yaml
 from dateutil.parser import parse
 from matplotlib import pyplot as plt
 from scipy import interpolate as RegularGridInterpolator
 from netCDF4 import Dataset
-import datetime
-import tempfile
-import logging
+from shapely.wkt import loads
+import gdal
 from .prior_creator import PriorCreator
 
 SUPPORTED_VARIABLES = ['lai', 'cab', 'cb', 'car', 'cw', 'cdm', 'n',
@@ -68,6 +65,33 @@ def parmap(f, X, nprocs=multiprocessing.cpu_count()):
     return [x for i, x in sorted(res)]
 
 
+def _get_config(configfile):
+    """
+    Load config from self.configfile.
+    writes to self.config.
+
+    :returns: -
+    """
+    try:
+        with open(configfile, 'r') as cfg:
+            config = yaml.load(cfg)
+    except FileNotFoundError as e:
+        logging.info('Info: current directory: {}'.format(os.getcwd()))
+        logging.error('{}'.format(e.args[0]))
+        raise
+    try:
+        assert 'Prior' in config.keys(),\
+            ('There is no prior section in configuration file ({}).'
+             .format(configfile))
+        assert config['Prior'] is not None,\
+            ('There is no prior configuration in the config file ({}).'
+             .format(configfile))
+    except AssertionError as e:
+        logging.error('{}'.format(e.args[0]))
+        raise
+    return config
+
+
 def processespercore(varname, PFT, PFT_ids, VegetationPriorCreator):
     """
     Create Prior values from PFT distributions and Vegetation traits
@@ -97,17 +121,18 @@ def processespercore(varname, PFT, PFT_ids, VegetationPriorCreator):
         b = time.time()
 
         if np.any(PFT_id):
-            trait_id = VegetationPriorCreator.ReadTraitDatabase([varname], pft_id)
+            trait_id = VegetationPriorCreator.ReadTraitDatabase(varname, pft_id)
 
             # filtering variables for erroneous values
             trait_f_ = trait_id[varname] * 1.
 
             # transform variables
             trait_tf_ = trait_f_
-            # if VegetationPrior.transformations.has_key(varname):
-            #     trait_tf_ = VegetationPrior.transformations[varname](trait_f_)
-            # else:
-            #     trait_tf_ = trait_f_
+            try:
+                trait_tf_ = VegetationPriorCreator.transformations[varname](trait_f_)
+            except:
+                trait_tf_ = trait_f_
+
 
             ierror = ~np.isnan(trait_tf_)
             trait_tf_avg = np.mean(trait_tf_[ierror])
@@ -122,10 +147,29 @@ def processespercore(varname, PFT, PFT_ids, VegetationPriorCreator):
             TRAIT_ttf_avg = TRAIT_ttf_avg + TRAIT_wtf_avg
             TRAIT_ttf_unc = TRAIT_ttf_unc + TRAIT_wtf_unc
 
+            # print(varname)
+            # print([PFT_id[590,2864], PFT_id[2864,590]])
+            # print(np.sum(~ np.isnan(trait_f_)))
+            # print(trait_tf_avg)
+            # print(trait_tf_unc)
+
     # post processes for erroneous data
-    ierror = (TRAIT_ttf_avg == 0) + (TRAIT_ttf_unc == 0)
+    corr_weight = np.sum(PFT[:,:,1:] / 100., axis=2)
+    ierror = (TRAIT_ttf_avg == 0) + (TRAIT_ttf_unc == 0) + (corr_weight ==0)
     TRAIT_ttf_avg[ierror] = np.NaN
     TRAIT_ttf_unc[ierror] = np.NaN
+
+    # print(np.nanmean(TRAIT_ttf_avg))
+    # In some cases the sum of all PFT <>1. Therefore we are required to correct for this
+    # causes for this are
+    # 1) wetlands, where a PFT contains both water and if everything went correctly. Within Try, there are traits provided for water pfs.
+    # 2) rounding errors. In the creation of PFT abundance
+    TRAIT_ttf_avg = TRAIT_ttf_avg/ (corr_weight+ 1e-10)
+    TRAIT_ttf_unc = TRAIT_ttf_unc / (corr_weight+ 1e-10)
+
+    # print(varname)
+    # print(np.nanmean(TRAIT_ttf_avg))
+    # print(np.nanmean(TRAIT_ttf_unc))
 
     return TRAIT_ttf_avg, TRAIT_ttf_unc
 
@@ -141,11 +185,20 @@ class VegetationPriorCreator(PriorCreator):
 
         # 1. Parameters
         # 1.1 Define Study Area
-        self.lon_study = [0, 10]
-        self.lat_study = [50, 60]
+        self.tileres = 10
+        try:
+            roi = loads(self.config['General']['roi'])
+            min_lon = np.floor(roi.bounds[0] / self.tileres) * self.tileres
+            max_lon = np.ceil(roi.bounds[2] / self.tileres) * self.tileres
+            min_lat = np.floor(roi.bounds[1] / self.tileres) * self.tileres
+            max_lat = np.ceil(roi.bounds[3] / self.tileres) * self.tileres
+            self.lat_study = [min_lat, max_lat]
+            self.lon_study = [min_lon, max_lon]
+        except:
+            self.lon_study = [-180, 180]
+            self.lat_study = [-90, 90]
 
         # 1.2 Define paths
-
         self.directory_data = self.config['Prior']['General']['directory_data']
         self.path2LCC_file = (self.directory_data + 'LCC/' + 'ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7_updated.nc')
         self.path2Climate_file = (self.directory_data + 'Climate/' + 'sdat_10012_1_20171030_081458445.tif')
@@ -153,40 +206,46 @@ class VegetationPriorCreator(PriorCreator):
         self.path2Trait_file = (self.directory_data + 'Trait_Database/' + 'Traits.nc')
         self.path2Traitmap_file = self.directory_data + 'Priors/' + 'Priors.nc'
 
-        try:
-            self.output_directory = self.config['Prior']['output_directory']
-        except KeyError as e:
-            logging.info(e)
-            self.output_directory = tempfile.mkdtemp(
-                prefix='multiply_priorengine_')
-            logging.info(f"No output directory in config file. "
-                         f"Created and using {self.output_directory}.")
+        self.output_directory = self.config['Prior']['output_directory']
         if not os.path.exists(self.output_directory):
             os.mkdir(self.output_directory)
 
         self.plotoption = 0  # [0,1,2,3,4,5,6,..]
 
-        # 0. Define parameter transformations
-        self.transformations = {
+        # define Prior values that are not found in online databases.
+        self.mu = dict()
+        self.unc = dict()
+        self.mu['cbrown'] = 0.2
+        self.mu['bsoil'] = 0.5
+        self.mu['psoil'] = 0.5
+
+        # add user defined priors (mu and/or unc)
+        for varname in SUPPORTED_VARIABLES:
+            if varname in self.config['Prior']:
+                if 'user' in self.config['Prior'][varname]:
+                    user_def = self.config['Prior'][varname]['user']
+                    if 'mu' in user_def:
+                        self.mu[varname] = user_def['mu']
+
+                    if 'unc' in user_def:
+                        self.unc[varname] = user_def['unc']
+
+    # 0. Define parameter transformations
+        self.transformations = dict({
             'lai': lambda x: np.exp(-x / 2.),
             'cab': lambda x: np.exp(-x / 100.),
             'car': lambda x: np.exp(-x / 100.),
             'cw': lambda x: np.exp(-50. * x),
-            'cm': lambda x: np.exp(-100. * x),
-            'ala': lambda x: x / 90.}
-        self.inv_transformations = {
+            'cdm': lambda x: np.exp(-100. * x),
+            'ala': lambda x: x / 90.})
+        self.inv_transformations = dict({
             'lai': lambda x: -2. * np.log(x),
             'cab': lambda x: -100 * np.log(x),
             'car': lambda x: -100 * np.log(x),
             'cw': lambda x: (-1 / 50.) * np.log(x),
-            'cm': lambda x: (-1 / 100.) * np.log(x),
-            'ala': lambda x: 90. * x}
-        # define Prior values that are not found in online databases.
-        self.mu = dict()
-        self.mu['cbrown'] = 0.2
-        self.mu['ala'] = 0.5
-        self.mu['bsoil'] = 1
-        self.mu['psoil'] = 0.5
+            'cdm': lambda x: (-1 / 100.) * np.log(x),
+            'ala': lambda x: 90. * x})
+
 
     @classmethod
     def get_variable_names(cls):
@@ -194,7 +253,7 @@ class VegetationPriorCreator(PriorCreator):
 
     # General structure of processing chains
     def ProcessData(self, variables=None, state_mask=None,
-                    timestr='2007-12-31 04:23', logger=None, file_prior=None,
+                    timestr='2005-05-05 05:55', logger=None, file_prior=None,
                     file_lcc=None, file_biome=None, file_meteo=None):
         """
         Process Data
@@ -217,6 +276,8 @@ class VegetationPriorCreator(PriorCreator):
         :rtype:
 
         """
+        if type(variables) is str:
+            variables = [variables]
 
         # offline processing (to be run only once)
         # self.OfflineProcessing()
@@ -252,17 +313,23 @@ class VegetationPriorCreator(PriorCreator):
         # VegPrior.path2LCC_file = file_lcc
         # VegPrior.path2Climate_file = file_biome
         # VegPrior.path2Meteo_file = file_meteo
-        # VegPrior.path2Traitmap_file = file_output
 
         #############
         time = parse(timestr)
         doystr = time.strftime('%j')
-        lon_study_ = np.arange(-180, 180, 10)
-        lat_study_ = np.arange(-90, 90, 10)
+
+        minlon  =  np.min(self.lon_study)
+        maxlon  =  np.max(self.lon_study)
+        minlat =   np.min(self.lat_study)
+        maxlat =   np.max(self.lat_study)
+
+        lat_study_ = np.arange(np.floor(minlat / self.tileres) , np.ceil(maxlat / self.tileres) ) * self.tileres
+        lon_study_ = np.arange(np.floor(minlon / self.tileres) , np.ceil(maxlon / self.tileres) ) * self.tileres
 
         for lon_study in lon_study_:
             for lat_study in lat_study_:
                 print('%3.2f %3.2f' % (lon_study, lat_study))
+
                 self.lon_study = [lon_study, lon_study + 10]
                 self.lat_study = [lat_study, lat_study + 10]
 
@@ -274,7 +341,7 @@ class VegetationPriorCreator(PriorCreator):
                 self.DynamicProcessing(variables, lon, lat, Prior_pbm_avg,
                                                    Prior_pbm_unc, doystr=doystr)
 
-        filenames = self.CombineTiles2Virtualfile(variables)
+        # filenames = self.CombineTiles2Virtualfile(variables, doystr)
 
     def OfflineProcessing(self):
         """
@@ -288,13 +355,14 @@ class VegetationPriorCreator(PriorCreator):
         # handle offline
 
         # Download Data
-        self.DownloadCrossWalkingTable()
+        # self.DownloadCrossWalkingTable()
 
         # Preprocess Data
-        self.RunCrossWalkingTable()
+        # self.RunCrossWalkingTable()
 
         # Construct Database
-        self.CreateDummyDatabase()
+        # self.CreateDummyDatabase()
+        self.CreateRealDatabase()
 
     def StaticProcessing(self, varnames, write_output=False):
         """
@@ -320,8 +388,7 @@ class VegetationPriorCreator(PriorCreator):
         LCC_map, LCC_lon, LCC_lat, LCC_classes = self.ReadLCC()
         CLM_map, CLM_lon, CLM_lat, CLM_classes = self.ReadClimate()
 
-
-        if np.all(LCC_map['Water']):
+        if np.all((LCC_map['Water'] + LCC_map['Snow_Ice'])>80):
 
             Prior_pbm_avg = dict()
             Prior_pbm_unc = dict()
@@ -333,17 +400,14 @@ class VegetationPriorCreator(PriorCreator):
 
         else:
             # Process Data (12.5s)
-            CLM_map_i = self.RescaleCLM(CLM_lon, CLM_lat, CLM_map,
-                                        LCC_lon, LCC_lat)
-            PFT, PFT_classes, Npft, PFT_ids = self.Combine2PFT(LCC_map,
-                                                               CLM_map_i)
+            CLM_map_i = self.RescaleCLM(CLM_lon, CLM_lat, CLM_map, LCC_lon, LCC_lat)
+            PFT, PFT_classes, Npft, PFT_ids = self.Combine2PFT(LCC_map,  CLM_map_i)
 
-            Prior_pbm_avg, Prior_pbm_unc = self.AssignPFTTraits2Map(PFT,
-                                                                    PFT_ids,
-                                                                    varnames)
+            Prior_pbm_avg, Prior_pbm_unc = self.AssignPFTTraits2Map(PFT,PFT_ids,varnames)
 
         if write_output:
-            self.WriteOutput(LCC_lon, LCC_lat, Prior_pbm_avg, Prior_pbm_unc)
+            # self.WriteOutput(LCC_lon, LCC_lat, Prior_pbm_avg, Prior_pbm_unc)
+            self.WriteGeoTiff(LCC_lon, LCC_lat, Prior_pbm_avg, Prior_pbm, unc)
 
         return LCC_lon, LCC_lat, Prior_pbm_avg, Prior_pbm_unc
 
@@ -411,7 +475,6 @@ class VegetationPriorCreator(PriorCreator):
         lat_s = lat[ilat_max:ilat_min]
 
         # classes0 = dataset_container['lccs_class'][ilon_min,ilat_min]
-
         class_names = ['Tree_Broadleaf_Evergreen',
                        'Tree_Broadleaf_Deciduous',
                        'Tree_Needleleaf_Evergreen',
@@ -452,6 +515,7 @@ class VegetationPriorCreator(PriorCreator):
         :rtype:
 
         """
+
         ds = gdal.Open(self.path2Climate_file)
         width = ds.RasterXSize
         height = ds.RasterYSize
@@ -518,7 +582,7 @@ class VegetationPriorCreator(PriorCreator):
                    'EF(1)',  # Polar/Frost                                30
                    'ET(2)',  # Polar/Tundra                               31
                    'EF(2)'  # Polar/Frost                                 32
-                   ];
+                   ]
 
         if self.plotoption == 3:
             plt.figure(figsize=[20, 20])
@@ -539,23 +603,284 @@ class VegetationPriorCreator(PriorCreator):
         :rtype:
 
         """
+        if type(varnames ) is str:
+            varnames = [varnames]
 
-        vars_in_database = ['lai','cab','car','cdm','cw','n']
+        # Read which variables are within the database file
+        Data = Dataset(self.path2Trait_file, 'r')
+        vars_in_database = Data.variables.keys()
+        Data.close()
 
         Var = dict()
-
         for varname in varnames:
-            if varname in  vars_in_database:
+
+            # create normal distribution around mu[varname]
+            if (varname in self.mu):
+                if (varname in self.unc):
+                    std = self.unc[varname]
+                else:
+                    std = self.mu[varname]*0.001
+                V = np.random.normal(loc=self.mu[varname], scale=std, size=100)
+                # ensure that none of the vegetation priors have (real) values <0
+                V * (V > 1e-9) + 1e-9 * (V < 1e-9)
+
+            # use try database values
+            elif varname in vars_in_database:
                 Data = Dataset(self.path2Trait_file, 'r')
                 V = Data[varname][:, pft_id, :]
+
+                # if too few entries were available for TRY for a specific PFT, we define the Prior for this PFT to be equivalent to average of all values of this variable
+                if np.sum(~ np.isnan(V)) < 10:
+                    V = Data[varname][:, :, :]
                 Data.close()
+
+                # use mean value from database, but with user-specified uncertainty
+                if (varname in self.unc):
+                    mu = np.nanmean(V)
+                    std = self.unc[varname]
+                    V = np.random.normal(loc=mu, scale=std, size=100)
+
+                    # ensure that none of the vegetation priors have (real) values <0
+                    V * (V > 1e-9) + 1e-9 * (V < 1e-9)
+
+            # parameter is not embedded in database or specified by user
             else:
-                # import pdb
-                # pdb.set_trace()
-                V = self.mu[varname]*np.array([1.,1.-1e-5])
+                V = np.array([1., 1. - 1e-5])
 
             Var[varname] = V
+
         return Var
+
+    def ExtractPFT4TryDatabaseEntries(self, Lat_, Lon_, Plantgroup_, Crop_, LeafType_, C3C4_, LeafPhen_):
+        Lat = np.floor(Lat_.astype(float)*1000)/1000.
+        Lon = np.floor(Lon_.astype(float) * 1000) / 1000.
+
+        LatLon = [complex(a, b) for a, b in zip(Lat, Lon)]
+        LatLon_u = np.unique(LatLon)
+
+        ID = np.zeros_like(Lat)+1
+        for i,latlon_u in enumerate(LatLon_u):
+            lon_u =  np.imag(latlon_u)
+            lat_u = np.real(latlon_u)
+
+            # tic = time.time()
+            # ID = []
+            # ID = np.zeros_like(Lat_)
+            # this runs over the full length of TRY entries.. therefore
+            # for i, lat in enumerate(Lat_):  # number of vaes is 31794
+
+            # self.lat_study = [Lat_[i].astype('float') - 0.1, Lat_[i].astype('float') + 0.1]
+            # self.lon_study = [Lon_[i].astype('float') - 0.1, Lon_[i].astype('float') + 0.1]
+
+            self.lat_study = [lat_u - 0.1, lat_u + 0.1]
+            self.lon_study = [lon_u - 0.1, lon_u + 0.1]
+
+            # Obtain climate map
+            CLM_map, CLM_lon, CLM_lat, CLM_classes = self.ReadClimate()
+
+            # iwater                                      =   (CLM_map_i[36,36] ==  0)
+            itropical = (CLM_map[0, 0] >= 1) * (CLM_map[0, 0] <= 7)
+            itemporate = (CLM_map[0, 0] >= 8) * (CLM_map[0, 0] <= 16)
+            iboreal = (CLM_map[0, 0] >= 17) * (CLM_map[0, 0] <= 28)
+            ipolar = (CLM_map[0, 0] >= 29) * (CLM_map[0, 0] <= 32)
+
+            # pft     =   PFT[36,36]      # pft from map
+
+            id = 17
+            if Crop_[i] == 'crop':
+                if (C3C4_[i] == 'C3') + (C3C4_[i] == 'C3/CAM') + (C3C4_[i] == 'CAM') + (C3C4_[i] == 'C3/C4'):
+                    id = 12
+                elif (C3C4_[i] == 'C4') + (C3C4_[i] == 'C4/CAM'):
+                    id = 13
+
+            if Plantgroup_[i] == 'graminoid':
+                if (C3C4_[i] == 'C3') + (C3C4_[i] == 'C3/CAM') + (C3C4_[i] == 'CAM') + (C3C4_[i] == 'C3/C4'):
+                    if ipolar:  # arctic
+                        id = 10
+                    else:
+                        id = 9
+                elif (C3C4_[i] == 'C4') + (C3C4_[i] == 'C4/CAM'):
+                    id = 11
+
+            if (Plantgroup_[i] == 'tree') + (Plantgroup_[i] == 'shrub/tree'):
+                if itropical:  # tropical
+                    if (LeafPhen_[i] == 'deciduous') + (LeafPhen_[i] == 'deciduous/evergreen'):
+                        id = 2
+                    elif LeafPhen_[i] == 'evergreen':
+                        id = 1
+                elif itemporate:  # temperate
+                    if (LeafType_[i] == 'needleleaved') + (LeafType_[i] == 'scale-shaped'):
+                        id = 3
+                    elif LeafType_[i] == 'broadleaved':
+                        if (LeafPhen_[i] == 'deciduous') + (LeafPhen_[i] == 'deciduous/evergreen'):
+                            id = 5
+                        elif LeafPhen_[i] == 'evergreen':
+                            id = 4
+                elif iboreal:  # boreal
+                    if (LeafPhen_[i] == 'deciduous') + (LeafPhen_[i] == 'deciduous/evergreen'):
+                        if (LeafType_[i] == 'needleleaved') + (LeafType_[i] == 'scale-shaped'):
+                            id = 8
+                        elif LeafType_[i] == 'broadleaved':
+                            id = 7
+                    elif LeafPhen_[i] == 'evergreen':
+                        id = 6
+
+            if (Plantgroup_[i] == 'shrub') + (Plantgroup_[i] == 'fern') + (Plantgroup_[i] == 'herb') + (
+                Plantgroup_[i] == 'herb/shrub'):  # shrubs
+                id = 14
+
+            if Plantgroup_[i] == 'moss':
+                id = 15
+
+            # ID.append(id)
+            # ID[i] = id
+            # I = np.where((lon_u == Lon) * (lat_u == Lat))
+            I = np.where((lat_u == Lat)*(lon_u==Lon))
+            ID[I] = id
+
+        # toc = time.time()
+        # print
+        # toc - tic
+        return ID
+
+    def ReadTryDatabase(self):
+        filename = 'EPTSv4_UTF8.csv'
+        # database_path = 'C:/Users/Amie Corbin/Desktop/Data/Prior_Engine/Try_Database/' + filename
+        import csv
+
+        Rows = []
+        with open(self.directory_data + 'Try_Database/' + filename, 'r') as csvfile:
+            spamreader = csv.reader(csvfile, delimiter=',')
+            # spamreader = csv.reader(csvfile)
+            # reader = csv.DictReader(csvfile)
+            for row in spamreader:
+                # print ', '.join(row)
+                # row.replace("NA", "NaN")
+                Rows.append(row)
+        Rows = np.array(Rows)
+
+        #site descriptions
+        site = dict()
+        site['Latitude'] = np.array([float(x.replace('NA', 'nan')) for x in Rows[1:,10]])
+        site['Longitude'] = np.array([float(x.replace('NA', 'nan')) for x in Rows[1:,11]])
+        site['PFT_id'] = np.array([int(x.replace('NA', 'nan')) for x in  Rows[1:, 8]])
+        site['TRYSpeciesID'] = np.array([int(x.replace('NA', 'nan')) for x in  Rows[1:, 5]]) # TRYSpec_nu
+        site['TRYSpeciesName']= Rows[1:,6] # Spec
+        site['Plantgroup'] = Rows[1:,12] # Plantgroup
+        site['Crop']    =  Rows[1:,13]  # 'Crop'
+        site['LeafType'] =   Rows[1:,14]  # 'LeafType'
+        site['C3C4'] = Rows[1:,15]  # 'Photosynth'
+        site['LeafPhen'] = Rows[1:,16]  # 'LeafPhenol'
+        site['Koppen'] = np.array([float(x.replace('NA', 'nan')) for x in Rows[1:,17]])  # 'Koppen Zone'
+
+        # define order of traits on basis of the header
+        TRYtraits_name = ['Cellulose', 'LAR', 'LWR', 'logLMA', 'Carbon', 'Phenols', 'Nitrogen', 'Phosphorus', \
+                       'PlantHeight', 'LA', 'ala', 'cab', 'LDMC', 'logStarch', 'Lignin', 'car', 'cw', \
+                       'Hydrogen', 'LeafThickness', 'Oxygen', 'N', 'LAI']
+        TRYtraits_col = np.arange(18,40)
+
+        # sort columns into their respective entries in a  dictionary
+        traits = dict()
+        for i, name in enumerate(TRYtraits_name):
+            icol = TRYtraits_col[i]
+            traits[name] = np.array([float(x.replace('NA', 'nan')) for x in Rows[1:, icol]])
+
+        # post process logLMA to cdm (dry matter content) consistent with PROSAIL
+        traits['cdm'] =np.exp(traits['logLMA'])
+
+        id_traits = dict()
+        id_traits['cdm'] = '11'
+        id_traits['ala'] = '3'
+        id_traits['cab'] = '413'
+        id_traits['car'] = '491'
+        id_traits['cw'] = '999001'
+        id_traits['N'] = '999002'
+        PFT_id = np.arange(1, 18)
+
+        # sort the values into structure (used by the old version of the 'ReadTryFile' method)
+        Latitude_, Longitude_, Koppen_,PFT_id_ = [np.array([]) for _ in range(4)]
+        TRYSpeciesID_, TRYSpeciesName_, Plantgroup_ = [np.array([]) for _ in range(3)]
+        Crop_, LeafType_, C3C4_, LeafPhen_ = [np.array([]) for _ in range(4)]
+        TRYTraitName_, TRYTraitID_, TRYTrait_value_ = [np.array([]) for _ in range(3)]
+        ierror_coor = (site['Latitude']<-90)+(site['Latitude']>90)+(site['Longitude']<-180)+(site['Longitude']>180)
+        for trait_name in id_traits.keys():
+            ierror_traits = np.isnan(traits[trait_name])
+            ierror = ierror_traits + ierror_coor
+            Latitude_ = np.hstack((Latitude_,site['Latitude'][~ierror]))
+            Longitude_ = np.hstack((Longitude_, site['Longitude'][~ierror]))
+            PFT_id_ = np.hstack((PFT_id_, site['PFT_id'][~ierror]))
+            TRYSpeciesID_ = np.hstack((TRYSpeciesID_, site['TRYSpeciesID'][~ierror]))
+            TRYSpeciesName_ = np.hstack((TRYSpeciesName_, site['TRYSpeciesName'][~ierror]))
+            Plantgroup_ = np.hstack((Plantgroup_, site['Plantgroup'][~ierror]))
+            Crop_ = np.hstack((Crop_, site['Crop'][~ierror]))
+            LeafType_ = np.hstack((LeafType_, site['LeafType'][~ierror]))
+            C3C4_ = np.hstack((C3C4_, site['C3C4'][~ierror]))
+            LeafPhen_ = np.hstack((LeafPhen_, site['LeafPhen'][~ierror]))
+            Koppen_ = np.hstack((Koppen_, site['Koppen'][~ierror]))
+
+            Trait_value = traits[trait_name][~ierror]
+            Trait_name = [trait_name for _ in range(len(Trait_value))]
+            Trait_ID = [id_traits[trait_name] for _ in range(len(Trait_value))]
+
+            TRYTraitName_ = np.hstack((TRYTraitName_, Trait_name)) # multiplied into list
+            TRYTraitID_ = np.hstack((TRYTraitID_,Trait_ID))  #multiplied into list
+            TRYTrait_value_ = np.hstack((TRYTrait_value_, Trait_value))
+
+        # ierror = (Latitude_ < -90) + (Latitude_ > 90) + (Longitude_ < -180) + (Longitude_ > 180)
+        # Latitude_ = Latitude_[~ierror]
+        # Longitude_ = Longitude_[~ierror]
+        # Plantgroup_ = Plantgroup_[~ierror]
+        # Crop_ = Crop_[~ierror]
+        # LeafType_ = LeafType_[~ierror]
+        # C3C4_ = C3C4_[~ierror]
+        # LeafPhen_ = LeafPhen_[~ierror]
+        # PFT_id_ = PFT_id_
+        # TRYTraitID_ = TRYTraitID_
+        # TRYTraitName_ = TRYTraitName_
+        # TRYTrait_value_ = TRYTrait_value_
+        # TRYSpeciesID_ = TRYSpeciesID_
+        # TRYSpeciesName_ = TRYSpeciesName_
+
+        return Latitude_, Longitude_, Plantgroup_, Crop_, LeafType_, C3C4_, LeafPhen_, PFT_id, TRYTraitID_, TRYTraitName_, TRYTrait_value_, TRYSpeciesID_, TRYSpeciesName_
+
+    def ReadTryFile(self):
+        import csv
+
+        Rows = []
+        with open(self.directory_data + 'Try_Database/PROSAILTraits.txt', 'r') as csvfile:
+            spamreader = csv.reader(csvfile, delimiter=',')
+            # spamreader = csv.reader(csvfile)
+            # reader = csv.DictReader(csvfile)
+            for row in spamreader:
+                # print ', '.join(row)
+                Rows.append(row)
+        Rows = np.array(Rows)
+
+        Lat_ = Rows[1:, 18]
+        Lon_ = Rows[1:, 19]
+
+        Plantgroup_ = Rows[1:, 20]
+        Crop_ = Rows[1:, 21]
+        LeafType_ = Rows[1:, 22]
+        C3C4_ = Rows[1:, 23]
+        LeafPhen_ = Rows[1:, 24]
+        PFT_id = np.arange(1, 18)
+
+
+        id_traitid = [i for i, name in enumerate(Rows[0, :]) if (name == "TRYTraitID")]
+        id_traitname = [i for i, name in enumerate(Rows[0, :]) if (name == "Trait_name")]
+        id_traitvalue = [i for i, name in enumerate(Rows[0, :]) if (name == "NewValue")]
+        id_speciesid = [i for i, name in enumerate(Rows[0, :]) if (name == "TRYSpec_nu")]
+        id_speciesname = [i for i, name in enumerate(Rows[0, :]) if (name == "Spec_name")]
+
+
+        TRYTraitID = Rows[1:, id_traitid]
+        TRYTraitName = Rows[1:, id_traitname]
+        trait_value = Rows[1:, id_traitvalue]
+        TRYSpeciesID = Rows[1:, id_speciesid]
+        TRYSpeciesName = Rows[1:, id_speciesname]
+
+        return Lat_, Lon_, Plantgroup_, Crop_, LeafType_, C3C4_, LeafPhen_, PFT_id, TRYTraitID, TRYTraitName, trait_value, TRYSpeciesID, TRYSpeciesName
 
     def ReadMeteorologicalData(self, doystr):
         """
@@ -694,6 +1019,145 @@ class VegetationPriorCreator(PriorCreator):
         dataset.close()
         os.system('chmod 755 "' + self.path2Trait_file + '"')
 
+    def CreateRealDatabase(self):
+
+        import csv
+        # Lat2_, Lon2_, Plantgroup2_, Crop2_, LeafType2_, C3C42_, LeafPhen2_, PFT_id2, TRYTraitID2, TRYTraitName2, trait_value2, TRYSpeciesID2, TRYSpeciesName2= self.ReadTryFile()
+        # trait_value2 = np.array([v.astype(float) for v in trait_value2[:, 0]])
+
+        Lat_, Lon_, Plantgroup_, Crop_, LeafType_, C3C4_, LeafPhen_, PFT_id, TRYTraitID, TRYTraitName, trait_value, TRYSpeciesID, TRYSpeciesName = self.ReadTryDatabase()
+
+        ID = self.ExtractPFT4TryDatabaseEntries(Lat_, Lon_, Plantgroup_, Crop_, LeafType_, C3C4_, LeafPhen_)
+
+
+        # LUT to link ID's to Name's
+        TRYTraitID_u = np.unique(TRYTraitID)
+        id_trait = dict()
+        id_trait['cdm'] = '11'
+        id_trait['ala'] = '3'
+        id_trait['cab'] = '413'
+        id_trait['car'] = '491'
+        id_trait['cwc'] = '999001'
+        id_trait['cw'] = '999001'
+        id_trait['N'] = '999002'
+
+        TRYSpeciesID_u = np.unique(TRYSpeciesID)
+        # id_speciesname = [TRYSpeciesName[ids == TRYSpeciesID][0] for ids in TRYSpeciesID_u]
+
+        #########################################################################################################
+        # Define file-setup
+        #########################################################################################################
+
+        # define variables
+        varnames = ['cab', 'cb', 'car', 'cw', 'cdm', 'N', 'ala', 'h', 'bsoil', 'psoil']#, 'lai',
+        # varnames = ['cab', 'car', 'cw', 'N', 'ala','cdm']  # , 'lai','cdm',
+        # varnames = ['cab', 'car' ,'N']
+        # varnames = ['N','car'] work well together in 1 file
+        # varnames = ['cab','cdm']#,'cab'
+        descriptions = ['Leaf Chlorophyll Content', 'Leaf Senescent material', \
+                        'Leaf Carotonoid Content', 'Leaf Water Content', 'Leaf Dry Mass', \
+                        'Structural Parameter', 'Average Leaf Angle', 'hotspot parameter', \
+                        'Soil Brightness parameter', 'Soil Wetness parameter'] #'Effective Leaf Area Index',
+        units = ['ug/cm2', '-', 'ug/cm2', 'cm', 'g/cm2', '-', 'degrees', '-', '-', '-']    #'m2/m2',         # to be replaced by directly extracting it from the ascii file?
+
+        #########################################################################################################
+        # Create file
+        #########################################################################################################
+        #Create netcdf file to hold database values
+        dataset = Dataset(self.path2Trait_file, 'w', format='NETCDF4')
+
+        # setup Netcdf file
+        dataset.description = 'Database for Prior-Engine'
+        dataset.history = 'Created' + time.ctime(time.time())
+        dataset.source = 'Data obtained from TRY-database'
+
+        # Define dimensions
+        Ntraits = len(id_trait)
+
+        Nspecies = len(TRYSpeciesID_u)
+        NPFT     = len(PFT_id)
+
+        pftdim = dataset.createDimension('pft', NPFT)
+        speciesdim = dataset.createDimension('type', Nspecies)
+        occurrencedim = dataset.createDimension('occ', None)
+
+        # create variables in dataset
+        occurrence = dataset.createVariable('Occurrences', np.float32, ('occ'))
+        occurrence.description = 'Unique PFT/Species entry into database'
+
+        pft = dataset.createVariable('PFTs', np.float32, ('pft'))
+        pft.description = 'PFT classification according to ORCHIDEE'
+
+        species = dataset.createVariable('Species', np.float32, ('type'))
+        species.description = 'Species name according to ??'
+
+        # fill 3D database with Trait values
+        Ivalid = (~np.isnan(trait_value))*(trait_value>=0)
+
+        Nmax = 0
+        var = dict()
+        for ivar, varname in enumerate(varnames):
+            if varname in id_trait:
+                # I1 = (id_trait[varname] == TRYTraitID2[:, 0]) * Ivalid
+                I1 = (id_trait[varname] == TRYTraitID) * Ivalid
+
+                var[varname] = dataset.createVariable(varname, np.float32, ('occ', 'pft', 'type'), zlib=True)
+                var[varname].units = units[ivar]
+                var[varname].description = descriptions[ivar]
+                for ipft in range(NPFT):
+                    I2 = (PFT_id[ipft] == ID)  # * (TRYSpeciesID_u[ispecies] == TRYSpeciesID[:,0])
+
+                    # print('ivar = %7.0f' % ivar + 'ipft = %7.0f' % ipft ) # + ',%7.0f' % ispecies
+                    Nocctot = 0
+                    if np.any(I1 * I2):
+
+                        for ispecies in range(Nspecies):
+                            # for ispecies in range(100):
+                            # I3 = (TRYSpeciesID_u[ispecies] == TRYSpeciesID2[:,0])
+                            I3 = (TRYSpeciesID_u[ispecies] == TRYSpeciesID[:])
+                            Itot = I1 * I2 * I3
+
+                            if np.any(Itot):
+                                trait_value_selected = trait_value[Itot]
+
+                                # cdm is some cases were provided in different units. this is to correct that
+                                if varname is 'cdm':
+                                    iuniterror = trait_value_selected > 1.e-1
+                                    trait_value_selected[iuniterror] = trait_value_selected[iuniterror] / 1.e4
+
+                                Noccurrence = len(trait_value_selected)# * (~np.all(np.isnan(trait_value_selected)))
+                                Nmax  = np.max([Noccurrence,Nmax])
+                                # print(trait_value_selected)
+
+                                # Fill file
+                                Nocctot = Nocctot+Noccurrence
+                                # if Noccurrence>0:
+                                var[varname][0:Noccurrence, ipft, ispecies] = trait_value_selected[0:Noccurrence]
+                                # var[varname][500, ipft, ispecies] = -999
+                                # if Noccurrence>100:
+                                # print(trait_value_selected[0:Noccurrence])
+                                    # var[Noccurrence:, ipft, ispecies] = -999.
+                                # else:
+                                #     var[:, ipft, ispecies] = -999
+
+
+                            # else:
+                            #     var[:, ipft, ispecies] = -998.
+                    # else:
+                    #     var[:, ipft, :] = -997.
+                    # else:
+                    #     var[:, :, :] = -999.
+
+                    print('Number of species/occ-entries (for '  + varname + ' and PFTid %02.0f' % ipft + ') =  %03.0f'  % Nocctot)
+
+        # fill in last column with nan values to ensure proper creation of all matrices
+        for varname in var:
+            for ipft in range(NPFT):
+                for ispecies in range(Nspecies):
+                    var[varname][Nmax, ipft, ispecies] = np.NaN
+
+        dataset.close()
+        os.system('chmod 755 "' + self.path2Trait_file + '"')
 
     # Static Processing data functions
     def RescaleCLM(self, CLM_lon, CLM_lat, CLM_map, LCC_lon, LCC_lat):
@@ -851,20 +1315,19 @@ class VegetationPriorCreator(PriorCreator):
         # Process in parallel
         option_parallel = 0
         if option_parallel == 1:
-            pr = partial(processespercore, PFT=PFT, PFT_ids=PFT_ids, VegetationPrior=self)
+            pr = partial(processespercore, PFT=PFT, PFT_ids=PFT_ids, VegetationPriorCreator=self)
             ret = parmap(pr, varnames, nprocs=3)
             for ivar, varname in enumerate(varnames):
                 TRAITS_ttf_avg[varname] = ret[ivar][0][:, :]
                 TRAITS_ttf_unc[varname] = ret[ivar][1][:, :]
         else:
-            # import pdb
-            # pdb.set_trace()
             for varname in varnames:
                 TRAIT_ttf_avg, TRAIT_ttf_unc            =   processespercore(varname, PFT, PFT_ids, self)
 
                 # write back to output
                 TRAITS_ttf_avg[varname]                 =   TRAIT_ttf_avg
                 TRAITS_ttf_unc[varname]                 =   TRAIT_ttf_unc
+
 
         if self.plotoption == 6:
             Nc = 4.
@@ -927,97 +1390,85 @@ class VegetationPriorCreator(PriorCreator):
         :rtype:
 
         """
-        varnames = [name for name in Prior_avg]
-        latstr = ('[%02.0f' % self.lat_study[0]
-                  + ' %02.0fN]' % self.lat_study[1])
-        lonstr = ('[%03.0f' % self.lon_study[0]
-                  + ' %03.0fE]' % self.lon_study[1])
-        filename = (self.path2Traitmap_file[:-3] + '_' + doystr + '_' + latstr
-                    + '_' + lonstr + '.nc')
-
-        dataset = Dataset(filename, 'w', format='NETCDF4_CLASSIC')
-        dataset.description = 'Transformed Priors at doy: ' + doystr
-        dataset.history = 'Created' + time.ctime(time.time())
-
-        dataset.cdm_data_type = 'grid'
-        # dataset.comment=
-        dataset.contact = 'j.timmermans@cml.leidenuniv.nl'
-        dataset.Conventions = 'CF-1.6'
-
-        dataset.creator_email = 'j.timmermans@cml.leidenuniv.nl'
-        dataset.creator_name = 'Leiden University'
-        dataset.date_created = '20180330T210326Z'
-        dataset.geospatial_lat_max = '90.0'
-        dataset.geospatial_lat_min = '-90.0'
-        dataset.geospatial_lat_resolution = '0.002778'
-        dataset.geospatial_lat_units = 'degrees_north'
-        dataset.geospatial_lon_max = '180.0'
-        dataset.geospatial_lon_min = '-180.0'
-        dataset.geospatial_lon_resolution = '0.002778'
-        dataset.geospatial_lon_units = 'degrees_east'
-        # dataset.history=amorgos-4,0, lc-sdr-1.0, lc-sr-1.0,
-        #                 lc-classification-1.0,lc-user-tools-3.12
-        dataset.id = 'ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7'
-        dataset.institution = 'Universite catholique de Louvain'
-        dataset.keywords = 'land cover classification,satellite,observation'
-        dataset.keywords_vocabulary = ('NASA Global Change Master Directory'
-                                       '(GCMD) Science Keywords')
-        dataset.license = 'ESA CCI Data Policy: free and open access'
-        dataset.naming_authority = 'org.esa-cci'
-        dataset.product_version = '2.0.7'
-        dataset.project = 'Climate Change Initiative - European Space Agency'
-        dataset.references = 'http://www.esa-landcover-cci.org/'
-        dataset.source = ('MERIS FR L1B version 5.05, MERIS RR L1B version'
-                          '8.0, SPOT VGT P')
-        dataset.spatial_resolution = '300m'
-        dataset.standard_name_vocabulary = ('NetCDF Climate and Forecast (CF)'
-                                            ' Standard Names version 21')
-        dataset.summary = ('This dataset contains the global ESA CCI land '
-                           'cover classification map derived from satellite '
-                           'data of one epoch.')
-        dataset.TileSize = '2048:2048'
-        dataset.time_coverage_duration = 'P1Y'
-        dataset.time_coverage_end = '20151231'
-        dataset.time_coverage_resolution = 'P1Y'
-        dataset.time_coverage_start = '20150101'
-        dataset.title = 'ESA CCI Land Cover Map'
-        dataset.tracking_id = '202be995-43d8-4e3a-9607-1bd3f02a925e'
-        dataset.type = 'ESACCI-LC-L4-LCCS-Map-300m-P1Y'
-
+        # varnames = [name for name in Prior_avg]
+        # latstr = ('[%02.0f' % self.lat_study[0]
+        #           + ' %02.0fN]' % self.lat_study[1])
+        # lonstr = ('[%03.0f' % self.lon_study[0]
+        #           + ' %03.0fE]' % self.lon_study[1])
+        # filename = (self.path2Traitmap_file[:-3] + '_' + doystr + '_' + latstr
+        #             + '_' + lonstr + '.nc')
         #
-
-        # create dimensions
-        Nlon = len(LCC_lon)
-        Nlat = len(LCC_lat)
-
-        londim = dataset.createDimension('lon', Nlon)
-        latdim = dataset.createDimension('lat', Nlat)
-
-        # create variables in dataset
-        lon = dataset.createVariable('lon', np.float32, ('lon'))
-        lon.description = 'Longitude'
-        lon.units = 'degrees_east'
-        lon[:] = LCC_lon
-
-        lat = dataset.createVariable('lat', np.float32, ('lat'))
-        lat.description = 'Latitude'
-        lat.units = 'degrees_north'
-        lat[:] = LCC_lat
-
-        for varname in varnames:
-            var = dataset.createVariable(varname, np.float32,
-                                         ('lon', 'lat'), zlib=True)
-            var.units = ''
-            var[:] = Prior_avg[varname]
-
-            var_unc = dataset.createVariable(varname + '_unc',
-                                             np.float32, ('lon', 'lat'))
-            var_unc.units = ''
-            var_unc[:] = Prior_unc[varname]
-
-        dataset.close()
-        os.system('chmod 755 "' + filename + '"')
-        print('%s', filename)
+        # dataset = Dataset(filename, 'w', format='NETCDF4_CLASSIC')
+        # dataset.description = 'Transformed Priors at doy: ' + doystr
+        # dataset.history = 'Created' + time.ctime(time.time())
+        #
+        # dataset.cdm_data_type = 'grid'
+        # dataset.contact = 'j.timmermans@cml.leidenuniv.nl'
+        # dataset.Conventions = 'CF-1.6'
+        #
+        # dataset.creator_email = 'j.timmermans@cml.leidenuniv.nl'
+        # dataset.creator_name = 'Leiden University'
+        # dataset.date_created = '20180330T210326Z'
+        # dataset.geospatial_lat_max = '90.0'
+        # dataset.geospatial_lat_min = '-90.0'
+        # dataset.geospatial_lat_resolution = '0.002778'
+        # dataset.geospatial_lat_units = 'degrees_north'
+        # dataset.geospatial_lon_max = '180.0'
+        # dataset.geospatial_lon_min = '-180.0'
+        # dataset.geospatial_lon_resolution = '0.002778'
+        # dataset.geospatial_lon_units = 'degrees_east'
+        # dataset.id = 'ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7'
+        # dataset.institution = 'Universite catholique de Louvain'
+        # dataset.keywords = 'land cover classification,satellite,observation'
+        # dataset.keywords_vocabulary = ('NASA Global Change Master Directory (GCMD) Science Keywords')
+        # dataset.license = 'ESA CCI Data Policy: free and open access'
+        # dataset.naming_authority = 'org.esa-cci'
+        # dataset.product_version = '2.0.7'
+        # dataset.project = 'Climate Change Initiative - European Space Agency'
+        # dataset.references = 'http://www.esa-landcover-cci.org/'
+        # dataset.source = ('MERIS FR L1B version 5.05, MERIS RR L1B version 8.0, SPOT VGT P')
+        # dataset.spatial_resolution = '300m'
+        # dataset.standard_name_vocabulary = ('NetCDF Climate and Forecast (CF) Standard Names version 21')
+        # dataset.summary = ('This dataset contains the global ESA CCI land cover classification map derived from satellite data of one epoch.')
+        # dataset.TileSize = '2048:2048'
+        # dataset.time_coverage_duration = 'P1Y'
+        # dataset.time_coverage_end = '20151231'
+        # dataset.time_coverage_resolution = 'P1Y'
+        # dataset.time_coverage_start = '20150101'
+        # dataset.title = 'ESA CCI Land Cover Map'
+        # dataset.tracking_id = '202be995-43d8-4e3a-9607-1bd3f02a925e'
+        # dataset.type = 'ESACCI-LC-L4-LCCS-Map-300m-P1Y'
+        #
+        # # create dimensions
+        # Nlon = len(LCC_lon)
+        # Nlat = len(LCC_lat)
+        #
+        # londim = dataset.createDimension('lon', Nlon)
+        # latdim = dataset.createDimension('lat', Nlat)
+        #
+        # # create variables in dataset
+        # lon = dataset.createVariable('lon', np.float32, ('lon'))
+        # lon.description = 'Longitude'
+        # lon.units = 'degrees_east'
+        # lon[:] = LCC_lon
+        #
+        # lat = dataset.createVariable('lat', np.float32, ('lat'))
+        # lat.description = 'Latitude'
+        # lat.units = 'degrees_north'
+        # lat[:] = LCC_lat
+        #
+        # for varname in varnames:
+        #     var = dataset.createVariable(varname, np.float32, ('lon', 'lat'), zlib=True)
+        #     var.units = ''
+        #     var[:] = Prior_avg[varname]
+        #     var_unc = dataset.createVariable(varname + '_unc',np.float32, ('lon', 'lat'))
+        #     var_unc.units = ''
+        #     var_unc[:] = Prior_unc[varname]
+        #
+        # dataset.close()
+        # os.system('chmod 755 "' + filename + '"')
+        # print('%s', filename)
+        return
 
     def WriteGeoTiff(self, LCC_lon, LCC_lat, Prior_avg,
                      Prior_unc, doystr='static'):
@@ -1066,7 +1517,7 @@ class VegetationPriorCreator(PriorCreator):
             dst_ds.GetRasterBand(2).SetDescription(varname + '-unc')
             dst_ds = None
 
-    def CombineTiles2Virtualfile(self, variable, doystr):
+    def CombineTiles2Virtualfile(self, variable, doystr, directory_data):
         """
         Combine all geotiff files into a virtual global file
 
@@ -1076,10 +1527,10 @@ class VegetationPriorCreator(PriorCreator):
         :rtype:
 
         """
-        dir = self.directory_data + 'Priors/'
+        dir = directory_data + 'Priors/'
         file_name = 'Priors_' + variable + '_' + doystr + '_global.vrt'
         # todo exchange 125 in upcoming versions with doy
-        list_of_files = glob.glob(dir + 'Priors*' + variable + '*125*.tiff')
+        list_of_files = glob.glob(dir + 'Priors*_' + variable + '_*125*.tiff')
         if len(list_of_files) == 0:
             raise UserWarning('No input files found for variable {}'.format(variable))
 
@@ -1087,24 +1538,10 @@ class VegetationPriorCreator(PriorCreator):
         for filename in list_of_files:
             list_of_files_as_strings.append('"' + filename + '"')
 
-        #import pdb
-        #pdb.set_trace()
         files = " ".join(list_of_files_as_strings)
         output_file_name = '{}{}'.format(self.output_directory, file_name)
-
-        file_projection = gdal.Open(list_of_files[0]).GetProjection()
-        srs = osr.SpatialReference()
-        srs.ImportFromWkt(file_projection)
-
-        wgs84_srs = osr.SpatialReference()
-        wgs84_srs.SetWellKnownGeogCS('EPSG:4326')
-
-        if srs.IsSame(wgs84_srs):
-            os.system('gdalbuildvrt -te -180 -90 180 90 ' + output_file_name + ' ' + files)
-        else:
-            os.system('gdalbuildvrt ' + output_file_name + ' ' + files)
+        os.system('gdalbuildvrt -te -180 -90 180 90 ' + output_file_name + ' ' + files)
         return output_file_name
-
 
     def compute_prior_file(self):
         """
@@ -1122,14 +1559,21 @@ class VegetationPriorCreator(PriorCreator):
         time = self.date
         doystr = time.strftime('%j')
 
-        if self.ptype.lower() == 'database':
+        if self.ptype == 'database':
             # 0. Setup Processing
             # filenames = self.CombineTiles2Virtualfile(variables, doystr)
-            filenames = self.CombineTiles2Virtualfile(self.variable, doystr)
+            filenames = self.CombineTiles2Virtualfile(self.variable, doystr, self.directory_data)
 
-        else:
-            filenames = None
-            print('not implemented yet')
+        elif self.ptype == 'user':
+            user_directory = '/'.join(self.output_directory.split('/')[:-2]) + '/user/'
+            self.path2Traitmap_file = user_directory + 'Priors/Priors.nc'
+
+            if  not os.path.exists(user_directory + 'Priors/'):
+                 os.mkdir(user_directory)
+                 os.mkdir(user_directory + 'Priors/')
+
+            self.ProcessData(variables = self.variable)
+            filenames = self.CombineTiles2Virtualfile(self.variable, doystr, user_directory)
 
         return filenames
 
@@ -1137,25 +1581,40 @@ if __name__ == "__main__":
     from multiply_prior_engine import PriorEngine
     import datetime
 
-    option_recreate_priors = 1
+    config = _get_config('config2.yaml')
 
-    ####################################################################
+    option_recreate_priors = 1
+    # vars = ['cbrown','bsoil','psoil']
+    # vars = ['car', 'cw', 'N']
+    vars = ['cdm','cab','ala']
+
+    VegPrior = VegetationPriorCreator(var=vars,
+                                      datestr='2007-12-31 04:23',
+                                      ptype='database',
+                                      config=config)
+    datestr = datetime.datetime.strftime(datetime.datetime.now(),'%Y%m%d%H%M%S')
+    VegPrior.path2Trait_file = VegPrior.directory_data + 'Trait_Database/' + 'Traits_'+datestr+'.nc'
+    VegPrior.CreateRealDatabase()
+
     if option_recreate_priors:
+        print('Reperform calculations')
+
+        # use a different prior for cdm, instead of the 'try database' as there were errors in the database
+        # VegPrior.mu['cdm'] = 0.003
+
+        # Define study area as global instead of through the config file
+        VegPrior.lon_study = [-180, 180]
+        VegPrior.lat_study = [-90, 90]
+
         # create Initial data-files to be retrieved from prior-engine
-        VegPrior = VegetationPriorCreator()
-        VegPrior.ProcessData(variables=['psoil','bsoil','ala','cbrown'])
-        # VegPrior.RetrievePrior(variables=['lai','cab'],datestr='2007-12-31 04:23', ptype='database')
+        VegPrior.ProcessData(variables=vars)
     else:
         print('using earlier calculations')
 
     ####################################################################
-    VegPrior = VegetationPriorCreator(variables=['ala', 'bsoil',
-                                                 'psoil', 'cbrown'],
-                                      datestr='2007-12-31 04:23',
-                                      ptype='database')
-    # VegPrior.ProcessData()
-    filename = VegPrior.compute_prior_file()
-    print('%s' % filename)
-    # this should give as output:
-    #
-    # end of file
+    # VegPrior.RetrievePrior(variables=['lai','cab'],datestr='2007-12-31 04:23', ptype='database')
+
+
+
+
+

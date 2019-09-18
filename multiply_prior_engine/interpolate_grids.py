@@ -39,7 +39,7 @@ def get_date_from_file_name(fn):
     parse (dateutil) datestr to create datetime.datetime object
     """
 
-    date = parse(re.findall(r'\d+', os.path.basename(fn))[0]).date()
+    date = parse(re.findall(r'\d{8}', os.path.basename(fn))[0]).date()
     return date
 
 #     try:
@@ -158,9 +158,9 @@ def interpolate_stack(fl, band, fillvalue, **kwargs):
 
     if not single_date:
         # TEMPORARY CHECK:  # ####
-        plt.pcolormesh(p[0, ::-1, :])
-        plt.colorbar()
-        plt.show()
+        # plt.pcolormesh(p[0, ::-1, :])
+        # plt.colorbar()
+        # plt.show()
         # ########################
 
         # 1st solution:

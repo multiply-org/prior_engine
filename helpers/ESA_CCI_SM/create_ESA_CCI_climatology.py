@@ -36,8 +36,9 @@ def prepare_yearly_aggregation(path_to_folders):
     os.chdir(path_to_folders)
     try:
         os.mkdir('./yearly/')
-    except:
+    except Exception:
         print('Could not create ./yearly/ in {}.'.format(path_to_folders))
+
 
 def yearly_aggregation(path_to_folders, year, cdo_in):
     """
@@ -47,7 +48,7 @@ def yearly_aggregation(path_to_folders, year, cdo_in):
         os.chdir(path_to_folders + '/{}/'.format(year))
         print("CDO calculating:\n{}".format(cdo_in))
         os.system("cdo mergetime {}".format(cdo_in))
-    except:
+    except Exception:
         print('[WARNING] Could not process year {}.'.format(year))
 
 
@@ -63,7 +64,8 @@ def parallelize_yearly_aggregation(path_to_folders, years):
         print(*i)
     # Perform parallel computation
     Parallel(n_jobs=-2, verbose=100, backend="multiprocessing")(
-        delayed(yearly_aggregation)(path_to_folders, year, cdo_in) for year, cdo_in in arg_instances)
+        delayed(yearly_aggregation)(path_to_folders, year, cdo_in)
+        for year, cdo_in in arg_instances)
 
 
 def extract_sm(files):
@@ -128,9 +130,9 @@ def calc_climatology(**kwargs):
     clim = xr.Dataset(coords={"month": range(1, 13),
                               "lon":  ds.coords["lon"].data,
                               "lat":  ds.coords["lat"].data},
-                      data_vars={"sm_mean": (('month', 'lat','lon'),
+                      data_vars={"sm_mean": (('month', 'lat', 'lon'),
                                              ds.sm[:12].data*np.nan),
-                                 "sm_std":  (('month', 'lat','lon'),
+                                 "sm_std":  (('month', 'lat', 'lon'),
                                              ds.sm[:12].data*np.nan)})
 
     for i in range(12):
@@ -158,7 +160,7 @@ def main():
     try:
         with open(args.config, 'r') as cfg:
             config = yaml.load(cfg)
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         raise
 
     def _check_path(path):
@@ -230,15 +232,16 @@ def main():
 
     # Create GeoTiffs
     # ----------------------
-    print('Starting to weite GeoTiffs from generated climaology.')
-    write_geotiffs.WriteGeoTiff_from_climNetCDF('ESA_CCI_SM_CLIM.nc',
-                                                out_dir=config['output_folder'],
-                                                varname='sm',
-                                                lyr_mean='sm_mean',
-                                                lyr_unc='sm_std',
-                                                new_no_data_value=-999,
-                                                upper_no_data_thres=1000,
-                                                flip_lat=False)
+    print('Starting to write GeoTiffs from generated climaology.')
+    write_geotiffs.WriteGeoTiff_from_climNetCDF(
+        'ESA_CCI_SM_CLIM.nc',
+        out_dir=config['output_folder'],
+        varname='sm',
+        lyr_mean='sm_mean',
+        lyr_unc='sm_std',
+        new_no_data_value=-999,
+        upper_no_data_thres=1000,
+        flip_lat=False)
 
 
 if __name__ == '__main__':

@@ -28,6 +28,10 @@ __status__ = "development"
 
 
 def create_SMAP_GeoTiff(filename):
+    """
+    create geotiffs from hdf5 layers in EASE grid 2.0 (EPSG:6933)
+    Create stacked vrt files containing data and std
+    """
     print('creating GeoTiff for {}.'.format(filename))
     data = ('HDF5:"{}"://Analysis_Data/sm_surface_analysis'
             .format(filename))
@@ -69,6 +73,9 @@ def create_SMAP_GeoTiff(filename):
 
 
 def _create_HDF5_filelist(path):
+    """
+    get all HDF5 files in path
+    """
     files = sorted(glob.glob('**/*h5', recursive=True))
     if len(files) > 0:
         return files
@@ -77,6 +84,9 @@ def _create_HDF5_filelist(path):
 
 
 def _get_variable_from(filename, group, variable):
+    """
+    get data for variable from group HDF5 file (filename)
+    """
     with h5py.File(filename, 'r') as f:
         dset = f['{}/{}'.format(group, variable)]
         # assert dset.shape == (3600, 1800), ('{}: incompatible shape ({})'
@@ -85,6 +95,9 @@ def _get_variable_from(filename, group, variable):
 
 
 def _get_date_from_SMAP(filename):
+    """
+    extract date from file name
+    """
     d = filename.split('/')[-1].split('_')[4]
     t = parse(d)
     return t, d
@@ -210,7 +223,7 @@ def main():
 
     args = parser.parse_args()
     if not os.path.isdir(os.path.expanduser(args.path)):
-        raise FileNotFoundError(f"\"{path}\" does not exist!")
+        raise FileNotFoundError(f"\"{args.path}\" does not exist!")
 
     os.chdir(args.path)
     fl = _create_HDF5_filelist(args.path)

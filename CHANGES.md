@@ -3,9 +3,18 @@ All notable changes to this project will be documented in this file.
 
 [Unreleased changes]
 
-## Version [0.4.3] - ????-??-??
+
+## Version [0.5.0] - 2019-09-19
+
+#### Added
+- User defined vegetation priors from the TRYdatabase
+- User prior generation CLI
+- helper functions to manually create soil moisture prior data from SMAP and ESA CCI data
+
 #### Changed
+- Documentation and README update
 - documentation requirements integrated in module requirements.txt file (necessary for building on RTD)
+- Bugfixes
 
 
 ## Version [0.4.2] - 2018-11-05
@@ -60,8 +69,8 @@ All notable changes to this project will be documented in this file.
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).*
 
 
-[Unreleased changes]: https://github.com/multiply-org/prior-engine/compare/v0.4.3...HEAD
-[0.4.3]: https://github.com/multiply-org/prior-engine/compare/v0.4.2...v0.4.3
+[Unreleased changes]: https://github.com/multiply-org/prior-engine/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/multiply-org/prior-engine/compare/v0.4.2...v0.5.0
 [0.4.2]: https://github.com/multiply-org/prior-engine/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/multiply-org/prior-engine/compare/v0.4...v0.4.1
 [0.4]: https://github.com/multiply-org/prior-engine/compare/v0.3...v0.4

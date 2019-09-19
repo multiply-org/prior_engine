@@ -5,7 +5,7 @@ about:
 
 package:
   name: multiply_prior_engine
-  version: "0.5.0"
+  version: "0.5.1"
 
 source:
   git_url: "https://github.com/multiply-org/prior-engine.git"

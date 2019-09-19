@@ -21,7 +21,7 @@ __copyright__ = "Thomas Ramsauer"
 __license__ = "gpl3"
 
 
-def WriteGeoTiff_from_climNetCDF(filename, varname,
+def WriteGeoTiff_from_climNetCDF(filename, out_dir, varname,
                                  lyr_mean='mean', lyr_unc='unc',
                                  new_no_data_value=None,
                                  upper_no_data_thres=None,
@@ -32,6 +32,7 @@ def WriteGeoTiff_from_climNetCDF(filename, varname,
     """Write GeoTiffs from climatology NetCDF (generated with geoval module).
 
     :param filename: filename of NetCDF file to be processed.
+    :param out_dir: directory to write the tiffs to.
     :param varname: name of variable to be written to Geotiffs.
     :param lyr_mean: name of mean layer/variable in NetCDF file.
     :param lyr_unc:  name of uncertainty layer/variable in NetCDF file.
@@ -51,7 +52,8 @@ def WriteGeoTiff_from_climNetCDF(filename, varname,
     drv = gdal.GetDriverByName("GTIFF")
     for month in np.arange(0, 12, 1):
         # print('month: ' + str(month+1))
-        fn_out = filename.split('.')[0] + '_{:02d}'.format(month+1) + '.tiff'
+        assert os.path.isdir(os.path.expanduser(out_dir))
+        fn_out = os.path.join(os.path.expanduser(out_dir), os.path.basename(filename).split('.')[0] + '_{:02d}'.format(month+1) + '.tiff')
         out_shape = (d.variables[lyr_mean][month].shape)
         # print(fn_out, out_shape[0], out_shape[1],Nlayers)
         dst_ds = drv.Create(fn_out, out_shape[1], out_shape[0],
@@ -59,8 +61,8 @@ def WriteGeoTiff_from_climNetCDF(filename, varname,
                             options=["COMPRESS=LZW",
                                      "INTERLEAVE=BAND",
                                      "TILED=YES"])
-        resx = lons_in[0][1] - lons_in[0][0]
-        resy = lats_in[1][0] - lats_in[0][0]
+        resx = np.abs(lons_in[0] - lons_in[1])
+        resy = np.abs(lats_in[0] - lats_in[1])
         dst_ds.SetGeoTransform([
              np.min(lons_in), resx, 0,
              np.max(lats_in), 0, -np.abs(resy)])
@@ -90,24 +92,9 @@ def WriteGeoTiff_from_climNetCDF(filename, varname,
         means[means.mask] = new_no_data_value
         unc[unc.mask] = new_no_data_value
 
+        print(f'Writing month {month+1} to {fn_out}.')
         dst_ds.GetRasterBand(1).WriteArray(means.data[::i])
         dst_ds.GetRasterBand(1).SetDescription(varname + '-mean')
         dst_ds.GetRasterBand(2).WriteArray(unc.data[::i])
         dst_ds.GetRasterBand(2).SetDescription(varname + '-uncertainty')
         dst_ds = None
-
-
-def main():
-    # TODO make actual CLI for main()
-    os.chdir('/home/thomas/Code/prior-engine/aux_data')
-    WriteGeoTiff_from_climNetCDF(filename=('CCI_SM_climatology_eur_merged_inv'
-                                 '.nc'),
-                                 varname='sm',
-                                 lyr_mean='sm',
-                                 lyr_unc='sm_stdev',
-                                 new_no_data_value=-999,
-                                 upper_no_ata_thres=10)
-
-
-if __name__ == '__main__':
-    main()

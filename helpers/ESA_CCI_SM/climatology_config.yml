@@ -1,0 +1,13 @@
+# ###############################################################################
+# Configuration File for Calculating Climatology from ESA CCI Soil Moisture Data.
+# ###############################################################################
+
+# path to folder containing yearly subfolders with ESA CCI SM *.nc files:
+path_to_yearly_folders: '/path/to/ESA_CCI_SM/v04_4/daily_files/COMBINED/'
+
+# path to folder where generated tiffs should be saved
+output_folder: '~/Desktop'
+
+# Start and end of calculation (end included)
+#start: 1980
+#end: 2017

@@ -71,6 +71,10 @@ class SoilMoisturePriorCreator(PriorCreator):
             [p.lower() for p in
              list(self.config['Prior'][self.variable][self.ptype].keys())]
         if 'dir' in prior_file_type:
+            assert len(prior_file_type) == 1, \
+                (f"More than one user prior file type mentioned in config "
+                 f"({prior_file_type}). Please use multiple ptypes (user1, "
+                 f"user2, ..).")
             try:
                 data_dir = \
                     self.config['Prior'][self.variable][self.ptype]['dir']
@@ -85,6 +89,10 @@ class SoilMoisturePriorCreator(PriorCreator):
             else:
                 return self._provide_prior_file()
         elif 'file' in prior_file_type:
+            assert len(prior_file_type) == 1, \
+                (f"More than one user prior file type mentioned in config "
+                 f"({prior_file_type}). Please use multiple ptypes (user1, "
+                 f"user2, ..).")
             try:
                 data_file = \
                     (self.config['Prior'][self.variable][self.ptype]['file'])
@@ -230,7 +238,7 @@ class SoilMoisturePriorCreator(PriorCreator):
         """
         fn = None
         if self.ptype.lower() == 'climatology':
-            pattern = (r"ESA_CCI_SM_clim_{:02d}.tiff"
+            pattern = (r"ESA_CCI_SM_CLIM_{:02d}.tiff"
                        .format(self.date.month))
         elif self.ptype.lower() == 'coarse':
             pattern = (r"SMAP_daily_{:8d}.tif*"
@@ -245,8 +253,9 @@ class SoilMoisturePriorCreator(PriorCreator):
         else:
             pattern = (r"*")
 
-        fn_list = sorted(glob.glob('{}'.format(os.path.join(
-            os.path.abspath(directory), pattern), recursive=True)))
+        srch = os.path.join(os.path.abspath(directory), pattern)
+        fn_list = sorted(glob.glob(f'{srch}', recursive=True))
+        logging.info(f"Searching for files with expression: {srch}")
 
         # AssertionError is caught by the prior engine:
         assert fn_list is not None and len(fn_list) > 0, \
@@ -416,6 +425,7 @@ class SoilMoisturePriorCreator(PriorCreator):
 
 class MapPriorCreator(PriorCreator):
     """
+    *Not Implemented*
     Prior which is based on a LC map and a LUT
     """
 
@@ -445,6 +455,11 @@ class MapPriorCreator(PriorCreator):
 
 
 class RoughnessPriorCreator(MapPriorCreator):
+    """
+    *Not Implemented*
+    Roughness Prior Creator which is based on a LC map and a LUT
+    """
+
 
     def __init__(self, **kwargs):
         super(RoughnessPriorCreator, self).__init__(**kwargs)
@@ -475,7 +490,6 @@ class RoughnessPriorCreator(MapPriorCreator):
         save mapped roughness data to file
         """
         return tempfile.mktemp(suffix='.nc')
-
 
     def compute_prior_file(self):
         assert False, 'roughness prior not implemented'

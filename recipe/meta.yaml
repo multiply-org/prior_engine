@@ -1,10 +1,11 @@
 about:
   summary: "MULTIPLY prior engine package"
   home: https://github.com/multiply-org/prior-engine
+  license: GPLv3
 
 package:
   name: multiply_prior_engine
-  version: "0.4.2"
+  version: "0.5.0"
 
 source:
   git_url: "https://github.com/multiply-org/prior-engine.git"

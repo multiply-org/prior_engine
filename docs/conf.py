@@ -19,23 +19,16 @@
 #
 import os
 import sys
-import recommonmark
-from recommonmark.parser import CommonMarkParser
-from recommonmark.transform import AutoStructify
 
+# for requirements file creation:
+import sphinx_rtd_theme
+import m2r
 
 sys.path.insert(0, os.path.abspath('.'))
 myPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(myPath + '/../multiply_prior_engine')
 sys.path.append(myPath + '/../')
 
-# At the bottom of conf.py
-def setup(app):
-    app.add_config_value('recommonmark_config', {
-            'url_resolver': lambda url: github_doc_root + url,
-            'auto_toc_tree_section': 'Contents',
-            }, True)
-    app.add_transform(AutoStructify)
 
 # -- General configuration ------------------------------------------------
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -108,11 +101,15 @@ html_theme = 'sphinx_rtd_theme'
 # documentation.
 #
 # html_theme_options = {}
+html_favicon = 'img/multiply_multi_colour_icon.png'
+html_logo = 'img/multiply_multi_colour.png'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+html_logo = '_static/logo/Multiply_multicolour.png'
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.

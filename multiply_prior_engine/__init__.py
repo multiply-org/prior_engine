@@ -10,6 +10,7 @@ import os
 
 # Setup of temporary directory
 # ----------------------------------
+# TODO work in user directory? consistence with other MULTIPLY modules!
 tempfile.tempdir = os.path.join(tempfile.gettempdir(),
                                 'MULTIPLYPriorEngine')
 try:

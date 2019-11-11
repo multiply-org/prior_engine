@@ -35,10 +35,10 @@ Prior:
       dir: ./aux_data/Coarse/SoilMoisture/
   clay_fraction:
     soil_map:
-      file: ./aux_data/Static/SoilTexture/cly_250_sl1_global.tif
+      file: ./aux_data/Static/SoilTexture/CLYPPT_M_sl1_250m_ll.tif
   sand_fraction:
     soil_map:
-      file: ./aux_data/Static/SoilTexture/snd_250_sl1_global.tif
+      file: ./aux_data/Static/SoilTexture/SNDPPT_M_sl1_250m_ll.tif
 
 #   recent:
 #     dir: ""

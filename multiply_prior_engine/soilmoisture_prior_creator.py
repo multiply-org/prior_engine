@@ -245,7 +245,7 @@ class SoilMoisturePriorCreator(PriorCreator):
             pattern = (r"SMAP_daily_{:8d}.tif*"
                        .format(self.date8))
         elif self.ptype.lower() == 'soil_map':
-            pattern = (r"*_250_sl1_global.tif*")
+            pattern = (r"*sl1_250m*.tif")
 
         # TODO read user pattern from config file to allow defined input
         # (has to be written to the config-file in a 'config step' first)

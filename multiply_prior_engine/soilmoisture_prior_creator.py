@@ -4,7 +4,7 @@
 """
     Soil Priors for Prior Engine in MULTIPLY.
 
-    Copyright (C) 2018  Thomas Ramsauer
+    Copyright (C) 2019  Thomas Ramsauer
 """
 
 
@@ -26,7 +26,7 @@ from .prior_creator import PriorCreator
 
 
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]
-__copyright__ = "Copyright 2018, Thomas Ramsauer"
+__copyright__ = "Copyright 2019, Thomas Ramsauer"
 __credits__ = "Alexander Löw"
 __maintainer__ = "Thomas Ramsauer"
 __email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
@@ -43,7 +43,7 @@ class SoilMoisturePriorCreator(PriorCreator):
 
     @classmethod
     def get_variable_names(cls):
-        return ['sm']
+        return ['sm', 'clay_fraction', 'sand_fraction']
 
     def compute_prior_file(self):
         """
@@ -229,6 +229,7 @@ class SoilMoisturePriorCreator(PriorCreator):
         Currently, the following prior types are supported:
         - climatology (calculated from ESA CCI data, standard)
         - coarse (daily aggregated SMAP L4 data, standard)
+        - soil_map (gloabal soil texture map data from soilgrids.org)
         - user prior, provided through user_prior_creator
 
         :param directory: directory containing the files (from config)
@@ -243,6 +244,9 @@ class SoilMoisturePriorCreator(PriorCreator):
         elif self.ptype.lower() == 'coarse':
             pattern = (r"SMAP_daily_{:8d}.tif*"
                        .format(self.date8))
+        elif self.ptype.lower() == 'soil_map':
+            pattern = (r"*_250_sl1_global.tif*")
+
         # TODO read user pattern from config file to allow defined input
         # (has to be written to the config-file in a 'config step' first)
         elif 'user' in self.ptype.lower():

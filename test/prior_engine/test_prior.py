@@ -24,6 +24,24 @@ def test_priorengine_get_priors_sm():
     assert type(P.get_priors()) is dict
 
 
+def test_priorengine_get_priors_clay_fraction():
+    P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
+                    datestr='2017-03-01',
+                    variables=['clay_fraction'])
+    priors = P.get_priors()
+    assert type(priors) is dict
+    assert 'clay_fraction' in priors.keys()
+
+
+def test_priorengine_get_priors_sand_fraction():
+    P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
+                    datestr='2017-03-01',
+                    variables=['sand_fraction'])
+    priors = P.get_priors()
+    assert type(priors) is dict
+    assert 'sand_fraction' in priors.keys()
+
+
 def test_priorengine_get_priors_lai():
     P = PriorEngine(config='./test/prior_engine/test_config_prior.yml',
                     datestr='2017-01-01',

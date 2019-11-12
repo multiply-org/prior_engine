@@ -34,6 +34,12 @@ Prior:
       dir: ./aux_data/Climatology/SoilMoisture/
     coarse:
       dir: ./aux_data/Coarse/SoilMoisture/
+  clay_fraction:
+    soil_map:
+      file: ./test/test_data/Static/SoilTexture/CLYPPT_M_sl1_250m_l1.tif
+  sand_fraction:
+    soil_map:
+      file: ./test/test_data/Static/SoilTexture/SNDPPT_M_sl1_250m_l1.tif
 #    recent:
 #      dir: ""
 #    user1:

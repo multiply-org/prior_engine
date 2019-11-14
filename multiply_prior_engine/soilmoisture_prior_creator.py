@@ -95,7 +95,7 @@ class SoilMoisturePriorCreator(PriorCreator):
                 aux_data_provider = get_aux_data_provider()
                 self.data_file = (self.config['Prior'][self.variable][self.ptype]['file'])
                 if not aux_data_provider.assure_element_provided(self.data_file):
-                    raise ValueError(f'Could not locate {self.data_file}.')
+                    raise FileNotFoundError(f'Could not locate {self.data_file}.')
             except KeyError:
                 assert self.data_file is not None, \
                   ('Cannot find file name for "{ptype}" prior in config file (under \'Prior/sm/{ptype}/file:\')!'.

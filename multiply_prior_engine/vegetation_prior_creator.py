@@ -4,16 +4,16 @@ __copyright__ = "Copyright 2017 J Timmermans"
 __email__ = "j.timmermans@cml.leidenuniv.nl"
 
 import glob
+import logging
 import os
-import subprocess
 import time
-import datetime
 
 import multiprocessing
 import numpy as np
 import yaml
 from dateutil.parser import parse
 from matplotlib import pyplot as plt
+from multiply_core.util import get_aux_data_provider
 from scipy import interpolate as RegularGridInterpolator
 from netCDF4 import Dataset
 from shapely.wkt import loads
@@ -199,12 +199,19 @@ class VegetationPriorCreator(PriorCreator):
             self.lat_study = [-90, 90]
 
         # 1.2 Define paths
+        aux_data_provider = get_aux_data_provider()
         self.directory_data = self.config['Prior']['General']['directory_data']
         self.path2LCC_file = (self.directory_data + 'LCC/' + 'ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7_updated.nc')
         self.path2Climate_file = (self.directory_data + 'Climate/' + 'sdat_10012_1_20171030_081458445.tif')
         self.path2Meteo_file = (self.directory_data + 'Meteorological/' + 'Meteo_.nc')
         self.path2Trait_file = (self.directory_data + 'Trait_Database/' + 'Traits.nc')
         self.path2Traitmap_file = self.directory_data + 'Priors/' + 'Priors.nc'
+        if not aux_data_provider.assure_element_provided(self.path2LCC_file):
+            logging.warning(f'{self.path2LCC_file} could not be found!')
+        if not aux_data_provider.assure_element_provided(self.path2Climate_file):
+            logging.warning(f'{self.path2Climate_file} could not be found!')
+        if not aux_data_provider.assure_element_provided(self.path2Trait_file):
+            logging.warning(f'{self.path2Trait_file} could not be found!')
 
         self.output_directory = self.config['Prior']['output_directory']
         if not os.path.exists(self.output_directory):
@@ -749,7 +756,11 @@ class VegetationPriorCreator(PriorCreator):
         import csv
 
         Rows = []
-        with open(self.directory_data + 'Try_Database/' + filename, 'r') as csvfile:
+        aux_data_provider = get_aux_data_provider()
+        path_to_file = os.path.abspath(os.path.join(self.directory_data, 'Try_Database', filename))
+        if not aux_data_provider.assure_element_provided(path_to_file):
+            logging.warning(f'Could not find {path_to_file}')
+        with open(path_to_file, 'r') as csvfile:
             spamreader = csv.reader(csvfile, delimiter=',')
             # spamreader = csv.reader(csvfile)
             # reader = csv.DictReader(csvfile)
@@ -847,7 +858,11 @@ class VegetationPriorCreator(PriorCreator):
         import csv
 
         Rows = []
-        with open(self.directory_data + 'Try_Database/PROSAILTraits.txt', 'r') as csvfile:
+        aux_data_provider = get_aux_data_provider()
+        path_to_file = os.path.abspath(os.path.join(self.directory_data, 'Try_Database', 'PROSAILTraits.txt'))
+        if not aux_data_provider.assure_element_provided(path_to_file):
+            logging.warning(f'Could not find {path_to_file}')
+        with open(path_to_file, 'r') as csvfile:
             spamreader = csv.reader(csvfile, delimiter=',')
             # spamreader = csv.reader(csvfile)
             # reader = csv.DictReader(csvfile)
@@ -1527,16 +1542,19 @@ class VegetationPriorCreator(PriorCreator):
         :rtype:
 
         """
+        aux_data_provider = get_aux_data_provider()
         dir = directory_data + 'Priors/'
         file_name = 'Priors_' + variable + '_' + doystr + '_global.vrt'
         # todo exchange 125 in upcoming versions with doy
-        list_of_files = glob.glob(dir + 'Priors*_' + variable + '_*125*.tiff')
+        # list_of_files = glob.glob(dir + 'Priors*_' + variable + '_*125*.tiff')
+        list_of_files = aux_data_provider.list_elements(dir, f'Priors*_{variable}_*125*.tiff')
         if len(list_of_files) == 0:
             raise UserWarning('No input files found for variable {}'.format(variable))
 
         list_of_files_as_strings = []
         for filename in list_of_files:
-            list_of_files_as_strings.append('"' + filename + '"')
+            if aux_data_provider.assure_element_provided(filename):
+                list_of_files_as_strings.append('"' + filename + '"')
 
         files = " ".join(list_of_files_as_strings)
         output_file_name = '{}{}'.format(self.output_directory, file_name)

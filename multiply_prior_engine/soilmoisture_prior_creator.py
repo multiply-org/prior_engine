@@ -4,7 +4,7 @@
 """
     Soil Priors for Prior Engine in MULTIPLY.
 
-    Copyright (C) 2018  Thomas Ramsauer
+    Copyright (C) 2019  Thomas Ramsauer
 """
 
 
@@ -18,15 +18,17 @@ import logging
 import numpy as np
 import shapely
 import shapely.wkt
+from multiply_core.util import get_aux_data_provider
 from netCDF4 import Dataset
 from osgeo import gdal
 from scipy import spatial
+from typing import List, Optional
 
 from .prior_creator import PriorCreator
 
 
 __author__ = ["Alexander Löw", "Thomas Ramsauer"]
-__copyright__ = "Copyright 2018, Thomas Ramsauer"
+__copyright__ = "Copyright 2019, Thomas Ramsauer"
 __credits__ = "Alexander Löw"
 __maintainer__ = "Thomas Ramsauer"
 __email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
@@ -43,7 +45,7 @@ class SoilMoisturePriorCreator(PriorCreator):
 
     @classmethod
     def get_variable_names(cls):
-        return ['sm']
+        return ['sm', 'clay_fraction', 'sand_fraction']
 
     def compute_prior_file(self):
         """
@@ -76,32 +78,28 @@ class SoilMoisturePriorCreator(PriorCreator):
                  f"({prior_file_type}). Please use multiple ptypes (user1, "
                  f"user2, ..).")
             try:
-                data_dir = \
-                    self.config['Prior'][self.variable][self.ptype]['dir']
+                data_dir = self.config['Prior'][self.variable][self.ptype]['dir']
                 self.data_dir = data_dir
                 assert os.path.isdir(self.data_dir), \
-                    ('Directory does not exist or cannot be found: {}'
-                     .format(self.data_dir))
+                    ('Directory does not exist or cannot be found: {}'.format(self.data_dir))
             except KeyError as e:
                 assert self.data_dir is not None, \
-                  ('Cannot find directory information for '
-                   '"{}" prior in config file!'.format(self.ptype))
+                  ('Cannot find directory information for "{}" prior in config file!'.format(self.ptype))
             else:
                 return self._provide_prior_file()
         elif 'file' in prior_file_type:
             assert len(prior_file_type) == 1, \
-                (f"More than one user prior file type mentioned in config "
-                 f"({prior_file_type}). Please use multiple ptypes (user1, "
-                 f"user2, ..).")
+                (f"More than one user prior file type mentioned in config ({prior_file_type}). "
+                 f"Please use multiple ptypes (user1, user2, ..).")
             try:
-                data_file = \
-                    (self.config['Prior'][self.variable][self.ptype]['file'])
-                self.data_file = data_file
-            except KeyError as e:
+                aux_data_provider = get_aux_data_provider()
+                self.data_file = (self.config['Prior'][self.variable][self.ptype]['file'])
+                if not aux_data_provider.assure_element_provided(self.data_file):
+                    raise FileNotFoundError(f'Could not locate {self.data_file}.')
+            except KeyError:
                 assert self.data_file is not None, \
-                  ('Cannot find file name for '
-                   '"{ptype}" prior in config file (under'
-                   ' \'Prior/sm/{ptype}/file:\')!'.format(ptype=self.ptype))
+                  ('Cannot find file name for "{ptype}" prior in config file (under \'Prior/sm/{ptype}/file:\')!'.
+                   format(ptype=self.ptype))
             else:
                 return self._provide_prior_file()
         elif 'mean' and 'unc' in prior_file_type:
@@ -205,8 +203,7 @@ class SoilMoisturePriorCreator(PriorCreator):
 
         if self.data_dir is not None:
             self.data_file = self._get_prior_file_from_dir(self.data_dir)
-        else:
-            assert self.data_file is not None
+        assert self.data_file is not None
 
         ext = os.path.splitext(self.data_file)[-1].lower()
         if ext == 'vrt':
@@ -222,6 +219,10 @@ class SoilMoisturePriorCreator(PriorCreator):
                                               self.data_file))
         return self.data_file
 
+    def list_elements(self, base_folder: str, pattern: [Optional[str]] = '*') -> List[str]:
+        pattern_in_absolute_path = os.path.join(os.path.abspath(base_folder), pattern)
+        return glob.glob(f'{pattern_in_absolute_path}')
+
     def _get_prior_file_from_dir(self, directory, return_vrt=True):
         """Get filename(s) of prior file(s) from directory.
         If multiple files are found self._merge_multiple_prior_files is called.
@@ -229,6 +230,7 @@ class SoilMoisturePriorCreator(PriorCreator):
         Currently, the following prior types are supported:
         - climatology (calculated from ESA CCI data, standard)
         - coarse (daily aggregated SMAP L4 data, standard)
+        - soil_map (gloabal soil texture map data from soilgrids.org)
         - user prior, provided through user_prior_creator
 
         :param directory: directory containing the files (from config)
@@ -243,6 +245,9 @@ class SoilMoisturePriorCreator(PriorCreator):
         elif self.ptype.lower() == 'coarse':
             pattern = (r"SMAP_daily_{:8d}.tif*"
                        .format(self.date8))
+        elif self.ptype.lower() == 'soil_map':
+            pattern = (r"*sl1_250m*.tif")
+
         # TODO read user pattern from config file to allow defined input
         # (has to be written to the config-file in a 'config step' first)
         elif 'user' in self.ptype.lower():
@@ -252,9 +257,9 @@ class SoilMoisturePriorCreator(PriorCreator):
                        .format(self.date8))
         else:
             pattern = (r"*")
-
-        srch = os.path.join(os.path.abspath(directory), pattern)
-        fn_list = sorted(glob.glob(f'{srch}', recursive=True))
+        aux_data_provider = get_aux_data_provider()
+        srch = aux_data_provider.list_elements(directory, pattern)
+        fn_list = sorted(srch)
         logging.info(f"Searching for files with expression: {srch}")
 
         # AssertionError is caught by the prior engine:
@@ -267,7 +272,8 @@ class SoilMoisturePriorCreator(PriorCreator):
             fn = self._merge_multiple_prior_files(fn_list)
         else:
             fn = fn_list[0]
-
+        if not aux_data_provider.assure_element_provided(fn):
+            return
         self._check_gdal_compliance(fn)
         return '{}'.format(fn)
 

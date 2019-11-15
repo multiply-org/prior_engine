@@ -133,8 +133,8 @@ def test_user_prior_initialization():
                                  datestr='2017-03-01',
                                  var="sm",
                                  ptype='user1')
-    with pytest.raises(AssertionError,
-                       # Expecting AssertionError
+    with pytest.raises(FileNotFoundError,
+                       # Expecting FileNotFoundError
                        # --> wrong path in config file.
                        match=r'.*path/to/file*'):
         S.compute_prior_file()

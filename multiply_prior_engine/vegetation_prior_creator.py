@@ -495,8 +495,7 @@ class VegetationPriorCreator(PriorCreator):
 
         Data = dict()
         for class_name in class_names:
-            data = dataset_container[class_name][ilat_max:ilat_min,
-                                                 ilon_min:ilon_max]
+            data = dataset_container[class_name][ilat_max:ilat_min, ilon_min:ilon_max]
             Data[class_name] = data
 
         if self.plotoption == 1:
@@ -1591,7 +1590,7 @@ class VegetationPriorCreator(PriorCreator):
                  os.mkdir(user_directory + 'Priors/')
 
             self.ProcessData(variables = self.variable)
-            filenames = self.CombineTiles2Virtualfile(self.variable, doystr, user_directory, DefaultAuxDataProvider())
+            filenames = self.CombineTiles2Virtualfile(self.variable, doystr, user_directory, DefaultAuxDataProvider({}))
 
         return filenames
 

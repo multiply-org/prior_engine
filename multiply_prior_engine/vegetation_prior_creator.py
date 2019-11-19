@@ -13,7 +13,7 @@ import numpy as np
 import yaml
 from dateutil.parser import parse
 from matplotlib import pyplot as plt
-from multiply_core.util import get_aux_data_provider
+from multiply_core.util import get_aux_data_provider, DefaultAuxDataProvider
 from scipy import interpolate as RegularGridInterpolator
 from netCDF4 import Dataset
 from shapely.wkt import loads
@@ -1532,7 +1532,7 @@ class VegetationPriorCreator(PriorCreator):
             dst_ds.GetRasterBand(2).SetDescription(varname + '-unc')
             dst_ds = None
 
-    def CombineTiles2Virtualfile(self, variable, doystr, directory_data):
+    def CombineTiles2Virtualfile(self, variable, doystr, directory_data, aux_data_provider):
         """
         Combine all geotiff files into a virtual global file
 
@@ -1542,7 +1542,6 @@ class VegetationPriorCreator(PriorCreator):
         :rtype:
 
         """
-        aux_data_provider = get_aux_data_provider()
         dir = directory_data + 'Priors/'
         file_name = 'Priors_' + variable + '_' + doystr + '_global.vrt'
         # todo exchange 125 in upcoming versions with doy
@@ -1580,18 +1579,19 @@ class VegetationPriorCreator(PriorCreator):
         if self.ptype == 'database':
             # 0. Setup Processing
             # filenames = self.CombineTiles2Virtualfile(variables, doystr)
-            filenames = self.CombineTiles2Virtualfile(self.variable, doystr, self.directory_data)
+            filenames = self.CombineTiles2Virtualfile(self.variable, doystr, self.directory_data,
+                                                      get_aux_data_provider())
 
         elif self.ptype == 'user':
             user_directory = '/'.join(self.output_directory.split('/')[:-2]) + '/user/'
             self.path2Traitmap_file = user_directory + 'Priors/Priors.nc'
 
-            if  not os.path.exists(user_directory + 'Priors/'):
+            if not os.path.exists(user_directory + 'Priors/'):
                  os.mkdir(user_directory)
                  os.mkdir(user_directory + 'Priors/')
 
             self.ProcessData(variables = self.variable)
-            filenames = self.CombineTiles2Virtualfile(self.variable, doystr, user_directory)
+            filenames = self.CombineTiles2Virtualfile(self.variable, doystr, user_directory, DefaultAuxDataProvider())
 
         return filenames
 

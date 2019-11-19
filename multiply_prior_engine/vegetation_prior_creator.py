@@ -3,7 +3,7 @@ __author__ = "J Timmermans"
 __copyright__ = "Copyright 2017 J Timmermans"
 __email__ = "j.timmermans@cml.leidenuniv.nl"
 
-import glob
+import datetime
 import logging
 import os
 import time
@@ -1597,7 +1597,6 @@ class VegetationPriorCreator(PriorCreator):
 
 if __name__ == "__main__":
     from multiply_prior_engine import PriorEngine
-    import datetime
 
     config = _get_config('config2.yaml')
 

@@ -23,6 +23,8 @@ __credits__ = "Alexander Löw"
 __maintainer__ = "Thomas Ramsauer"
 __email__ = "t.ramsauer@iggf.geo.uni-muenchen.de"
 
+component_progress_logger = logging.getLogger('ComponentProgress')
+component_progress_logger.setLevel(logging.INFO)
 
 def _get_config(configfile):
     """
@@ -139,7 +141,8 @@ class PriorEngine(object):
 
         """
         res = {}
-        for var in self.variables:
+        for i, var in enumerate(self.variables):
+            component_progress_logger.info(f'{int((i / len(self.variables)) * 100)}')
             res.update({var: self._get_prior(var)})
         # return self._concat_priors(res)
         return res

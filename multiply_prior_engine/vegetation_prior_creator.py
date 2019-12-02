@@ -1541,7 +1541,7 @@ class VegetationPriorCreator(PriorCreator):
         :rtype:
 
         """
-        dir = directory_data + 'Priors/'
+        dir = os.path.join(directory_data, 'Priors/')
         file_name = 'Priors_' + variable + '_' + doystr + '_global.vrt'
         # todo exchange 125 in upcoming versions with doy
         # list_of_files = glob.glob(dir + 'Priors*_' + variable + '_*125*.tiff')
@@ -1556,7 +1556,14 @@ class VegetationPriorCreator(PriorCreator):
 
         files = " ".join(list_of_files_as_strings)
         output_file_name = os.path.join(self.output_directory, file_name)
-        os.system('gdalbuildvrt -te -180 -90 180 90 ' + output_file_name + ' ' + files)
+        res = os.system('gdalbuildvrt -te -180 -90 180 90 ' + output_file_name + ' ' + files)
+        if res > 0:
+            logging.info(f'First attempt at creating {output_file_name} failed. Attempting to specify resolution.')
+            res = os.system('gdalbuildvrt -tr 100 100 -te -180 -90 180 90 ' + output_file_name + ' ' + files)
+        if res == 0:
+            logging.info(f'Successfully created {output_file_name}.')
+        else:
+            logging.warning(f'Could not create {output_file_name}!')
         return output_file_name
 
     def compute_prior_file(self):

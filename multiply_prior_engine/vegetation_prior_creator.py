@@ -1555,7 +1555,7 @@ class VegetationPriorCreator(PriorCreator):
                 list_of_files_as_strings.append('"' + filename + '"')
 
         files = " ".join(list_of_files_as_strings)
-        output_file_name = '{}{}'.format(self.output_directory, file_name)
+        output_file_name = os.path.join(self.output_directory, file_name)
         os.system('gdalbuildvrt -te -180 -90 180 90 ' + output_file_name + ' ' + files)
         return output_file_name
 

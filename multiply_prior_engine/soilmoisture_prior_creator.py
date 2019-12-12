@@ -45,7 +45,7 @@ class SoilMoisturePriorCreator(PriorCreator):
 
     @classmethod
     def get_variable_names(cls):
-        return ['sm', 'clay_fraction', 'sand_fraction']
+        return ['sm', 'clay_fraction', 'sand_fraction', 'sr']
 
     def compute_prior_file(self):
         """
@@ -247,6 +247,8 @@ class SoilMoisturePriorCreator(PriorCreator):
                        .format(self.date8))
         elif self.ptype.lower() == 'soil_map':
             pattern = (r"*sl1_250m*.tif")
+        elif self.ptype.lower() == 'temporary':
+            pattern = f'sr_prior_{self.date.timetuple().tm_yday}.tif'
 
         # TODO read user pattern from config file to allow defined input
         # (has to be written to the config-file in a 'config step' first)

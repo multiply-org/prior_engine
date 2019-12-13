@@ -248,7 +248,7 @@ class SoilMoisturePriorCreator(PriorCreator):
         elif self.ptype.lower() == 'soil_map':
             pattern = (r"*sl1_250m*.tif")
         elif self.ptype.lower() == 'temporary':
-            pattern = f'sr_prior_{self.date.timetuple().tm_yday}.tif'
+            pattern = f'{self.variable}_prior_{self.date.timetuple().tm_yday}.tif'
 
         # TODO read user pattern from config file to allow defined input
         # (has to be written to the config-file in a 'config step' first)

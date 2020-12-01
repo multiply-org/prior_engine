@@ -215,7 +215,11 @@ class VegetationPriorCreator(PriorCreator):
 
         self.output_directory = self.config['Prior']['output_directory']
         if not os.path.exists(self.output_directory):
-            os.mkdir(self.output_directory)
+            try:
+                os.mkdir(self.output_directory)
+            except FileExistsError:
+                logging.warning(f"Output directory already exists! "
+                                f"({self.output_directory})")
 
         self.plotoption = 0  # [0,1,2,3,4,5,6,..]
 
@@ -1636,8 +1640,3 @@ if __name__ == "__main__":
 
     ####################################################################
     # VegPrior.RetrievePrior(variables=['lai','cab'],datestr='2007-12-31 04:23', ptype='database')
-
-
-
-
-

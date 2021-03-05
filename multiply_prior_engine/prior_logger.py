@@ -13,7 +13,7 @@ import logging
 import logging.config
 import pkg_resources
 import tempfile
-
+from pathlib import Path
 
 __author__ = "Thomas Ramsauer"
 __copyright__ = "Thomas Ramsauer"
@@ -46,7 +46,8 @@ class PriorLogger(object):
             config_dict = yaml.safe_load(cfg)
 
         # add temporary log file name to configuration
-        filename = os.path.join(tempfile.tempdir, 'prior_engine.log')
+        home_dir = str(Path.home())
+        filename = os.path.join(home_dir, '.multiply', 'tmp', 'prior_engine.log')
         config_dict['handlers']['file']['filename'] = filename
 
         # set level
